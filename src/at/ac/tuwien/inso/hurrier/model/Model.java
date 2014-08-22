@@ -53,6 +53,8 @@ public class Model {
 	private Connection conn;
 	private String name;
 
+	private LinkedList<ModelModificationListener> listeners = new LinkedList<ModelModificationListener> ();
+
 	
 	//
 	// DB-Settings:
@@ -414,6 +416,11 @@ public class Model {
 		project.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+
+		for (ModelModificationListener listener : listeners) {
+			listener.projectAdded (project);
+		}
 	}
 
 	
@@ -439,6 +446,11 @@ public class Model {
 		user.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+	
+		for (ModelModificationListener listener : listeners) {
+			listener.userAdded (user);
+		}
 	}
 	
 	
@@ -464,6 +476,11 @@ public class Model {
 		identity.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+
+		for (ModelModificationListener listener : listeners) {
+			listener.identityAdded (identity);
+		}
 	}
 	
 	
@@ -493,6 +510,11 @@ public class Model {
 		relation.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+
+		for (ModelModificationListener listener : listeners) {
+			listener.interactionAdded (relation);
+		}
 	}
 
 		
@@ -518,6 +540,11 @@ public class Model {
 		severity.setId (getLastInsertedId (stmt));
 
 		stmt.close ();		
+
+	
+		for (ModelModificationListener listener : listeners) {
+			listener.severityAdded (severity);
+		}
 	}
 
 	
@@ -543,6 +570,11 @@ public class Model {
 		priority.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+	
+		for (ModelModificationListener listener : listeners) {
+			listener.priorityAdded (priority);
+		}
 	}
 
 
@@ -568,6 +600,11 @@ public class Model {
 		category.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+	
+		for (ModelModificationListener listener : listeners) {
+			listener.categoryAdded (category);
+		}
 	}
 
 
@@ -593,6 +630,11 @@ public class Model {
 		component.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+	
+		for (ModelModificationListener listener : listeners) {
+			listener.componentAdded (component);
+		}
 	}
 
 
@@ -637,6 +679,11 @@ public class Model {
 		bug.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+
+		for (ModelModificationListener listener : listeners) {
+			listener.bugAdded (bug);
+		}
 	}
 
 
@@ -665,6 +712,11 @@ public class Model {
 		history.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+	
+		for (ModelModificationListener listener : listeners) {
+			listener.bugHistoryAdded (history);
+		}
 	}
 
 
@@ -690,6 +742,11 @@ public class Model {
 		cmnt.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+	
+		for (ModelModificationListener listener : listeners) {
+			listener.commentAdded (cmnt);
+		}
 	}
 
 
@@ -715,6 +772,11 @@ public class Model {
 		status.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+	
+		for (ModelModificationListener listener : listeners) {
+			listener.statusAdded (status);
+		}
 	}
 
 		
@@ -754,6 +816,11 @@ public class Model {
 		commit.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
+
+	
+		for (ModelModificationListener listener : listeners) {
+			listener.commitAdded (commit);
+		}
 	}
 
 	
@@ -773,6 +840,11 @@ public class Model {
 		stmt.executeUpdate();
 
 		stmt.close ();
+
+	
+		for (ModelModificationListener listener : listeners) {
+			listener.bugfixCommitAdded (bugfix);
+		}
 	}
 
 
@@ -1160,6 +1232,23 @@ public class Model {
 	}
 
 
+	//
+	// Listener:
+	//
+
+	public void addListener (ModelModificationListener listener) {
+		assert (listener != null);
+
+		listeners.add (listener);
+	}
+
+	public void removeListener (ModelModificationListener listener) {
+		assert (listener != null);
+
+		listeners.remove (listener);
+	}
+
+	
 	//
 	// Helper:
 	//

@@ -42,7 +42,7 @@ public class Bug {
 		assert (title != null);
 		assert (creation != null);
 		assert (priority != null);
-		assert (category != null);
+		//assert (category != null);
 
 		this.id = id;
 		this.identity = identity;

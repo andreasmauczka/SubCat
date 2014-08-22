@@ -21,22 +21,27 @@
 
 package at.ac.tuwien.inso.hurrier.model;
 
+import java.util.Date;
+
 
 public class Comment {
 	private Integer id;
+	private Date creation;
 	private Bug bug;
 	private Identity identity;
-	private int wordCount;
+	private String content;
 
-	public Comment (Integer id, Bug bug, Identity identity, int wordCount) {
+	public Comment (Integer id, Bug bug, Date creation, Identity identity, String content) {
 		assert (bug != null);
+		assert (creation != null);
 		assert (identity != null);
-		assert (wordCount >= 0);
+		assert (content != null);
 
 		this.id = id;
 		this.bug = bug;
 		this.identity = identity;
-		this.wordCount = wordCount;
+		this.content = content;
+		this.creation = creation;
 	}
 
 	public Integer getId () {
@@ -57,6 +62,16 @@ public class Comment {
 		this.bug = bug;
 	}
 
+	public Date getCreationDate () {
+		return creation;
+	}
+
+	public void setCreationDate (Date creation) {
+		assert (creation != null);
+
+		this.creation = creation;
+	}
+
 	public Identity getIdentity () {
 		return identity;
 	}
@@ -67,20 +82,20 @@ public class Comment {
 		this.identity = identity;
 	}
 
-	public int getWordCount () {
-		return wordCount;
+	public String getContent () {
+		return content;
 	}
 
-	public void setWordCount (int wordCount) {
-		assert (wordCount >= 0);
+	public void setContent (String content) {
+		assert (content != null);
 
-		this.wordCount = wordCount;
+		this.content = content;
 	}
 
 	@Override
 	public String toString() {
 		return "Comment [id=" + id + ", bug=" + bug + ", identity=" + identity
-				+ ", wordCount=" + wordCount + "]";
+				+ ", wordCount=" + content.length () + "]";
 	}
 
 	public boolean equals (Comment obj) {

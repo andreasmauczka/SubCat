@@ -36,7 +36,7 @@ public class Project {
 		assert (date != null);
 		assert (domain != null);
 		assert (product != null);
-		assert (revision != null);
+		//assert (revision != null);
 
 		this.id = id;
 		this.date = date;

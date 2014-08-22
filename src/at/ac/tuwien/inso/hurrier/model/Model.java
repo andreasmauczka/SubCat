@@ -74,8 +74,8 @@ public class Model {
 		+ "date			TEXT								NOT NULL,"
 		+ "domain		TEXT								NOT NULL,"
 		+ "product		TEXT								NOT NULL,"
-		+ "revision		TEXT								NOT NULL,"
-		+ "defaultStatusId INT								"
+		+ "revision		TEXT								        ,"
+		+ "defaultStatusId INT										 "
 //		+ "FOREIGN KEY (defaultStatusId) REFERENCES StatusTable"
 		+ ")";
 
@@ -90,9 +90,8 @@ public class Model {
 	private static final String IDENTITY_TABLE =
 		"CREATE TABLE IF NOT EXISTS Identities ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
-		+ "mail			TEXT								NOT NULL,"
+		+ "mail			TEXT								        ,"
 		+ "name			TEXT								NOT NULL,"
-		+ "lastActivity	TEXT								NOT NULL,"
 		+ "user			INT									NOT NULL,"
 		+ "FOREIGN KEY(user) REFERENCES Users (id)"
 		+ ")";
@@ -147,7 +146,7 @@ public class Model {
 		+ "creation		TEXT								NOT NULL,"
 		+ "priority		INT									NOT NULL,"
 		+ "severity		INT									NOT NULL,"
-		+ "category		INT									NOT NULL,"
+		+ "category		INT									        ,"
 		+ "comments		INT									NOT NULL DEFAULT 0,"
 		+ "curStat		INT									NOT NULL,"
 		+ "FOREIGN KEY(priority) REFERENCES Priorities (id),"
@@ -164,9 +163,10 @@ public class Model {
 	private static final String COMMENT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Comments ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "creation		TEXT								NOT NULL,"
 		+ "bug			INT									NOT NULL,"
 		+ "identity		INT									NOT NULL,"
-		+ "wordCount	INT									NOT NULL,"
+		+ "content		TEXT								NOT NULL,"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id)"
 		+ ")";
@@ -270,8 +270,8 @@ public class Model {
 
 	private static final String IDENTITY_INSERTION =
 		"INSERT INTO Identities"
-		+ "(mail, name, lastActivity, user)"
-		+ "VALUES (?,?,?,?)";
+		+ "(mail, name, user)"
+		+ "VALUES (?,?,?)";
 
 	private static final String INTERACTION_INSERTION =
 		"INSERT INTO Interactions"
@@ -301,8 +301,8 @@ public class Model {
 
 	private static final String COMMENT_INSERTION =
 		"INSERT INTO Comments"
-		+ "(bug, identity, wordCount)"
-		+ "VALUES (?,?,?)";	
+		+ "(bug, creation, identity, content)"
+		+ "VALUES (?,?,?,?)";	
 	
 	private static final String STATUS_INSERTION =
 		"INSERT INTO Status"
@@ -442,8 +442,8 @@ public class Model {
 	}
 	
 	
-	public Identity addIdentity (String mail, String name, Date lastActivity, User user) throws SQLException {
-		Identity identity = new Identity (null, mail, name, lastActivity, user);
+	public Identity addIdentity (String mail, String name, User user) throws SQLException {
+		Identity identity = new Identity (null, mail, name, user);
 		add (identity);
 		return identity;
 	}
@@ -458,8 +458,7 @@ public class Model {
 
 		stmt.setString (1, identity.getMail ());
 		stmt.setString (2, identity.getName ());
-		stmt.setString (3, dateFormat.format(identity.getLastActivity ()));
-		stmt.setInt (4, identity.getUser ().getId ());
+		stmt.setInt (3, identity.getUser ().getId ());
 		stmt.executeUpdate();
 
 		identity.setId (getLastInsertedId (stmt));
@@ -610,13 +609,12 @@ public class Model {
 		assert (bug.getIdentity () != null);
 		assert (bug.getComponent () != null);
 		assert (bug.getPriority () != null);
-		assert (bug.getCategory () != null);
 		assert (bug.getSeverity() != null);
 		assert (bug.getIdentity ().getId () != null);
 		assert (bug.getComponent ().getId () != null);
 		assert (bug.getPriority ().getId () != null);
-		assert (bug.getCategory ().getId () != null);
 		assert (bug.getSeverity().getId () != null);
+		assert (bug.getCategory () == null || bug.getCategory ().getId () != null);
 
 
 		PreparedStatement stmt = conn.prepareStatement (BUG_INSERTION,
@@ -628,8 +626,12 @@ public class Model {
 		stmt.setString (4, dateFormat.format (bug.getCreation ()));
 		stmt.setInt (5, bug.getPriority ().getId ());
 		stmt.setInt (6, bug.getSeverity ().getId ());
-		stmt.setInt (7, bug.getCategory ().getId ());
-		stmt.setInt (8, bug.getCategory ().getProject ().getId ());
+		if (bug.getCategory () != null) {
+			stmt.setInt (7, bug.getCategory ().getId ());
+		} else {
+			stmt.setNull (7, Types.INTEGER);
+		}
+		stmt.setInt (8, bug.getComponent ().getProject ().getId ());
 		stmt.executeUpdate();
 
 		bug.setId (getLastInsertedId (stmt));
@@ -666,8 +668,8 @@ public class Model {
 	}
 
 
-	public Comment addComment (Bug bug, Identity identity, int wordCount) throws SQLException {
-		Comment cmnt = new Comment(null, bug, identity, wordCount);
+	public Comment addComment (Bug bug, Date creation, Identity identity, String content) throws SQLException {
+		Comment cmnt = new Comment(null, bug, creation, identity, content);
 		add (cmnt);
 		return cmnt;
 	}
@@ -680,8 +682,9 @@ public class Model {
 			Statement.RETURN_GENERATED_KEYS);
 
 		stmt.setInt (1, cmnt.getBug ().getId ());
-		stmt.setInt (2, cmnt.getIdentity ().getId ());
-		stmt.setInt (3, cmnt.getWordCount ());
+		stmt.setString (2, dateFormat.format (cmnt.getCreationDate ()));
+		stmt.setInt (3, cmnt.getIdentity ().getId ());
+		stmt.setString (4, cmnt.getContent ());
 		stmt.executeUpdate();
 
 		cmnt.setId (getLastInsertedId (stmt));

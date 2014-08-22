@@ -21,27 +21,20 @@
 
 package at.ac.tuwien.inso.hurrier.model;
 
-import java.util.Date;
-
 
 public class Identity {
 	private Integer id;
 	private String mail;
 	private String name;
-	private Date lastActivity;
 	private User user;
 
-	public Identity(Integer id, String mail, String name, Date lastActivity,
-			User user) {
-		assert (mail != null);
+	public Identity(Integer id, String mail, String name, User user) {
 		assert (name != null);
-		assert (lastActivity != null);
 		assert (user != null);
 
 		this.id = id;
 		this.mail = mail;
 		this.name = name;
-		this.lastActivity = lastActivity;
 		this.user = user;
 	}
 
@@ -73,16 +66,6 @@ public class Identity {
 		this.name = name;
 	}
 
-	public Date getLastActivity () {
-		return lastActivity;
-	}
-
-	public void setLastActivity (Date lastActivity) {
-		assert (lastActivity != null);
-
-		this.lastActivity = lastActivity;
-	}
-
 	public User getUser () {
 		return user;
 	}
@@ -96,7 +79,7 @@ public class Identity {
 	@Override
 	public String toString () {
 		return "Identity [id=" + id + ", mail=" + mail + ", name=" + name
-				+ ", lastActivity=" + lastActivity + ", user=" + user + "]";
+				+ ", user=" + user + "]";
 	}
 	
 	public boolean equals (Identity obj) {

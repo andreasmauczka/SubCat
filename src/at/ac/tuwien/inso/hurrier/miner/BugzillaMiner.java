@@ -1,0 +1,373 @@
+/* BugzillaMiner.java
+ *
+ * Copyright (C) 2014  Brosch Florian
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License 2.0
+ * as published by the Free Software Foundation.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ * Author:
+ * 	Florian Brosch <flo.brosch@gmail.com>
+ */
+
+package at.ac.tuwien.inso.hurrier.miner;
+
+import java.net.MalformedURLException;
+import java.sql.SQLException;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import at.ac.tuwien.inso.hurrier.bugzilla.BugzillaBug;
+import at.ac.tuwien.inso.hurrier.bugzilla.BugzillaChange;
+import at.ac.tuwien.inso.hurrier.bugzilla.BugzillaComment;
+import at.ac.tuwien.inso.hurrier.bugzilla.BugzillaContext;
+import at.ac.tuwien.inso.hurrier.bugzilla.BugzillaException;
+import at.ac.tuwien.inso.hurrier.bugzilla.BugzillaHistory;
+import at.ac.tuwien.inso.hurrier.bugzilla.BugzillaProduct;
+import at.ac.tuwien.inso.hurrier.bugzilla.BugzillaUser;
+import at.ac.tuwien.inso.hurrier.model.Bug;
+import at.ac.tuwien.inso.hurrier.model.Component;
+import at.ac.tuwien.inso.hurrier.model.Identity;
+import at.ac.tuwien.inso.hurrier.model.Model;
+import at.ac.tuwien.inso.hurrier.model.Priority;
+import at.ac.tuwien.inso.hurrier.model.Project;
+import at.ac.tuwien.inso.hurrier.model.Severity;
+import at.ac.tuwien.inso.hurrier.model.Status;
+import at.ac.tuwien.inso.hurrier.model.User;
+
+
+public class BugzillaMiner extends Miner {
+	private final int PAGE_SIZE = 10;
+
+	// LinkedBlockingQueue does not allow `null`
+	// as poison
+	private class QueueEntry {
+		public BugzillaBug bug;
+		
+		public QueueEntry (BugzillaBug bug) {
+			this.bug = bug;
+		}
+	}
+	
+	private LinkedBlockingQueue<QueueEntry> queue = new LinkedBlockingQueue<QueueEntry> ();
+	private boolean run = true;
+
+	private BugzillaContext context;
+	private Settings settings;
+	private Model model;
+
+	private Map<String, Component> components = new HashMap<String, Component> ();
+	private Map<String, Priority> priorities = new HashMap<String, Priority> ();
+	private Map<String, Severity> severities = new HashMap<String, Severity> ();
+	private Map<String, Identity> identities = new HashMap<String, Identity> ();
+	private Map<String, Status> status = new HashMap<String, Status> ();
+	private Project project;
+
+	private List<Worker> workers = new LinkedList<Worker> ();
+	private MinerException storedException;
+	
+	
+	private class Worker extends Thread {
+
+		@Override
+		public void run () {
+			while (!Thread.currentThread().isInterrupted ()) {
+				try {
+					BugzillaBug bbug = queue.take ().bug;
+					if (bbug == null) {
+						// stop thread, done
+						break;
+					}
+
+					process (bbug);
+
+					Thread.sleep (settings.bugCooldownTime);
+				} catch (InterruptedException e) {
+					Thread.currentThread ().interrupt ();
+				} catch (BugzillaException e) {
+					abortRun (new MinerException ("Bugzilla-Exception: " + e.getMessage (), e));
+				} catch (SQLException e) {
+					abortRun (new MinerException ("SQL-Exception: " + e.getMessage (), e));
+				}
+			}
+		}
+
+		private void process (BugzillaBug bzBug) throws BugzillaException, SQLException {
+			assert (bzBug != null);
+			
+			Integer bugId = bzBug.getId ();
+
+			// Get data:
+			Map<Integer, BugzillaHistory[]> _histories = context.getHistory (bugId);
+			Map<Integer, BugzillaComment[]> _comments = context.getComments (bugId);
+			BugzillaHistory[] histories = _histories.get (bugId);
+			BugzillaComment[] comments = _comments.get (bugId);
+			assert (comments != null);
+
+
+			Identity creator = resolveIdentity (comments[0].getCreator ());
+			Component component = resolveComponent (bzBug.getComponent ());
+			Severity severity = resolveSeverity (bzBug.getSeverity ());
+			Priority priority = resolvePriority (bzBug.getPriority ());
+			Date creation = bzBug.getCreationTime ();
+			String title = bzBug.getSummary ();
+			
+
+			// Add to model:
+			Bug bug = model.addBug (creator, component, title, creation, priority, severity, null);
+			addComments (bug, comments);
+			addHistory (bug, histories);
+		}
+
+		private void addComments (Bug bug, BugzillaComment[] comments) throws SQLException, BugzillaException {
+			assert (bug != null);
+			assert (comments != null);
+
+			for (BugzillaComment comment : comments) {
+
+				if (Thread.currentThread().isInterrupted ()) {
+					return ;
+				}
+				
+				Identity cmntCreator = resolveIdentity (comment.getCreator ());
+				Date cmntCreation = comment.getTime ();
+				String cmntContent = comment.getText ();
+
+				model.addComment (bug, cmntCreation, cmntCreator, cmntContent);
+			}
+		}
+		
+		private void addHistory (Bug bug, BugzillaHistory[] history) throws SQLException, BugzillaException {
+			assert (bug != null);
+
+			if (history == null) {
+				return ;
+			}
+
+
+			for (BugzillaHistory entry : history) {
+				BugzillaChange[] changes = entry.getChanges ();
+				for (BugzillaChange change : changes) {
+					if (Thread.currentThread().isInterrupted ()) {
+						return ;
+					}
+
+					// TODO: resolution
+					if ("bug_status".equals (change.getFieldName ())) {
+						Identity identity = resolveIdentity (entry.getWho ());
+						Status bugStat = resolveStatus (change.getAdded ());
+						Date date = entry.getWhen ();
+	
+						model.addBugHistory (bug, bugStat, identity, date);
+					}
+				}
+			}
+		}
+	}
+	
+
+	public BugzillaMiner (Settings settings, Model model) {
+		assert (settings != null);
+		assert (model != null);
+		
+		this.settings = settings;
+		this.model = model;
+	}
+
+	@Override
+	public void run () throws MinerException {
+		for (int i = 0; i < settings.bugThreads; i++) {
+			Worker worker = new Worker ();
+			workers.add (worker);
+			worker.start ();
+		}
+
+		try {
+			triggerStart ();
+			_run ();
+		} catch (SQLException e) {
+			abortRun (new MinerException ("SQL-Error: " + e.getMessage (), e));
+		} catch (BugzillaException e) {
+			abortRun (new MinerException ("Bugzilla-Error: " + e.getMessage (), e));
+		} catch (MinerException e) {
+			abortRun (e);
+		} catch (InterruptedException e) {
+			abortRun (null);
+		}
+
+		for (Worker worker : workers) {
+			try {
+				worker.join ();
+			} catch (InterruptedException e) {
+			}
+		}
+
+		if (storedException != null) {
+			throw storedException;
+		}
+	}
+
+	private void abortRun (MinerException e) {
+		if (storedException == null) {
+			storedException = e;
+		}
+		
+		run = false;
+		queue.clear ();
+
+		for (Worker worker : workers) {
+			worker.interrupt ();
+		}
+		
+		triggerEnd ();
+	}
+	
+	public void _run () throws MinerException, SQLException, BugzillaException, InterruptedException {
+		try {
+			context = new BugzillaContext (settings.bugRepository);
+		} catch (MalformedURLException e) {
+			throw new MinerException ("Malformed tracker URL: " + e.getMessage (), e);
+		}
+
+		if (settings.bugEnableUntrustedCertificates) {
+			context.enableUntrustedCertificates ();
+		}
+
+		if (settings.bugLoginUser != null && settings.bugLoginPw != null) {
+			context.login (settings.bugLoginUser, settings.bugLoginPw);
+		}
+
+		
+		BugzillaProduct product = getBugzillaProduct (settings.bugProductName);
+		if (product == null) {
+			throw new MinerException ("Unknown product `" + settings.bugProductName + "'");
+		}
+		
+		project = model.addProject (new Date (), settings.bugTrackerName, settings.bugProductName, null);
+		model.setDefaultStatus (resolveStatus ("UNCO"));
+
+		for (int page = 1; run && !Thread.currentThread().isInterrupted () ; page++) {
+			BugzillaBug[] bugs = context.getBugs (settings.bugProductName, page, PAGE_SIZE);
+			if (bugs.length < 1) {
+				break;
+			}
+			
+			for (BugzillaBug bzBug : bugs) {
+				queue.add (new QueueEntry (bzBug));
+			}
+
+			Thread.sleep (settings.bugCooldownTime);
+		}
+
+
+		// Poisoned Pills:
+		for (int i = 0; i < workers.size (); i++) {
+			queue.add (new QueueEntry (null));
+		}
+	}
+
+	@Override
+	public synchronized void stop () {
+		queue.clear ();
+		run = false;
+		abortRun (null);
+	}
+
+
+	//
+	// Helper:
+	//
+
+	private synchronized BugzillaProduct getBugzillaProduct (String productName) throws BugzillaException, MinerException {
+		assert (productName != null);
+		
+		Integer[] ids = context.getAccessibleProducts ();
+		BugzillaProduct[] products = context.getProducts (ids);
+		for (BugzillaProduct product : products) {
+			if (productName.equals (product.getName ())) {
+				return product;
+			}
+		}
+
+		throw new MinerException ("Product '" + productName + "' not found.");
+	}
+
+	private synchronized Status resolveStatus (String name) throws SQLException {
+		assert (name != null);
+
+		Status stat = status.get (name);
+		if (stat == null) {
+			stat = model.addStatus (project, name);
+			status.put (name, stat);
+		}
+		
+		return stat;
+	}
+
+	private synchronized Component resolveComponent (String name) throws SQLException {
+		assert (name != null);
+
+		Component component = components.get (name);
+		if (component == null) {
+			component = model.addComponent (project, name);
+			components.put (name, component);
+		}
+		
+		return component;
+	}
+
+	private synchronized Severity resolveSeverity (String name) throws SQLException {
+		assert (name != null);
+
+		Severity severity = severities.get (name);
+		if (severity == null) {
+			severity = model.addSeverity (project, name);
+			severities.put (name, severity);
+		}
+		
+		return severity;
+	}
+
+	private synchronized Identity resolveIdentity (String name) throws SQLException, BugzillaException {
+		assert (name != null);
+
+		Identity identity = identities.get (name);
+		if (identity == null) {
+			BugzillaUser[] bugUserList = context.getUsers (name);
+			assert (bugUserList.length == 1);
+			BugzillaUser bugUser = bugUserList[0];
+
+			User user = model.addUser (project, name);
+			identity = model.addIdentity (bugUser.getEmail (), bugUser.getName (), user);
+			identities.put (name, identity);
+		}
+
+		return identity;
+	}
+	
+	private synchronized Priority resolvePriority (String name) throws SQLException {
+		assert (name != null);
+
+		Priority priority = priorities.get (name);
+		if (priority == null) {
+			priority = model.addPriority (project, name);
+			priorities.put (name, priority);
+		}
+		
+		return priority;
+	}
+}
+

@@ -204,16 +204,16 @@ public class ViewFactory {
 
 			
 			User user1 = model.addUser (project, "user 1");
-			Identity identity1a = model.addIdentity ("user1@mail.endl", "user1a", new Date (), user1);
-			Identity identity1b = model.addIdentity ("user1@mail.endl", "user1b", new Date (), user1);
+			Identity identity1a = model.addIdentity ("user1@mail.endl", "user1a", user1);
+			Identity identity1b = model.addIdentity ("user1@mail.endl", "user1b", user1);
 			
 			User user2 = model.addUser (project, "user 2");
-			Identity identity2a = model.addIdentity ("user2@mail.endl", "user2a", new Date (), user2);
-			model.addIdentity ("user2@mail.endl", "user2b", new Date (), user2);
+			Identity identity2a = model.addIdentity ("user2@mail.endl", "user2a", user2);
+			model.addIdentity ("user2@mail.endl", "user2b", user2);
 
 			User user3 = model.addUser (project, "user 3");
-			Identity identity3a = model.addIdentity ("user3@mail.endl", "user3a", new Date (), user3);
-			model.addIdentity ("user3@mail.endl", "user3b", new Date (), user3);
+			Identity identity3a = model.addIdentity ("user3@mail.endl", "user3a", user3);
+			model.addIdentity ("user3@mail.endl", "user3b", user3);
 
 			
 			Category cat1 = model.addCategory(project, "Corrective");

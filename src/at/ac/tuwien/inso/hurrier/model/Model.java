@@ -359,11 +359,11 @@ public class Model {
 		this.name = name;
 	}
 
-	public void close () throws SQLException {
+	public synchronized void close () throws SQLException {
 		conn.close ();
 	}
 
-	public boolean remove() throws SQLException {
+	public synchronized boolean remove() throws SQLException {
 		assert (name != null);
 		close ();
 
@@ -387,20 +387,19 @@ public class Model {
 		return proj;
 	}
 
-	public void setDefaultStatus (Status status) throws SQLException {
+	public synchronized void setDefaultStatus (Status status) throws SQLException {
 		assert (status != null);
 		assert (status.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (UPDATE_DEFAULT_STATUS,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = conn.prepareStatement (UPDATE_DEFAULT_STATUS);
 	
-		stmt.setInt (1, status.getProject ().getId ());
-		stmt.setInt (2, status.getId ());
+		stmt.setInt (1, status.getId ());
+		stmt.setInt (2, status.getProject ().getId ());
 		stmt.executeUpdate();
 		stmt.close ();
 	}
 	
-	public void add (Project project) throws SQLException {
+	public synchronized void add (Project project) throws SQLException {
 		assert (project != null);
 		assert (project.getId () == null);
 
@@ -424,13 +423,13 @@ public class Model {
 	}
 
 	
-	public User addUser (Project project, String name) throws SQLException {
+	public synchronized User addUser (Project project, String name) throws SQLException {
 		User user = new User (null, project, name);
 		add (user);
 		return user;
 	}
 
-	public void add (User user) throws SQLException {
+	public synchronized void add (User user) throws SQLException {
 		assert (user != null);
 		Project project = user.getProject ();
 		assert (project.getId () != null);
@@ -454,13 +453,13 @@ public class Model {
 	}
 	
 	
-	public Identity addIdentity (String mail, String name, User user) throws SQLException {
+	public synchronized Identity addIdentity (String mail, String name, User user) throws SQLException {
 		Identity identity = new Identity (null, mail, name, user);
 		add (identity);
 		return identity;
 	}
 
-	public void add (Identity identity) throws SQLException {
+	public synchronized void add (Identity identity) throws SQLException {
 		assert (identity != null);
 		assert (identity.getUser ().getId () != null);
 		assert (identity.getId () == null);
@@ -484,13 +483,13 @@ public class Model {
 	}
 	
 	
-	public Interaction addInteraction (User from, User to, boolean closed, int quotes, float pos, float neg, Date date) throws SQLException {
+	public synchronized Interaction addInteraction (User from, User to, boolean closed, int quotes, float pos, float neg, Date date) throws SQLException {
 		Interaction relation = new Interaction (null, from, to, closed, quotes, pos, neg, date);
 		add (relation);
 		return relation;
 	}
 
-	public void add (Interaction relation) throws SQLException {
+	public synchronized void add (Interaction relation) throws SQLException {
 		assert (relation != null);
 		assert (relation.getFrom ().getId () != null);
 		assert (relation.getTo ().getId () != null);
@@ -518,13 +517,13 @@ public class Model {
 	}
 
 		
-	public Severity addSeverity (Project project, String name) throws SQLException {
+	public synchronized Severity addSeverity (Project project, String name) throws SQLException {
 		Severity sev = new Severity (null, project, name);
 		add (sev);
 		return sev;
 	}
 
-	public void add (Severity severity) throws SQLException {
+	public synchronized void add (Severity severity) throws SQLException {
 		assert (severity != null);
 		Project project = severity.getProject ();
 		assert (project.getId () != null);
@@ -548,13 +547,13 @@ public class Model {
 	}
 
 	
-	public Priority addPriority (Project project, String name) throws SQLException {
+	public synchronized Priority addPriority (Project project, String name) throws SQLException {
 		Priority priority = new Priority (null, project, name);
 		add (priority);
 		return priority;
 	}
 	
-	public void add (Priority priority) throws SQLException {
+	public synchronized void add (Priority priority) throws SQLException {
 		assert (priority != null);
 		Project project = priority.getProject ();
 		assert (project.getId () != null);
@@ -578,13 +577,13 @@ public class Model {
 	}
 
 
-	public Category addCategory (Project project, String name) throws SQLException {
+	public synchronized Category addCategory (Project project, String name) throws SQLException {
 		Category category = new Category (null, project, name);
 		add (category);
 		return category;
 	}
 
-	public void add (Category category) throws SQLException {
+	public synchronized void add (Category category) throws SQLException {
 		assert (category != null);
 		Project project = category.getProject ();
 		assert (project.getId () != null);
@@ -608,13 +607,13 @@ public class Model {
 	}
 
 
-	public Component addComponent (Project project, String name) throws SQLException {
+	public synchronized Component addComponent (Project project, String name) throws SQLException {
 		Component component = new Component (null, project, name);
 		add (component);
 		return component;
 	}
 
-	public void add (Component component) throws SQLException {
+	public synchronized void add (Component component) throws SQLException {
 		assert (component != null);
 		Project project = component.getProject ();
 		assert (project.getId () != null);
@@ -638,14 +637,14 @@ public class Model {
 	}
 
 
-	public Bug addBug (Identity identity, Component component,
+	public synchronized Bug addBug (Identity identity, Component component,
 			String title, Date creation, Priority priority, Severity severity, Category category) throws SQLException {
 		Bug bug = new Bug (null, identity, component, title, creation, priority, severity, category);
 		add (bug);
 		return bug;
 	}
 	
-	public void add (Bug bug) throws SQLException {
+	public synchronized void add (Bug bug) throws SQLException {
 		assert (bug != null);
 		assert (bug.getId () == null);
 		assert (bug.getIdentity () != null);
@@ -687,13 +686,13 @@ public class Model {
 	}
 
 
-	public BugHistory addBugHistory (Bug bug, Status status, Identity identity, Date date) throws SQLException {
+	public synchronized BugHistory addBugHistory (Bug bug, Status status, Identity identity, Date date) throws SQLException {
 		BugHistory history = new BugHistory(null, bug, status, identity, date);
 		add (history);
 		return history;
 	}
 
-	public void add (BugHistory history) throws SQLException {
+	public synchronized void add (BugHistory history) throws SQLException {
 		assert (history != null);
 		assert (history.getId () == null);
 		assert (history.getBug ().getId () != null);
@@ -720,13 +719,13 @@ public class Model {
 	}
 
 
-	public Comment addComment (Bug bug, Date creation, Identity identity, String content) throws SQLException {
+	public synchronized Comment addComment (Bug bug, Date creation, Identity identity, String content) throws SQLException {
 		Comment cmnt = new Comment(null, bug, creation, identity, content);
 		add (cmnt);
 		return cmnt;
 	}
 	
-	public void add (Comment cmnt) throws SQLException {
+	public synchronized void add (Comment cmnt) throws SQLException {
 		assert (cmnt != null);
 		assert (cmnt.getId () == null);
 
@@ -750,13 +749,13 @@ public class Model {
 	}
 
 
-	public Status addStatus (Project project, String name) throws SQLException {
+	public synchronized Status addStatus (Project project, String name) throws SQLException {
 		Status status = new Status (null, project, name);
 		add (status);
 		return status;
 	}	
 	
-	public void add (Status status) throws SQLException {
+	public synchronized void add (Status status) throws SQLException {
 		assert (status != null);
 		Project project = status.getProject ();
 		assert (project.getId () != null);
@@ -780,7 +779,7 @@ public class Model {
 	}
 
 		
-	public Commit addCommit (Project project, Identity autor,
+	public synchronized Commit addCommit (Project project, Identity autor,
 			Identity committer, Date date, String title, int linesAdded,
 			int linesRemoved, Category category)
 		throws SQLException
@@ -792,7 +791,7 @@ public class Model {
 		return commit;
 	}
 	
-	public void add (Commit commit) throws SQLException {
+	public synchronized void add (Commit commit) throws SQLException {
 		assert (commit != null);
 		Project project = commit.getProject ();
 		assert (commit.getId () == null);
@@ -824,13 +823,13 @@ public class Model {
 	}
 
 	
-	public BugfixCommit addBugfixCommit (Commit commit, Bug bug) throws SQLException {
+	public synchronized BugfixCommit addBugfixCommit (Commit commit, Bug bug) throws SQLException {
 		BugfixCommit bugfix = new BugfixCommit (commit, bug);
 		add (bugfix);
 		return bugfix;
 	}
 
-	public void add (BugfixCommit bugfix) throws SQLException {
+	public synchronized void add (BugfixCommit bugfix) throws SQLException {
 		assert (bugfix != null);
 
 		PreparedStatement stmt = conn.prepareStatement (BUGFIX_COMMIT_INSERTION);
@@ -852,7 +851,7 @@ public class Model {
 	// Get Data:
 	//
 	
-	private PreparedStatement buildPreparedStmt (Query queryConfig, Map<String, Object> vars) throws SemanticException, SQLException {
+	private synchronized PreparedStatement buildPreparedStmt (Query queryConfig, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (queryConfig != null);
 		assert (vars != null);
 		
@@ -910,7 +909,7 @@ public class Model {
 		return stmt;
 	}
 
-	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException {
+	public synchronized DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException {
 		assert (config != null);
 		assert (vars != null);
 
@@ -924,7 +923,7 @@ public class Model {
 		return data;
 	}
 	
-	public DistributionChartOptionConfigData getDistributionChartOptionConfigData (DistributionChartOptionConfig config, Map<String, Object> vars) throws SemanticException {
+	public synchronized DistributionChartOptionConfigData getDistributionChartOptionConfigData (DistributionChartOptionConfig config, Map<String, Object> vars) throws SemanticException {
 		assert (config != null);
 		assert (vars != null);
 
@@ -939,7 +938,7 @@ public class Model {
 		return data;
 	}
 	
-	public TrendChartData getTrendChartData (TrendChartPlotConfig trendChartPlotConfig, Map<String, Object> vars) throws SemanticException {
+	public synchronized TrendChartData getTrendChartData (TrendChartPlotConfig trendChartPlotConfig, Map<String, Object> vars) throws SemanticException {
 		assert (trendChartPlotConfig != null);
 		assert (vars != null);
 
@@ -994,7 +993,7 @@ public class Model {
 		}
 	}
 	
-	public TrendChartConfigData getChartGroupConfigData (TrendChartConfig config, Map<String, Object> vars) throws SemanticException {
+	public synchronized TrendChartConfigData getChartGroupConfigData (TrendChartConfig config, Map<String, Object> vars) throws SemanticException {
 		assert (config != null);
 		assert (vars != null);
 
@@ -1009,7 +1008,7 @@ public class Model {
 		return data;
 	}
 	
-	private DropDownData getDropDownData (DropDownConfig config, Map<String, Object> vars) throws SemanticException {
+	private synchronized DropDownData getDropDownData (DropDownConfig config, Map<String, Object> vars) throws SemanticException {
 		assert (config != null);
 		assert (vars != null);
 
@@ -1060,7 +1059,7 @@ public class Model {
 		}
 	}
 	
-	private OptionListConfigData getOptionListData (OptionListConfig config, Map<String, Object> vars) throws SemanticException {
+	private synchronized OptionListConfigData getOptionListData (OptionListConfig config, Map<String, Object> vars) throws SemanticException {
 		assert (config != null);
 		assert (vars != null);
 
@@ -1111,7 +1110,7 @@ public class Model {
 		}
 	}
 	
-	public PieChartData getPieChart (PieChartConfig config, Map<String, Object> vars) throws SemanticException {
+	public synchronized PieChartData getPieChart (PieChartConfig config, Map<String, Object> vars) throws SemanticException {
 		assert (config != null);
 		assert (vars != null);
 
@@ -1162,7 +1161,7 @@ public class Model {
 		}
 	}
 	
-	public DistributionChartData getDistributionChartData (Query query, Map<String, Object> vars) throws SemanticException {
+	public synchronized DistributionChartData getDistributionChartData (Query query, Map<String, Object> vars) throws SemanticException {
 		assert (query != null);
 		assert (vars != null);
 
@@ -1236,13 +1235,13 @@ public class Model {
 	// Listener:
 	//
 
-	public void addListener (ModelModificationListener listener) {
+	public synchronized void addListener (ModelModificationListener listener) {
 		assert (listener != null);
 
 		listeners.add (listener);
 	}
 
-	public void removeListener (ModelModificationListener listener) {
+	public synchronized void removeListener (ModelModificationListener listener) {
 		assert (listener != null);
 
 		listeners.remove (listener);

@@ -24,7 +24,7 @@ package at.ac.tuwien.inso.hurrier.bugzilla;
 import java.util.Date;
 
 
-public class Attachment {
+public class BugzillaAttachment {
 	private String data;
 	private Date creationTime;
 	private Date lastChangeTime;
@@ -38,7 +38,7 @@ public class Attachment {
 	private String creator;
 	private String contentType;
 	
-	public Attachment (int id, int bug_id, Date creationTime,
+	public BugzillaAttachment (int id, int bug_id, Date creationTime,
 			Date lastChangeTime,  String fileName, String contentType,
 			String summary, String creator, Boolean isPrivate, Boolean isObsolete,
 			Boolean isPatch, String data) {

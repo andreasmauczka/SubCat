@@ -1,4 +1,4 @@
-/* User.java
+/* Change.java
  *
  * Copyright (C) 2014  Brosch Florian
  * 
@@ -22,48 +22,49 @@
 package at.ac.tuwien.inso.hurrier.bugzilla;
 
 
-public class User {
-	private int id;
-	private String realName;
-	private String email;
-	private String name;
+public class BugzillaChange {
+	private String fieldName;
+	private String removed;
+	private String added;
+	private Integer attachmentId;
 
-	public User (int id, String realName, String email, String name) {
-		super ();
+	public BugzillaChange (String fieldName, String removed, String added,
+			Integer attachmentId) {
 
-		assert (name != null);
+		assert (fieldName != null);
+		assert (added != null);
 		
-		this.id = id;
-		this.realName = realName;
-		this.email = email;
-		this.name = name;
+		this.fieldName = fieldName;
+		this.removed = removed;
+		this.added = added;
+		this.attachmentId = attachmentId;
 	}
 
-	public String toString () {
-		return "[User id="
-			+ id
-			+ " realName="
-			+ realName
-			+ " email="
-			+ email
-			+ " name= "
-			+ name
-			+ "]";
+	public String getFieldName () {
+		return fieldName;
+	}
+
+	public String getRemoved () {
+		return removed;
+	}
+
+	public String getAdded () {
+		return added;
+	}
+
+	public Integer getAttachmentId () {
+		return attachmentId;
 	}
 	
-	public int getId () {
-		return id;
-	}
-
-	public String getRealName () {
-		return realName;
-	}
-
-	public String getEmail () {
-		return email;
-	}
-
-	public String getName () {
-		return name;
+	public String toString () {
+		return "[Change fieldName="
+			+ fieldName
+			+ " removed="
+			+ removed
+			+ " added="
+			+ added
+			+ " attachmentId="
+			+ attachmentId
+			+ "]";
 	}
 }

@@ -24,12 +24,12 @@ package at.ac.tuwien.inso.hurrier.bugzilla;
 import java.util.Date;
 
 
-public class History {
+public class BugzillaHistory {
 	private Date when;
 	private String who;
-	private Change[] changes;
+	private BugzillaChange[] changes;
 
-	public History (Date when, String who, Change[] changes) {
+	public BugzillaHistory (Date when, String who, BugzillaChange[] changes) {
 		assert (when != null);
 		assert (who != null);
 		assert (changes != null);
@@ -47,7 +47,7 @@ public class History {
 		return who;
 	}
 
-	public Change[] getChanges () {
+	public BugzillaChange[] getChanges () {
 		return changes;
 	}
 

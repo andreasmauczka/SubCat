@@ -1,4 +1,4 @@
-/* Comment.java
+/* User.java
  *
  * Copyright (C) 2014  Brosch Florian
  * 
@@ -21,40 +21,33 @@
 
 package at.ac.tuwien.inso.hurrier.bugzilla;
 
-import java.util.Date;
 
-
-public class Comment {
+public class BugzillaUser {
 	private int id;
-	private int bugId;
-	// not supporte by all versions
-	private Integer attachmentId;
-	private String text;
-	private String creator;
-	private Date time;
+	private String realName;
+	private String email;
+	private String name;
 
-	public Comment (int id, int bugId, Integer attachmentId, String text,
-			String creator, Date time) {
+	public BugzillaUser (int id, String realName, String email, String name) {
+		super ();
 
-		assert (creator != null);
-		assert (time != null);
-		assert (text != null);
-
+		assert (name != null);
+		
 		this.id = id;
-		this.bugId = bugId;
-		this.attachmentId = attachmentId;
-		this.text = text;
-		this.creator = creator;
-		this.time = time;
+		this.realName = realName;
+		this.email = email;
+		this.name = name;
 	}
 
 	public String toString () {
-		return "[Comment id="
+		return "[User id="
 			+ id
-			+ " creator="
-			+ creator
-			+ " attachmentId="
-			+ attachmentId
+			+ " realName="
+			+ realName
+			+ " email="
+			+ email
+			+ " name= "
+			+ name
 			+ "]";
 	}
 	
@@ -62,23 +55,15 @@ public class Comment {
 		return id;
 	}
 
-	public int getBugId () {
-		return bugId;
+	public String getRealName () {
+		return realName;
 	}
 
-	public Integer getAttachmentId () {
-		return attachmentId;
+	public String getEmail () {
+		return email;
 	}
 
-	public String getText () {
-		return text;
-	}
-
-	public String getCreator () {
-		return creator;
-	}
-
-	public Date getTime () {
-		return time;
+	public String getName () {
+		return name;
 	}
 }

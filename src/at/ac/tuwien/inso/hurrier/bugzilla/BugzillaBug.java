@@ -24,7 +24,7 @@ package at.ac.tuwien.inso.hurrier.bugzilla;
 import java.util.Arrays;
 import java.util.Date;
 
-public class Bug {
+public class BugzillaBug {
 	private int id;
 	private String alias;
 	// since 3.4
@@ -56,7 +56,7 @@ public class Bug {
 	private String version;
 
 
-	public Bug (int id, String alias, String assignedTo,
+	public BugzillaBug (int id, String alias, String assignedTo,
 			String[] ccs, String component,
 			Date creationTime, Integer dups, boolean isOpen,
 			Date lastChangeTime, String opSys,

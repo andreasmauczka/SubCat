@@ -43,11 +43,11 @@ import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
 // See:
 //  http://www.bugzilla.org/docs/4.2/en/html/api/index.html
 
-public class Context {
+public class BugzillaContext {
 	private XmlRpcClientConfigImpl config;
 	private XmlRpcClient client;
 	
-	public Context (String bugzilla) throws MalformedURLException {
+	public BugzillaContext (String bugzilla) throws MalformedURLException {
 		assert (bugzilla != null);
 
 		// Endpoint:
@@ -95,7 +95,7 @@ public class Context {
 	//
 
 	/*
-	private void printValue (String key, Object obj, String offset) {
+	private static void printValue (String key, Object obj, String offset) {
 		if (obj instanceof Map) {
 			print ((Map<?,?>) obj, offset + " " + key + ":");
 			return ;
@@ -111,11 +111,7 @@ public class Context {
 		System.out.println (offset + key + ": " + obj);
 	}
 
-	private void print (Map<?,?> map) {
-		print (map, "");
-	}
-
-	private void print (Map<?,?> map, String offset) {
+	private static void print (Map<?,?> map, String offset) {
 		System.out.println ("----");
 		for (Object foo : map.keySet ()) {
 			Object val = map.get (foo);
@@ -123,7 +119,7 @@ public class Context {
 			printValue ((String) foo, val, offset);
 		}
 	}
-	*/
+	/**/
 	
 	//
 	// Result Map Helper:
@@ -162,7 +158,17 @@ public class Context {
 
 		Object res = map.get (key);
 		if (res == null && !optional) {
-			throw new BugzillaException ("Unregistered key `" + key + "' in Result Map");
+			StringBuilder keys = new StringBuilder ();
+			boolean first = true;
+			for (Object keyItem : map.keySet ()) {
+				//printValue (keyItem.toString (), map, "MAP: " + keyItem + ": ");
+				if (first == false) {
+					keys.append (',');
+				}
+				keys.append (keyItem);
+				first = false;
+			}
+			throw new BugzillaException ("Unregistered key `" + key + "' in Result Map. Got: [" + keys + "]");
 		}
 		return res;
 	}
@@ -358,8 +364,8 @@ public class Context {
 		Map<?,?> map = (Map<?,?>) resObj;
 		return getIntegerArrayFromResultMap (map, "ids");
 	}
-
-	public Product[] getProducts (Integer... ids) throws BugzillaException {
+	
+	public BugzillaProduct[] getProducts (Integer... ids) throws BugzillaException {
 		// Params:
 		Map<String, Object[]> params = new HashMap<String, Object[]> ();
 		params.put ("ids", ids);
@@ -368,7 +374,7 @@ public class Context {
 		return getProductsImpl (params);
 	}
 
-	public Product[] getProductsImpl (Map<String, Object[]> params) throws BugzillaException {
+	private BugzillaProduct[] getProductsImpl (Map<String, Object[]> params) throws BugzillaException {
 		assert (params != null);
 
 		Object resObj = execute ("Product.get", new Object[] {params});
@@ -378,7 +384,7 @@ public class Context {
 		Object[] objArr = getArrayFromResultMap (map, "products");
 		assertArrayType (objArr, Map.class);
 
-		Product[] products = new Product[objArr.length];
+		BugzillaProduct[] products = new BugzillaProduct[objArr.length];
 		for (int i = 0; i < objArr.length; i++) {
 			assertType (objArr[i], Map.class);
 			Map<?,?> productMap = (Map<?,?>) objArr[i];
@@ -386,10 +392,11 @@ public class Context {
 			int id = getIntFromResultMap (productMap, "id");
 			String name = getStringFromResultMap (productMap, "name");
 			String desc = getStringFromResultMap (productMap, "description");
+
+			/* Components are not available for older versions
 			Object[] compObjList = getArrayFromResultMap (productMap, "components");
 			assertArrayType (compObjList, Map.class);
 
-			/* Components are not available for older versions
 			Component[] components = new Component[compObjList.length];
 			for (int c = 0; c < compObjList.length; c++) {
 				Map<?,?> componentMap = (Map<?,?>) compObjList[i];
@@ -402,7 +409,7 @@ public class Context {
 				components[i] = new Component (cid, cname, cdesc, ckey);
 			} */
 
-			products[i] = new Product (id, name, desc);
+			products[i] = new BugzillaProduct (id, name, desc);
 		}
 
 		return products;
@@ -413,7 +420,7 @@ public class Context {
 	// Bug API:
 	//
 
-	public Bug[] getBugs (Integer... ids) throws BugzillaException {
+	public BugzillaBug[] getBugs (Integer... ids) throws BugzillaException {
 		// Get the resutl map:
 		Map<String, Object[]> params = new HashMap<String, Object[]> ();
 		params.put ("ids", ids);		
@@ -427,14 +434,18 @@ public class Context {
 		return processBugHash (map);
 	}
 	
-	public Bug[] getBugs (String product, int page, int pageSize) throws BugzillaException {
+	public BugzillaBug[] getBugs (String product, int page, int pageSize) throws BugzillaException {
 		assert (product != null);
+		assert (pageSize > 0);
+		assert (page > 0);
+
+		int offset = (page - 1) * pageSize;
 
 		// Get the resutl map:
 		Map<String, Object> params = new HashMap<String, Object> ();
 		params.put ("product", product);
 		params.put ("limit", pageSize);		
-		params.put ("offset", page);		
+		params.put ("offset", offset);		
 
 		Object resObj = execute ("Bug.search", new Object[] {params});
 		assertType (resObj, Map.class);
@@ -445,14 +456,14 @@ public class Context {
 		return processBugHash (map);
 	}
 
-	private Bug[] processBugHash (Map<?,?> map) throws BugzillaException {
+	private BugzillaBug[] processBugHash (Map<?,?> map) throws BugzillaException {
 		assert (map != null);
 
 		// Convert resuls:
 		Object[] objArr = getArrayFromResultMap (map, "bugs");
 		assertArrayType (objArr, Map.class);
 
-		Bug[] bugs = new Bug[objArr.length];
+		BugzillaBug[] bugs = new BugzillaBug[objArr.length];
 		for (int i = 0; i < objArr.length; i++) {
 			assertType (objArr[i], Map.class);
 			Map<?,?> bugMap = (Map<?,?>) objArr[i];
@@ -475,7 +486,7 @@ public class Context {
 			String summary = getStringFromResultMap (bugMap, "summary");
 			String version = getStringFromResultMap (bugMap, "version", true);
 
-			bugs[i] = new Bug (id, alias, assignedTo,
+			bugs[i] = new BugzillaBug (id, alias, assignedTo,
 					ccs, component,
 					creationTime,
 					dups, isOpen,
@@ -488,7 +499,7 @@ public class Context {
 		return bugs;
 	}
 	
-	public Map<Integer, Comment[]> getComments (Integer... ids) throws BugzillaException {
+	public Map<Integer, BugzillaComment[]> getComments (Integer... ids) throws BugzillaException {
 		// Get the resutl map:
 		Map<String, Object[]> params = new HashMap<String, Object[]> ();
 		params.put ("ids", ids);		
@@ -502,7 +513,7 @@ public class Context {
 		Map<?,?> objMap = getMapFromResultMap (map, "bugs");
 		assertType (objMap, Map.class);
 
-		HashMap<Integer, Comment[]> res = new HashMap<Integer, Comment[]> ();
+		HashMap<Integer, BugzillaComment[]> res = new HashMap<Integer, BugzillaComment[]> ();
 		for(Entry<?, ?> entry : objMap.entrySet()) {
 			// Key:
 			Object key = entry.getKey();
@@ -520,20 +531,20 @@ public class Context {
 			assertType (value, Map.class);
 
 
-			Comment[] comments = processCommentHash ((Map<?,?>) value);
+			BugzillaComment[] comments = processCommentHash ((Map<?,?>) value);
 			res.put (bugId, comments);
 		}
 		
 		return res;
 	}
 
-	private Comment[] processCommentHash (Map<?,?> map) throws BugzillaException {
+	private BugzillaComment[] processCommentHash (Map<?,?> map) throws BugzillaException {
 		assert (map != null);
 
 		Object[] objArr = getArrayFromResultMap (map, "comments");
 		assertArrayType (objArr, Map.class);
 
-		Comment[] bugs = new Comment[objArr.length];
+		BugzillaComment[] bugs = new BugzillaComment[objArr.length];
 		for (int i = 0; i < objArr.length ; i++) {
 			assertType (objArr[i], Map.class);
 			Map<?,?> cmntMap = (Map<?,?>) objArr[i];
@@ -545,14 +556,14 @@ public class Context {
 			String creator = getStringFromResultMap (cmntMap, "author", true); // Docu: creator
 			Date time = getDateFromResultMap (cmntMap, "time");
 			
-			bugs[i] = new Comment(id, bugId, attachmentId, text,
+			bugs[i] = new BugzillaComment(id, bugId, attachmentId, text,
 				creator, time);
 		}
 
 		return bugs;
 	}
 
-	public Map<Integer, History[]> getHistory (Integer... ids) throws BugzillaException {
+	public Map<Integer, BugzillaHistory[]> getHistory (Integer... ids) throws BugzillaException {
 		// Get the resutl map:
 		Map<String, Object[]> params = new HashMap<String, Object[]> ();
 		params.put ("ids", ids);
@@ -566,7 +577,7 @@ public class Context {
 		Object[] objArr = getArrayFromResultMap (map, "bugs");
 		assertArrayType (objArr, Map.class);
 
-		HashMap<Integer, History[]> history = new HashMap<Integer, History[]> ();
+		HashMap<Integer, BugzillaHistory[]> history = new HashMap<Integer, BugzillaHistory[]> ();
 		for (int i = 0; i < objArr.length; i++) {
 			assertType (objArr[i], Map.class);
 			Map<?,?> bugMap = (Map<?,?>) objArr[i];
@@ -574,7 +585,7 @@ public class Context {
 			int id = getIntFromResultMap (bugMap, "id");
 			Map<?,?>[] historiesMap = getMapArrayFromResultMap (bugMap, "history");
 
-			History[] histories = new History[historiesMap.length];
+			BugzillaHistory[] histories = new BugzillaHistory[historiesMap.length];
 			for (int h = 0; h < histories.length; h++) {
 				Map<?,?> historyMap = historiesMap[h];
 
@@ -582,7 +593,7 @@ public class Context {
 				String who = getStringFromResultMap (historyMap, "who");
 				Map<?, ?>[] changesArr = getMapArrayFromResultMap (historyMap, "changes");
 				
-				Change[] changes = new Change[changesArr.length];
+				BugzillaChange[] changes = new BugzillaChange[changesArr.length];
 				for (int c = 0; c < changesArr.length ; c++) {
 					Map<?,?> changeMap = changesArr[c];
 
@@ -591,10 +602,10 @@ public class Context {
 					String added = getStringFromResultMap (changeMap, "added");
 					Integer attachmentId = getIntFromResultMap (changeMap, "attachment_id", true);
 
-					changes[c] = new Change (fieldName, removed, added, attachmentId);
+					changes[c] = new BugzillaChange (fieldName, removed, added, attachmentId);
 				}
 				
-				histories[h] = new History (when, who, changes);
+				histories[h] = new BugzillaHistory (when, who, changes);
 			}
 
 			history.put (id, histories);
@@ -702,7 +713,7 @@ public class Context {
 		execute ("User.logout", new Object[] {});
 	}	
 
-	public User[] getUsers (String... names) throws BugzillaException {
+	public BugzillaUser[] getUsers (String... names) throws BugzillaException {
 		// Get the resutl map:
 		Map<String, Object[]> params = new HashMap<String, Object[]> ();
 		params.put ("names", names);
@@ -715,7 +726,7 @@ public class Context {
 		Object[] objArr = getArrayFromResultMap (map, "users");
 		assertArrayType (objArr, Map.class);
 
-		User[] users = new User[objArr.length];
+		BugzillaUser[] users = new BugzillaUser[objArr.length];
 		for (int i = 0; i < objArr.length; i++) {
 			assertType (objArr[i], Map.class);
 			Map<?,?> userMap = (Map<?,?>) objArr[i];
@@ -725,7 +736,7 @@ public class Context {
 			String email = getStringFromResultMap (userMap, "email", true);
 			String name = getStringFromResultMap (userMap, "name");
 
-			users[i] = new User(id, realName, email, name);
+			users[i] = new BugzillaUser(id, realName, email, name);
 		}
 
 		return users;
@@ -737,21 +748,21 @@ public class Context {
 	// Test Main:
 	//
 	
-	/*
+	//*
 	public static void main (String[] args) {
 		try {
-			Context context = new Context ("https://bugzilla.gnome.org");
+			BugzillaContext context = new BugzillaContext ("https://bugzilla.gnome.org");
 			context.enableUntrustedCertificates ();
 
-			Bug[] bugs = context.getBugs (688732);
-			for (Bug bug : bugs) {
+			BugzillaBug[] bugs = context.getBugs (703688, 692187);
+			for (BugzillaBug bug : bugs) {
 				System.out.println(bug);
 			}
 	
-			Map<Integer, History[]> histories = context.getHistory (688732);
-			for (History c : histories.get (688732)) {
+			Map<Integer, BugzillaHistory[]> histories = context.getHistory (703688, 692187);
+			for (BugzillaHistory c : histories.get (703688)) {
 				System.out.println (c);
-				for (Change v : c.getChanges ()) {
+				for (BugzillaChange v : c.getChanges ()) {
 					System.out.println ("  " + v);
 				}
 			}
@@ -787,5 +798,5 @@ public class Context {
 			e.printStackTrace();
 		}
 	}
-	*/
+	/**/
 }

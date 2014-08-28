@@ -22,13 +22,13 @@
 package at.ac.tuwien.inso.hurrier.bugzilla;
 
 
-public class Product {
+public class BugzillaProduct {
 	private int id;
 	private String name;
 	private String description;
 	//private Component[] components;
 	
-	Product (int id, String name, String description) {
+	BugzillaProduct (int id, String name, String description) {
 		
 		assert (name != null);
 		

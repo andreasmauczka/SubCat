@@ -1,4 +1,4 @@
-/* Change.java
+/* Comment.java
  *
  * Copyright (C) 2014  Brosch Florian
  * 
@@ -21,50 +21,64 @@
 
 package at.ac.tuwien.inso.hurrier.bugzilla;
 
+import java.util.Date;
 
-public class Change {
-	private String fieldName;
-	private String removed;
-	private String added;
+
+public class BugzillaComment {
+	private int id;
+	private int bugId;
+	// not supporte by all versions
 	private Integer attachmentId;
+	private String text;
+	private String creator;
+	private Date time;
 
-	public Change (String fieldName, String removed, String added,
-			Integer attachmentId) {
+	public BugzillaComment (int id, int bugId, Integer attachmentId, String text,
+			String creator, Date time) {
 
-		assert (fieldName != null);
-		assert (added != null);
-		
-		this.fieldName = fieldName;
-		this.removed = removed;
-		this.added = added;
+		assert (creator != null);
+		assert (time != null);
+		assert (text != null);
+
+		this.id = id;
+		this.bugId = bugId;
 		this.attachmentId = attachmentId;
+		this.text = text;
+		this.creator = creator;
+		this.time = time;
 	}
 
-	public String getFieldName () {
-		return fieldName;
+	public String toString () {
+		return "[Comment id="
+			+ id
+			+ " creator="
+			+ creator
+			+ " attachmentId="
+			+ attachmentId
+			+ "]";
+	}
+	
+	public int getId () {
+		return id;
 	}
 
-	public String getRemoved () {
-		return removed;
-	}
-
-	public String getAdded () {
-		return added;
+	public int getBugId () {
+		return bugId;
 	}
 
 	public Integer getAttachmentId () {
 		return attachmentId;
 	}
-	
-	public String toString () {
-		return "[Change fieldName="
-			+ fieldName
-			+ " removed="
-			+ removed
-			+ " added="
-			+ added
-			+ " attachmentId="
-			+ attachmentId
-			+ "]";
+
+	public String getText () {
+		return text;
+	}
+
+	public String getCreator () {
+		return creator;
+	}
+
+	public Date getTime () {
+		return time;
 	}
 }

@@ -43,4 +43,8 @@ public class Settings {
 	//
 	
 	public String srcLocalPath = null;
+	public String srcRemote = "";
+	public String srcRemotePw = null;
+	public String srcRemoteUser = null;
+
 }

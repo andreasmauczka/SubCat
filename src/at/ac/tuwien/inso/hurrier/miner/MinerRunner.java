@@ -22,11 +22,12 @@
 package at.ac.tuwien.inso.hurrier.miner;
 
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
-
 import at.ac.tuwien.inso.hurrier.model.Model;
+import at.ac.tuwien.inso.hurrier.model.Project;
 
 
 public class MinerRunner {
@@ -34,20 +35,28 @@ public class MinerRunner {
 
 	private List<MinerListener> listeners = new LinkedList<MinerListener> ();
 	private LinkedList<RunnableMiner> miners = new LinkedList<RunnableMiner> ();
-	private Model model;
 
+	private Settings settings;
+	
 	private MinerException storedException;
 
 	private static void init () {
 		if (registeredMiner == null) {
 			registeredMiner = new LinkedList<Miner.MetaData> ();
+			registeredMiner.add (new BugzillaMinerMetaData ());
+			registeredMiner.add (new GitMinerMetaData ());
+			//registeredMiner.add (new SvnMinerMetaData ());
 		}
 	}
 	
 	private MinerRunner (Settings settings) throws MinerException {
 		assert (settings != null);
-		
+
+		this.settings = settings;
 		init ();
+
+		Model model;
+		Project project;
 
 		try {
 			model = new Model ("my-test.db");
@@ -57,6 +66,13 @@ public class MinerRunner {
 			throw new MinerException ("SQL-Error: " + e.getMessage (), e);
 		}
 
+		try {
+			project = model.addProject (new Date (), settings.bugTrackerName, settings.bugProductName, null);
+		} catch (SQLException e) {
+			throw new MinerException ("SQL-Error: " + e.getMessage (), e);
+		}
+
+
 		LinkedList<Miner.MinerType> foundMinerTypes = new LinkedList<Miner.MinerType> ();
 		
 		for (Miner.MetaData meta : registeredMiner) {
@@ -65,7 +81,7 @@ public class MinerRunner {
 			}
 
 			if (meta.is (settings)) {
-				Miner miner = meta.create (settings, model);
+				Miner miner = meta.create (settings, project, model);
 				miner.addListener (listeners);
 				this.miners.add (new RunnableMiner (this, miner));
 				foundMinerTypes.add (meta.getType ());
@@ -133,12 +149,20 @@ public class MinerRunner {
 
 	public static void main (String[] args) {
 		Settings settings = new Settings ();
+
+		/* Bugzilla Test:
 		settings.bugRepository = "https://bugzilla.gnome.org";
 		settings.bugProductName = "valadoc";
 		settings.bugTrackerName = "Bugzilla";
 		settings.bugEnableUntrustedCertificates = true;
 		settings.bugThreads = 1;
-
+		/* GIT Test: * /
+		settings.srcLocalPath = System.getProperty("user.dir");
+		*/
+		/* Svn Test: * /
+		settings.srcLocalPath = "/home/mog/student-project-netcracker-read-only";
+		settings.srcRemote = "http://student-project-netcracker.googlecode.com/svn/trunk/";
+		*/
 		try {
 			MinerRunner runner = new MinerRunner (settings);
 			runner.addListener (new MinerListener () {

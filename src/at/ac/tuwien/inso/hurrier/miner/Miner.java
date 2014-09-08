@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import at.ac.tuwien.inso.hurrier.model.Model;
+import at.ac.tuwien.inso.hurrier.model.Project;
 
 public abstract class Miner {
 	public enum MinerType {
@@ -40,7 +41,7 @@ public abstract class Miner {
 		
 		public abstract boolean is (Settings settings);
 		
-		public abstract Miner create (Settings settings, Model model);
+		public abstract Miner create (Settings settings, Project project, Model model);
 	}
 
 	

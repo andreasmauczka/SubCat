@@ -27,7 +27,7 @@ import java.util.Date;
 public class Commit {
 	private Integer id;
 	private Project project;
-	private Identity autor;
+	private Identity author;
 	private Identity committer;
 	private Date date;
 	private String title;
@@ -35,19 +35,18 @@ public class Commit {
 	private int linesRemoved;
 	private Category category;
 
-	public Commit (Integer id, Project project, Identity autor,
+	public Commit (Integer id, Project project, Identity author,
 			Identity committer, Date date, String title, int linesAdded,
 			int linesRemoved, Category category) {
 		assert (project != null);
-		assert (autor != null);
+		assert (author != null);
 		assert (committer != null);
 		assert (date != null);
 		assert (title != null);
-		assert (category != null);
 		
 		this.id = id;
 		this.project = project;
-		this.autor = autor;
+		this.author = author;
 		this.committer = committer;
 		this.date = date;
 		this.title = title;
@@ -74,14 +73,14 @@ public class Commit {
 		this.project = project;
 	}
 
-	public Identity getAutor () {
-		return autor;
+	public Identity getAuthor () {
+		return author;
 	}
 
-	public void setAutor (Identity autor) {
-		assert (autor != null);
+	public void setAuthor (Identity author) {
+		assert (author != null);
 
-		this.autor = autor;
+		this.author = author;
 	}
 
 	public Identity getCommitter () {
@@ -135,8 +134,6 @@ public class Commit {
 	}
 
 	public Category getCategory () {
-		assert (category != null);
-
 		return category;
 	}
 
@@ -146,7 +143,7 @@ public class Commit {
 
 	@Override
 	public String toString () {
-		return "Commit [id=" + id + ", project=" + project + ", autor=" + autor
+		return "Commit [id=" + id + ", project=" + project + ", author=" + author
 				+ ", committer=" + committer + ", date=" + date + ", title="
 				+ title + ", linesAdded=" + linesAdded + ", linesRemoved="
 				+ linesRemoved + ", category=" + category + "]";

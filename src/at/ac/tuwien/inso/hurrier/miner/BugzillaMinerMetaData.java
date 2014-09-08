@@ -23,6 +23,7 @@ package at.ac.tuwien.inso.hurrier.miner;
 
 import at.ac.tuwien.inso.hurrier.miner.Miner.MinerType;
 import at.ac.tuwien.inso.hurrier.model.Model;
+import at.ac.tuwien.inso.hurrier.model.Project;
 
 
 public class BugzillaMinerMetaData implements Miner.MetaData {
@@ -40,6 +41,8 @@ public class BugzillaMinerMetaData implements Miner.MetaData {
 
 	@Override
 	public boolean is (Settings settings) {
+		assert (settings !=null);
+		
 		if (settings.bugRepository == null || settings.bugProductName == null || settings.bugTrackerName == null) {
 			return false;
 		}
@@ -48,8 +51,8 @@ public class BugzillaMinerMetaData implements Miner.MetaData {
 	}
 
 	@Override
-	public Miner create (Settings settings, Model model) {
-		return new BugzillaMiner (settings, model);
+	public Miner create (Settings settings, Project project, Model model) {
+		return new BugzillaMiner (settings, project, model);
 	}
 }
 

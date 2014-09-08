@@ -179,16 +179,19 @@ public class BugzillaMiner extends Miner {
 	}
 	
 
-	public BugzillaMiner (Settings settings, Model model) {
+	public BugzillaMiner (Settings settings, Project project, Model model) {
 		assert (settings != null);
+		assert (project != null);
 		assert (model != null);
 		
 		this.settings = settings;
+		this.project = project;
 		this.model = model;
 	}
 
 	@Override
 	public void run () throws MinerException {
+		
 		for (int i = 0; i < settings.bugThreads; i++) {
 			Worker worker = new Worker ();
 			workers.add (worker);
@@ -255,8 +258,7 @@ public class BugzillaMiner extends Miner {
 		if (product == null) {
 			throw new MinerException ("Unknown product `" + settings.bugProductName + "'");
 		}
-		
-		project = model.addProject (new Date (), settings.bugTrackerName, settings.bugProductName, null);
+
 		model.setDefaultStatus (resolveStatus ("UNCO"));
 
 		for (int page = 1; run && !Thread.currentThread().isInterrupted () ; page++) {

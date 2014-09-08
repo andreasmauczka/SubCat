@@ -74,8 +74,8 @@ public class Model {
 		"CREATE TABLE IF NOT EXISTS Projects ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
 		+ "date			TEXT								NOT NULL,"
-		+ "domain		TEXT								NOT NULL,"
-		+ "product		TEXT								NOT NULL,"
+		+ "domain		TEXT								        ,"
+		+ "product		TEXT								        ,"
 		+ "revision		TEXT								        ,"
 		+ "defaultStatusId INT										 "
 //		+ "FOREIGN KEY (defaultStatusId) REFERENCES StatusTable"
@@ -138,7 +138,7 @@ public class Model {
 		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
 		+ "UNIQUE (project, name)"
 		+ ")";
-	
+
 	private static final String BUG_TABLE =
 		"CREATE TABLE IF NOT EXISTS Bugs ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -203,19 +203,20 @@ public class Model {
 		+ "UNIQUE (project, name)"
 		+ ")";
 
+	// TODO: modified_files : int
 	private static final String COMMIT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Commits ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
 		+ "project		INT									NOT NULL,"
-		+ "autor		INT									NOT NULL,"
+		+ "author		INT									NOT NULL,"
 		+ "committer	INT									NOT NULL,"	// TODO: Rename to Pusher
 		+ "date			TEXT								NOT NULL,"
 		+ "title		TEXT								NOT NULL,"
 		+ "linesAdded	INT									NOT NULL,"
 		+ "linesRemoved	INT									NOT NULL,"
-		+ "category		INT									NOT NULL,"
+		+ "category		INT									        ,"
 		+ "FOREIGN KEY(committer) REFERENCES Identities (id),"
-		+ "FOREIGN KEY(autor) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(author) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(category) REFERENCES Categories (id),"
 		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
 		+ ")";
@@ -318,7 +319,7 @@ public class Model {
 
 	private static final String COMMIT_INSERTION =
 		"INSERT INTO Commits"
-		+ "(project, autor, committer, date, title, linesAdded, linesRemoved, category)"
+		+ "(project, author, committer, date, title, linesAdded, linesRemoved, category)"
 		+ "VALUES (?,?,?,?,?,?,?,?)";
 
 	private static final String BUGFIX_COMMIT_INSERTION =
@@ -779,12 +780,12 @@ public class Model {
 	}
 
 		
-	public synchronized Commit addCommit (Project project, Identity autor,
+	public synchronized Commit addCommit (Project project, Identity author,
 			Identity committer, Date date, String title, int linesAdded,
 			int linesRemoved, Category category)
 		throws SQLException
 	{
-		Commit commit = new Commit (null, project, autor,
+		Commit commit = new Commit (null, project, author,
 				committer, date, title, linesAdded,
 				linesRemoved, category);
 		add (commit);
@@ -795,21 +796,24 @@ public class Model {
 		assert (commit != null);
 		Project project = commit.getProject ();
 		assert (commit.getId () == null);
-		assert (commit.getAutor ().getId () != null);
+		assert (commit.getAuthor ().getId () != null);
 		assert (commit.getCommitter ().getId () != null);
-		assert (commit.getCategory ().getId () != null);
 		assert (project.getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (COMMIT_INSERTION,
 			Statement.RETURN_GENERATED_KEYS);
 		stmt.setInt (1, project.getId ());
-		stmt.setInt (2, commit.getAutor ().getId ());
+		stmt.setInt (2, commit.getAuthor ().getId ());
 		stmt.setInt (3, commit.getCommitter ().getId ());
 		stmt.setString (4, dateFormat.format (commit.getDate ()));
 		stmt.setString (5, commit.getTitle ());
 		stmt.setInt (6, commit.getLinesAdded ());
 		stmt.setInt (7, commit.getLinesRemoved ());
-		stmt.setInt (8, commit.getCategory ().getId ());
+		if (commit.getCategory () != null) {
+			stmt.setInt (8, commit.getCategory ().getId ());
+		} else {
+			stmt.setNull (8, Types.INTEGER);
+		}
 		stmt.executeUpdate();
 
 		commit.setId (getLastInsertedId (stmt));

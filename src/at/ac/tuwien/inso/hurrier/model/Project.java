@@ -34,9 +34,6 @@ public class Project {
 	public Project (Integer id, Date date, String domain, String product,
 			String revision) {
 		assert (date != null);
-		assert (domain != null);
-		assert (product != null);
-		//assert (revision != null);
 
 		this.id = id;
 		this.date = date;
@@ -68,8 +65,6 @@ public class Project {
 	}
 
 	public void setDomain (String domain) {
-		assert (domain != null);
-
 		this.domain = domain;
 	}
 
@@ -78,8 +73,6 @@ public class Project {
 	}
 
 	public void setProduct (String product) {
-		assert (product != null);
-
 		this.product = product;
 	}
 
@@ -88,8 +81,6 @@ public class Project {
 	}
 
 	public void setRevision (String revision) {
-		assert (revision != null);
-
 		this.revision = revision;
 	}
 

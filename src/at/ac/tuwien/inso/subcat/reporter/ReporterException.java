@@ -1,4 +1,4 @@
-/* TokenType.java
+/* ReporterException.java
  *
  * Copyright (C) 2014 Florian Brosch
  *
@@ -28,46 +28,20 @@
  *       Florian Brosch <flo.brosch@gmail.com>
  */
 
-package at.ac.tuwien.inso.subcat.config;
+package at.ac.tuwien.inso.subcat.reporter;
 
+public class ReporterException extends Exception {
+	private static final long serialVersionUID = 1L;
 
-public enum TokenType {
-	EOF,			// \0
+	public ReporterException (String msg) {
+		super (msg);
+	}
 
-	ASSIGN,			// =
-	PLUS,			// +
+	public ReporterException (Exception e) {
+		super (e);
+	}
 
-	OPEN_BRACE,		// {
-	CLOSE_BRACE,	// }
-	
-	SEMICOLON,		// ;
-
-	ID,				// <id>
-	TAB,			// Tab
-	PROJECT_VIEW,	// ProjectView
-	USER_VIEW,		// UserView
-	TEAM_VIEW,		// TeamView
-	VAR_NAME,		// VarName
-
-	REPORTER,		// Reporter
-	
-	PIE_CHARTS,		// PieCharts
-	PIE_CHART,		// PieCHart
-	TREND_CHARTS,	// TrendCharts
-	TREND_CHART,	// TrendChart
-	SHOW_TOTAL,		// ShowTotal
-	DROP_DOWN,		// DropDown
-	OPTION_LIST,	// OptionList
-	DISTRIBUTION_CHARTS, 		// DistributionCharts
-	DISTRIBUTION_CHARTS_OPTION,	// DistributionOption
-	FILTER,						// Filter
-	ATTRIBUTES,		// Attributes
-	ATTRIBUTE,		// Attribute
-	
-	NAME,			// Name
-	QUERY,			// Query
-	DATA_QUERY,		// DataQuery
-	
-	STRING,			// "<whatever>"
-	BOOLEAN,		// true, false
+	public ReporterException (String msg, Exception e) {
+		super (msg, e);
+	}
 }

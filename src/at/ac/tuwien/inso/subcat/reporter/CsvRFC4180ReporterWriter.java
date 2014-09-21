@@ -1,4 +1,4 @@
-/* TokenType.java
+/* CsvRFC4180Reporter.java
  *
  * Copyright (C) 2014 Florian Brosch
  *
@@ -28,46 +28,20 @@
  *       Florian Brosch <flo.brosch@gmail.com>
  */
 
-package at.ac.tuwien.inso.subcat.config;
+package at.ac.tuwien.inso.subcat.reporter;
 
+public class CsvRFC4180ReporterWriter extends AbstractCsvReporterWriter {
 
-public enum TokenType {
-	EOF,			// \0
-
-	ASSIGN,			// =
-	PLUS,			// +
-
-	OPEN_BRACE,		// {
-	CLOSE_BRACE,	// }
+	public CsvRFC4180ReporterWriter () {
+		super ("RFC 4180, USA, UK", "", "", ",", "", "\n");
+	}
 	
-	SEMICOLON,		// ;
-
-	ID,				// <id>
-	TAB,			// Tab
-	PROJECT_VIEW,	// ProjectView
-	USER_VIEW,		// UserView
-	TEAM_VIEW,		// TeamView
-	VAR_NAME,		// VarName
-
-	REPORTER,		// Reporter
-	
-	PIE_CHARTS,		// PieCharts
-	PIE_CHART,		// PieCHart
-	TREND_CHARTS,	// TrendCharts
-	TREND_CHART,	// TrendChart
-	SHOW_TOTAL,		// ShowTotal
-	DROP_DOWN,		// DropDown
-	OPTION_LIST,	// OptionList
-	DISTRIBUTION_CHARTS, 		// DistributionCharts
-	DISTRIBUTION_CHARTS_OPTION,	// DistributionOption
-	FILTER,						// Filter
-	ATTRIBUTES,		// Attributes
-	ATTRIBUTE,		// Attribute
-	
-	NAME,			// Name
-	QUERY,			// Query
-	DATA_QUERY,		// DataQuery
-	
-	STRING,			// "<whatever>"
-	BOOLEAN,		// true, false
+	@Override
+	protected String escapeValue (String value) {
+		if (value.contains ("\"") || value.contains (",")) {
+			return "\"" + value + "\"";
+		}
+		
+		return value;
+	}
 }

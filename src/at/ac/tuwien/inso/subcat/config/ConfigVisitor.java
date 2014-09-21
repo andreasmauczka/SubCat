@@ -87,4 +87,7 @@ public class ConfigVisitor {
 	public void visitDistributionAttributesConfig (DistributionAttributesConfig distributionAttributesConfig) {
 	}
 
+	public void visitExporterConfig (ExporterConfig exporterConfig) {
+	}
+
 }

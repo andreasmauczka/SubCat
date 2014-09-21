@@ -1,4 +1,4 @@
-/* TokenType.java
+/* CsvEuropeanReporterWriter.java
  *
  * Copyright (C) 2014 Florian Brosch
  *
@@ -27,47 +27,20 @@
  * Author:
  *       Florian Brosch <flo.brosch@gmail.com>
  */
+package at.ac.tuwien.inso.subcat.reporter;
 
-package at.ac.tuwien.inso.subcat.config;
+public class CsvEuropeanReporterWriter extends AbstractCsvReporterWriter {
 
+	public CsvEuropeanReporterWriter () {
+		super ("European", "", "", ";", "", "\n");
+	}
 
-public enum TokenType {
-	EOF,			// \0
-
-	ASSIGN,			// =
-	PLUS,			// +
-
-	OPEN_BRACE,		// {
-	CLOSE_BRACE,	// }
-	
-	SEMICOLON,		// ;
-
-	ID,				// <id>
-	TAB,			// Tab
-	PROJECT_VIEW,	// ProjectView
-	USER_VIEW,		// UserView
-	TEAM_VIEW,		// TeamView
-	VAR_NAME,		// VarName
-
-	REPORTER,		// Reporter
-	
-	PIE_CHARTS,		// PieCharts
-	PIE_CHART,		// PieCHart
-	TREND_CHARTS,	// TrendCharts
-	TREND_CHART,	// TrendChart
-	SHOW_TOTAL,		// ShowTotal
-	DROP_DOWN,		// DropDown
-	OPTION_LIST,	// OptionList
-	DISTRIBUTION_CHARTS, 		// DistributionCharts
-	DISTRIBUTION_CHARTS_OPTION,	// DistributionOption
-	FILTER,						// Filter
-	ATTRIBUTES,		// Attributes
-	ATTRIBUTE,		// Attribute
-	
-	NAME,			// Name
-	QUERY,			// Query
-	DATA_QUERY,		// DataQuery
-	
-	STRING,			// "<whatever>"
-	BOOLEAN,		// true, false
+	@Override
+	protected String escapeValue (String value) {
+		if (value.contains ("\"") || value.contains (";")) {
+			return "\"" + value + "\"";
+		}
+		
+		return value;
+	}
 }

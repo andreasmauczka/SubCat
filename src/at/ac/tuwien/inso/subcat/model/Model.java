@@ -1243,6 +1243,17 @@ public class Model {
 		return new DistributionChartData (data);
 	}
 
+	public synchronized void rawSelect (Query query, Map<String, Object> vars, SelectCallback callback) throws SemanticException, SQLException, Exception {
+		assert (query != null);
+		assert (vars != null);
+		assert (callback != null);
+
+		PreparedStatement stmt = buildPreparedStmt (query, vars);
+
+		// Execution:
+		ResultSet res = stmt.executeQuery ();
+		callback.processResult (res);
+	}
 
 	//
 	// Listener:

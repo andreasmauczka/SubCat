@@ -30,15 +30,37 @@
 
 package at.ac.tuwien.inso.subcat.config;
 
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+
 
 public class Configuration {
 	private TeamViewConfig teamViewConfig;
 	private ProjectViewConfig projectViewConfig;
 	private UserViewConfig userViewConfig;
-
+	private List<ExporterConfig> exporter;
+	private Map<String, ExporterConfig> exporterMap;
+	
 	public Configuration () {
+		exporter = new LinkedList<ExporterConfig> ();
+		exporterMap = new HashMap<String, ExporterConfig> ();
 	}
 
+	public boolean addExporterConfig (ExporterConfig expConf) {
+		if (exporterMap.containsKey (expConf.getName ())) {
+			return false;
+		}
+
+		exporter.add (expConf);
+		exporterMap.put (expConf.getName (), expConf);
+		return true;
+	}
+
+	public List<ExporterConfig> getExporterConfigs () {
+		return exporter;
+	}
 	
 	public TeamViewConfig getTeamViewConfig () {
 		return teamViewConfig;

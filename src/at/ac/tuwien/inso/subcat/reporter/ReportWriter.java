@@ -1,4 +1,4 @@
-/* TokenType.java
+/* ReportWriter.java
  *
  * Copyright (C) 2014 Florian Brosch
  *
@@ -28,46 +28,19 @@
  *       Florian Brosch <flo.brosch@gmail.com>
  */
 
-package at.ac.tuwien.inso.subcat.config;
+package at.ac.tuwien.inso.subcat.reporter;
 
+import at.ac.tuwien.inso.subcat.miner.Settings;
+import at.ac.tuwien.inso.subcat.model.SelectCallback;
+import at.ac.tuwien.inso.subcat.model.Project;
 
-public enum TokenType {
-	EOF,			// \0
+public abstract class ReportWriter implements SelectCallback {
+	public abstract String getTypeName ();
+	public abstract String getLabel ();
 
-	ASSIGN,			// =
-	PLUS,			// +
+	public abstract void init (Project project, Settings settings, String outputPath)
+		throws ReporterException;
 
-	OPEN_BRACE,		// {
-	CLOSE_BRACE,	// }
-	
-	SEMICOLON,		// ;
-
-	ID,				// <id>
-	TAB,			// Tab
-	PROJECT_VIEW,	// ProjectView
-	USER_VIEW,		// UserView
-	TEAM_VIEW,		// TeamView
-	VAR_NAME,		// VarName
-
-	REPORTER,		// Reporter
-	
-	PIE_CHARTS,		// PieCharts
-	PIE_CHART,		// PieCHart
-	TREND_CHARTS,	// TrendCharts
-	TREND_CHART,	// TrendChart
-	SHOW_TOTAL,		// ShowTotal
-	DROP_DOWN,		// DropDown
-	OPTION_LIST,	// OptionList
-	DISTRIBUTION_CHARTS, 		// DistributionCharts
-	DISTRIBUTION_CHARTS_OPTION,	// DistributionOption
-	FILTER,						// Filter
-	ATTRIBUTES,		// Attributes
-	ATTRIBUTE,		// Attribute
-	
-	NAME,			// Name
-	QUERY,			// Query
-	DATA_QUERY,		// DataQuery
-	
-	STRING,			// "<whatever>"
-	BOOLEAN,		// true, false
+	public abstract void cleanup ()
+		throws ReporterException;
 }

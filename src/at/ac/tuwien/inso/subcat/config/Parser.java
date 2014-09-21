@@ -60,7 +60,7 @@ public class Parser {
 
 	
 		while (getCurrent ().getType () != TokenType.EOF) {
-			parseView (config);
+			parseRoot (config);
 		}
 	}
 
@@ -73,12 +73,16 @@ public class Parser {
 	// Rules:
 	//
 
-	private void parseView (Configuration config) throws ParserException {
+	private void parseRoot (Configuration config) throws ParserException {
 		assert (config != null);
 
 		Token current = getCurrent ();
-		
+
 		switch (current.getType ()) {
+		case REPORTER:
+			parseReporter (config);
+			break;
+
 		case TEAM_VIEW:
 			TeamViewConfig teamView = new TeamViewConfig (current.getStart (), current.getEnd ());
 			config.setTeamViewConfig (teamView);
@@ -101,11 +105,35 @@ public class Parser {
 			error ("unexpected token " + current.getType () + ", expected: "
 				+ TokenType.TEAM_VIEW
 				+ "|" + TokenType.USER_VIEW 
-				+ "|" + TokenType.PROJECT_VIEW);
+				+ "|" + TokenType.PROJECT_VIEW
+				+ "|" + TokenType.REPORTER);
 			break;
 		}
 		
 		expect (TokenType.SEMICOLON);
+	}
+
+	private void parseReporter (Configuration config) throws ParserException {
+		assert (config != null);
+
+		String name;
+		Query query;
+
+		Token current = getCurrent ();
+		expect (TokenType.REPORTER);
+
+		expect (TokenType.ASSIGN);
+		expect (TokenType.OPEN_BRACE);
+
+		name = parseName ();
+		query = parseQuery ();
+
+		ExporterConfig expConf = new ExporterConfig (name, query, current.getStart (), current.getEnd ());
+		if (!config.addExporterConfig (expConf)) {
+			throw new ParserException ("Exporter `" + expConf.getName () + "' already defined.", current.getStart (), current.getEnd ());
+		}
+		
+		expect (TokenType.CLOSE_BRACE);
 	}
 
 	private void parseView (Configuration config, TokenType tabTokenType, ViewConfig view) throws ParserException {

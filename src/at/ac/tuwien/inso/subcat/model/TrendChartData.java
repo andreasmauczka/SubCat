@@ -35,7 +35,6 @@ public class TrendChartData {
 	private Integer[] data;
 	
 	public TrendChartData () {
-		assert (data != null);
 
 		this.data = new Integer[12];
 	}

@@ -207,7 +207,7 @@ public class BugzillaMiner extends Miner {
 			worker.start ();
 		}
 
-		triggerStart ();
+		emitStart ();
 
 		try {
 			_run ();
@@ -232,7 +232,7 @@ public class BugzillaMiner extends Miner {
 			throw storedException;
 		}
 
-		triggerEnd ();
+		emitEnd ();
 	}
 
 	private void abortRun (MinerException e) {
@@ -247,7 +247,7 @@ public class BugzillaMiner extends Miner {
 			worker.interrupt ();
 		}
 
-		triggerStop ();
+		emitStop ();
 	}
 	
 	public void _run () throws MinerException, SQLException, BugzillaException, InterruptedException {

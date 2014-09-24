@@ -174,9 +174,9 @@ public class SvnMiner extends Miner {
 	public void run () throws MinerException {
 		// TODO Auto-generated method stub
 		try {
-			triggerStart ();
+			emitStart ();
 			_run ();
-			triggerEnd ();
+			emitEnd ();
 		} catch (IOException e) {
 			throw new MinerException ("IO-Error: " + e.getMessage (), e);
 		} catch (SQLException e) {
@@ -195,6 +195,6 @@ public class SvnMiner extends Miner {
 	@Override
 	public void stop() {
 		// TODO Auto-generated method stub
-		triggerStop ();
+		emitStop ();
 	}
 }

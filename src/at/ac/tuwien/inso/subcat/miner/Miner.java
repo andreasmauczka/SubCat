@@ -79,19 +79,19 @@ public abstract class Miner {
 	// Listener Helper:
 	//
 
-	protected synchronized void triggerStart () {
+	protected synchronized void emitStart () {
 		for (MinerListener listener : listeners) {
 			listener.start (this);
 		}
 	}
 
-	protected synchronized void triggerEnd () {
+	protected synchronized void emitEnd () {
 		for (MinerListener listener : listeners) {
 			listener.end (this);
 		}
 	}
 
-	protected synchronized void triggerStop () {
+	protected synchronized void emitStop () {
 		for (MinerListener listener : listeners) {
 			listener.stop (this);
 		}

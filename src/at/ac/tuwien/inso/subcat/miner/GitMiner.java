@@ -143,9 +143,9 @@ public class GitMiner extends Miner {
 	@Override
 	public void run () throws MinerException {
 		try {
-			triggerStart ();
+			emitStart ();
 			_run ();
-			triggerEnd ();
+			emitEnd ();
 		} catch (IOException e) {
 			throw new MinerException ("IO-Error: " + e.getMessage (), e);
 		} catch (SQLException e) {
@@ -249,6 +249,6 @@ public class GitMiner extends Miner {
 	@Override
 	public void stop () {
 		// TODO
-		triggerStop ();
+		emitStop ();
 	}
 }

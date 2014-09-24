@@ -118,7 +118,7 @@ public class SvnMiner extends Miner {
 	
 	private void parseLogentry () throws XmlReaderException, ParseException, IOException, SQLException {
 		
-		String revision = reader.getAttribute ("revision");
+		//String revision = reader.getAttribute ("revision");
 		
 		reader.acceptStart ("logentry", true);
 		

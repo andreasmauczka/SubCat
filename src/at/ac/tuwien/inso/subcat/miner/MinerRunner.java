@@ -44,8 +44,6 @@ public class MinerRunner {
 
 	private List<MinerListener> listeners = new LinkedList<MinerListener> ();
 	private LinkedList<RunnableMiner> miners = new LinkedList<RunnableMiner> ();
-
-	private Settings settings;
 	
 	private MinerException storedException;
 
@@ -61,7 +59,6 @@ public class MinerRunner {
 	private MinerRunner (Settings settings) throws MinerException {
 		assert (settings != null);
 
-		this.settings = settings;
 		init ();
 
 		Model model;

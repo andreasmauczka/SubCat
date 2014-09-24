@@ -143,7 +143,9 @@ public class GitMiner extends Miner {
 	@Override
 	public void run () throws MinerException {
 		try {
+			triggerStart ();
 			_run ();
+			triggerEnd ();
 		} catch (IOException e) {
 			throw new MinerException ("IO-Error: " + e.getMessage (), e);
 		} catch (SQLException e) {
@@ -195,7 +197,6 @@ public class GitMiner extends Miner {
 		int linesAdded = outputStream.getLinesAdded ();
 		int linesRemoved = outputStream.getLinesRemoved ();
 
-		//System.out.println("Commit: " + rev);
 		model.addCommit (project, author, committer, date, message, linesAdded, linesRemoved, null);
 
 		//System.out.println (repository + ": +" + linesAdded + " -" + linesRemoved);
@@ -248,5 +249,6 @@ public class GitMiner extends Miner {
 	@Override
 	public void stop () {
 		// TODO
+		triggerStop ();
 	}
 }

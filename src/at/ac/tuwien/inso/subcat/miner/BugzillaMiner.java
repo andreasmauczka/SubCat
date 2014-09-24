@@ -207,8 +207,9 @@ public class BugzillaMiner extends Miner {
 			worker.start ();
 		}
 
+		triggerStart ();
+
 		try {
-			triggerStart ();
 			_run ();
 		} catch (SQLException e) {
 			abortRun (new MinerException ("SQL-Error: " + e.getMessage (), e));
@@ -230,6 +231,8 @@ public class BugzillaMiner extends Miner {
 		if (storedException != null) {
 			throw storedException;
 		}
+
+		triggerEnd ();
 	}
 
 	private void abortRun (MinerException e) {
@@ -243,8 +246,8 @@ public class BugzillaMiner extends Miner {
 		for (Worker worker : workers) {
 			worker.interrupt ();
 		}
-		
-		triggerEnd ();
+
+		triggerStop ();
 	}
 	
 	public void _run () throws MinerException, SQLException, BugzillaException, InterruptedException {

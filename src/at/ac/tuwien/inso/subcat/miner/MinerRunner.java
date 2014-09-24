@@ -159,7 +159,7 @@ public class MinerRunner {
 	public static void main (String[] args) {
 		Settings settings = new Settings ();
 
-		/* Bugzilla Test:
+		/* Bugzilla Test: */
 		settings.bugRepository = "https://bugzilla.gnome.org";
 		settings.bugProductName = "valadoc";
 		settings.bugTrackerName = "Bugzilla";
@@ -167,7 +167,6 @@ public class MinerRunner {
 		settings.bugThreads = 1;
 		/* GIT Test: * /
 		settings.srcLocalPath = System.getProperty("user.dir");
-		*/
 		/* Svn Test: * /
 		settings.srcLocalPath = "/home/mog/student-project-netcracker-read-only";
 		settings.srcRemote = "http://student-project-netcracker.googlecode.com/svn/trunk/";

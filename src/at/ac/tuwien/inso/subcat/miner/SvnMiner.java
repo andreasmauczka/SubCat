@@ -99,7 +99,7 @@ public class SvnMiner extends Miner {
 		
 		assert (date != null || msg != null || path != null);
 		
-		System.out.println("Commit: " + author);
+		System.out.println ("Commit: " + author);
 		model.addCommit (project, author, committer, date, msg, 0, 0, null);
 		// TODO store path
 	
@@ -108,9 +108,9 @@ public class SvnMiner extends Miner {
 	public void parse () throws XmlReaderException, ParseException, IOException, SQLException {
 		reader = new XmlReader (settings.srcLocalPath);
 		reader.expectStart ("log", true);
-		reader.acceptStart("log", true);
-		while (reader.isStart("logentry")){
-			parseLogentry();
+		reader.acceptStart ("log", true);
+		while (reader.isStart ("logentry")){
+			parseLogentry ();
 		}
 		reader.expectEnd ("log", true);
 	}
@@ -118,22 +118,22 @@ public class SvnMiner extends Miner {
 	
 	private void parseLogentry () throws XmlReaderException, ParseException, IOException, SQLException {
 		
-		String revision = reader.getAttribute("revision");
+		String revision = reader.getAttribute ("revision");
 		
-		reader.acceptStart("logentry", true);
+		reader.acceptStart ("logentry", true);
 		
 		//<author> might be omitted, e.g. during cvs2svn migration
-		String author = parseOptional("author");
+		String author = parseOptional ("author");
 		
 		//parse date element
-		SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'");
-		Date date = format.parse(parseSingle("date"));
+		SimpleDateFormat format = new SimpleDateFormat ("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'");
+		Date date = format.parse (parseSingle("date"));
 		
 		//<paths> must have at least one element <path> but may have more
-		String path = parseMulti(new String[]{"paths","path"});
+		String path = parseMulti (new String[]{"paths","path"});
 		
 		//parse commit msg
-		String msg = parseSingle("msg");
+		String msg = parseSingle ("msg");
 		
 		//store the commit in the DB
 		processCommit (author, date, path, msg);
@@ -141,7 +141,7 @@ public class SvnMiner extends Miner {
 	}
 
 	private String parseSingle (String element) throws XmlReaderException {
-		reader.acceptStart(element,true);
+		reader.acceptStart (element,true);
 		String content = reader.getText();
 		reader.expectEnd (element, true);
 		return content;
@@ -161,20 +161,22 @@ public class SvnMiner extends Miner {
 		reader.acceptStart(elements[0],true);
 		String content = parseSingle(elements[1]);
 		try {
-			reader.expectEnd(elements[0], true);
+			reader.expectEnd (elements[0], true);
 		}
 		catch (XmlReaderException e){
-			content = parseMulti(elements);
+			content = parseMulti (elements);
 		}
 		
 		return content;
 	}
 	
 	@Override
-	public void run() throws MinerException {
+	public void run () throws MinerException {
 		// TODO Auto-generated method stub
 		try {
+			triggerStart ();
 			_run ();
+			triggerEnd ();
 		} catch (IOException e) {
 			throw new MinerException ("IO-Error: " + e.getMessage (), e);
 		} catch (SQLException e) {
@@ -187,14 +189,12 @@ public class SvnMiner extends Miner {
 		
 	}
 	private void _run () throws IOException, MinerException, SQLException, ParseException, XmlReaderException {
-		parse();
-		
+		parse ();	
 	}
 
 	@Override
 	public void stop() {
 		// TODO Auto-generated method stub
-
+		triggerStop ();
 	}
-	
-	}
+}

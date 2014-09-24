@@ -62,7 +62,7 @@ public class SvnMinerMetaData implements MetaData {
 		}
 
 		File file = new File (settings.srcLocalPath);
-		if (!file.exists() || file.isDirectory()) {
+		if (!file.exists () || file.isDirectory ()) {
 			return false;
 		}
 

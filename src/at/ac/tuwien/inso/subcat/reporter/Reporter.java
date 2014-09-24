@@ -86,7 +86,7 @@ public class Reporter {
 
 		try {
 			formatter.init (project, settings, outputPath);
-			model.rawSelect (config.getQuery (), vars, formatter);
+			model.rawForeach (config.getQuery (), vars, formatter);
 		} catch (ReporterException e) {
 			throw e;
 		} catch (Exception e) {

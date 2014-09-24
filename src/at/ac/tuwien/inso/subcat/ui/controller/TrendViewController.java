@@ -30,6 +30,7 @@
 
 package at.ac.tuwien.inso.subcat.ui.controller;
 
+import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.LinkedList;
 import java.util.Map;
@@ -82,6 +83,9 @@ public class TrendViewController extends ChartController implements TrendViewLis
 		} catch (SemanticException e) {
 			// TODO
 			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO
+			e.printStackTrace();
 		}
 	}
 	
@@ -95,6 +99,9 @@ public class TrendViewController extends ChartController implements TrendViewLis
 			} catch (SemanticException e) {
 				// TODO
 				e.printStackTrace ();
+			} catch (SQLException e) {
+				// TODO
+				e.printStackTrace();
 			}
 		}
 	}
@@ -124,6 +131,9 @@ public class TrendViewController extends ChartController implements TrendViewLis
 		} catch (SemanticException e) {
 			// TODO
 			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO
+			e.printStackTrace();
 		}
 	}
 	
@@ -142,10 +152,13 @@ public class TrendViewController extends ChartController implements TrendViewLis
 		} catch (SemanticException e) {
 			// TODO
 			e.printStackTrace ();
+		} catch (SQLException e) {
+			// TODO
+			e.printStackTrace();
 		}
 	}
 
-	private void drawLine (ChartIdentifier identifier) throws SemanticException {
+	private void drawLine (ChartIdentifier identifier) throws SemanticException, SQLException {
 		assert (identifier != null);
 
 		Map<String, Object> vars = getVariables (identifier);

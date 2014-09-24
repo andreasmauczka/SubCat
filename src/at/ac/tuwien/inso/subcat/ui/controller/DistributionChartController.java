@@ -30,6 +30,7 @@
 
 package at.ac.tuwien.inso.subcat.ui.controller;
 
+import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.Map;
 
@@ -78,6 +79,9 @@ public class DistributionChartController extends ChartController implements Dist
 		} catch (SemanticException e) {
 			// TODO
 			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 
 	}
@@ -91,6 +95,9 @@ public class DistributionChartController extends ChartController implements Dist
 			} catch (SemanticException e) {
 				// TODO
 				e.printStackTrace ();				
+			} catch (SQLException e) {
+				// TODO 
+				e.printStackTrace();
 			}
 		}
 	}
@@ -117,10 +124,13 @@ public class DistributionChartController extends ChartController implements Dist
 		} catch (SemanticException e) {
 			// TODO
 			e.printStackTrace ();				
+		} catch (SQLException e) {
+			// TODO
+			e.printStackTrace();
 		}
 	}
 	
-	private void drawLine (DistributionView.ChartIdentifier identifier) throws SemanticException {
+	private void drawLine (DistributionView.ChartIdentifier identifier) throws SemanticException, SQLException {
 		assert (identifier != null);
 
 		Map<String, Object> vars = getVariables (identifier);

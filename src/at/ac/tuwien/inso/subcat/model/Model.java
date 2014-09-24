@@ -42,7 +42,9 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import at.ac.tuwien.inso.subcat.config.DistributionAttributesConfig;
@@ -59,8 +61,10 @@ import at.ac.tuwien.inso.subcat.config.TrendChartPlotConfig;
 
 public class Model {
 	private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-	private Connection conn;
 	private String name;
+
+	private LinkedList<Connection> connections = new LinkedList<Connection> ();
+	private int connPoolSize;
 
 	private LinkedList<ModelModificationListener> listeners = new LinkedList<ModelModificationListener> ();
 
@@ -70,7 +74,7 @@ public class Model {
 	//
 	
 	private static final String ENABLE_FOREIGN_KEYS =
-			"PRAGMA foreign_keys = ON";
+		"PRAGMA foreign_keys = ON";
 
 	
 	//
@@ -168,9 +172,6 @@ public class Model {
 		+ "FOREIGN KEY(curStat) REFERENCES Status (id)"
 		+ ")";
 
-	
-
-	// TODO: Add date
 	private static final String COMMENT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Comments ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -265,6 +266,162 @@ public class Model {
 		+ "  WHERE Bugs.id = NEW.bug; "
 		+ "END ";
 
+	private static final String SELECT_ALL_COMMITS =
+		"SELECT"
+		+ " Commits.id				AS cId,"
+		+ " Commits.date			AS cDate,"
+		+ " Commits.title			AS cTitle,"
+		+ " Commits.linesAdded		AS cLinesAdded,"
+		+ " Commits.linesRemoved	AS cLinesAdded,"
+		+ " Commits.category		AS cCategory,"
+		+ " AuthorIdentity.id		AS aiId,"
+		+ " AuthorIdentity.name		AS aiName,"
+		+ " AuthorIdentity.mail		AS aiName,"
+		+ " AuthorUser.id			AS auId,"
+		+ " AuthorUser.name			AS auName,"
+		+ " CommitterIdentity.id	AS aiId,"
+		+ " CommitterIdentity.name	AS aiName,"
+		+ " CommitterIdentity.mail	AS aiName,"
+		+ " CommitterUser.id		AS auId,"
+		+ " CommitterUser.name		AS auName "
+		+ "FROM"
+		+ " Commits "
+		+ "LEFT JOIN Identities AuthorIdentity"
+		+ " ON Commits.author = AuthorIdentity.id "
+		+ "LEFT JOIN Users AuthorUser"
+		+ " ON AuthorUser.id = AuthorIdentity.user "
+		+ "LEFT JOIN Identities CommitterIdentity"
+		+ " ON Commits.author = CommitterIdentity.id "
+		+ "LEFT JOIN Users CommitterUser"
+		+ " ON CommitterUser.id = CommitterIdentity.user "
+		+ "WHERE"
+		+ " Commits.project = ?";
+
+	private static final String SELECT_ALL_BUGS = 
+		"SELECT"
+		+ " Bugs.id,"
+		+ " Identity.id				AS aiId,"
+		+ " Identity.name			AS aiName,"
+		+ " Identity.mail			AS aiName,"
+		+ " Users.id				AS auId,"
+		+ " Users.name				AS auName,"
+		+ " Bugs.component,"
+		+ " Bugs.title,"
+		+ " Bugs.creation,"
+		+ " Bugs.priority,"
+		+ " Bugs.severity,"
+		+ " Bugs.category,"
+		+ " Bugs.comments,"
+		+ " Bugs.curStat "
+		+ "FROM"
+		+ " Bugs "
+		+ "LEFT JOIN Identities Identity"
+		+ " ON Bugs.identity = Identity.id "
+		+ "LEFT JOIN Users "
+		+ " ON Users.id = Identity.user "
+		+ "JOIN Components"
+		+ " ON Components.id = Bugs.component "
+		+ "WHERE"
+		+ " Components.project = ?";
+
+	private static final String SELECT_ALL_CATEGORIES =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " Categories "
+		+ "WHERE"
+		+ " project = ?";
+
+	private static final String SELECT_ALL_SEVERITIES =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " Severity "
+		+ "WHERE"
+		+ " project = ?";
+
+	private static final String SELECT_ALL_STATUSES =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM "
+		+ " Status "
+		+ "WHERE"
+		+ " project = ?";
+
+	private static final String SELECT_ALL_PRIORITIES =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " Priorities "
+		+ "WHERE "
+		+ " project = ?";
+
+	private static final String SELECT_ALL_COMPONENTS =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " Components "
+		+ "WHERE"
+		+ " project = ?";
+
+	private static final String SELECT_ALL_PROJECTS =
+		"SELECT"
+		+ " id,"
+		+ " date,"
+		+ " domain,"
+		+ " product,"
+		+ " revision "
+		+ "FROM"
+		+ " Projects";
+
+	private static final String SELECT_ALL_COMMENTS =
+		"SELECT"
+		+ " Comments.id,"
+		+ " Comments.creation,"
+		+ " Identity.id				AS aiId,"
+		+ " Identity.name			AS aiName,"
+		+ " Identity.mail			AS aiName,"
+		+ " Users.id				AS auId,"
+		+ " Users.name				AS auName,"
+		+ " Comments.content "
+		+ "FROM"
+		+ " Comments "
+		+ "LEFT JOIN Identities Identity"
+		+ " ON Comments.identity = Identity.id "
+		+ "LEFT JOIN Users "
+		+ " ON Users.id = Identity.user "
+		+ "WHERE"
+		+ " Comments.bug = ?";
+
+	private static final String SELECT_FULL_HISTORY =
+		"SELECT"
+		+ " BugHistories.id,"
+		+ " Status.id,"
+		+ " Status.name,"
+		+ " Identity.id				AS aiId,"
+		+ " Identity.name			AS aiName,"
+		+ " Identity.mail			AS aiName,"
+		+ " Users.id				AS auId,"
+		+ " Users.name				AS auName,"
+		+ " BugHistories.date "
+		+ "FROM"
+		+ " BugHistories "
+		+ "LEFT JOIN Identities Identity"
+		+ " ON BugHistories.identity = Identity.id "
+		+ "LEFT JOIN Users "
+		+ " ON Users.id = Identity.user "
+		+ "LEFT JOIN Status"
+		+ " ON BugHistories.status = Status.id "
+		+ "WHERE"
+		+ " BugHistories.bug = ? "
+		+ "ORDER BY"
+		+ " BugHistories.id";
+
 
 	//
 	// Insertions:
@@ -344,33 +501,64 @@ public class Model {
 	private static final String UPDATE_DEFAULT_STATUS =
 		"UPDATE Projects SET defaultStatusId = ? WHERE id = ?";
 
-	
+
 	
 	//
 	// Creation & Destruction:
 	//
 	
-	public Model (String name) throws SQLException, ClassNotFoundException {
+	public Model (String name) throws ClassNotFoundException, SQLException {
+		this (name, 1);
+	}
+	
+	public Model (String name, int connPoolSize) throws SQLException, ClassNotFoundException {
+		assert (connPoolSize >= 1);
 		assert (name != null);
-		
-		//Set config
-		org.sqlite.SQLiteConfig config = new org.sqlite.SQLiteConfig ();
-		config.enforceForeignKeys (true);
 
-	    
-		// TODO: Escape path
 		Class.forName ("org.sqlite.JDBC");
-		conn = DriverManager.getConnection ("jdbc:sqlite:" + name,
-				config.toProperties());
+		this.name = name;
+
+		this.connPoolSize = 0;
+		setConnectionPoolSize (connPoolSize);
 
 		// Prepare database:
 		createTables ();
+	}
 
-		this.name = name;
+	
+	//
+	// Connection helper:
+	//
+	
+	private synchronized Connection popConnection () throws SQLException {
+		assert (connections != null);
+		
+		Connection conn = connections.poll ();
+		if (connections.size () == 0) {
+			conn = createConnection ();
+		}
+		
+		return conn;
+	}
+
+	private synchronized void pushConnection (Connection conn) throws SQLException {
+		assert (conn != null);
+
+		if (connections == null || connections.size () == connPoolSize) {
+			conn.close ();
+		} else {
+			connections.add (conn);
+		}
 	}
 
 	public synchronized void close () throws SQLException {
-		conn.close ();
+		for (Connection conn : connections) {
+			conn.close ();
+		}
+
+		connections = null;
+		connPoolSize = -1;
+		name = null;
 	}
 
 	public synchronized boolean remove() throws SQLException {
@@ -380,10 +568,40 @@ public class Model {
 		File file = new File (name + ".db");
 		boolean res = file.delete ();
 		
-		name = null;
 		return res;
 	}
+	
+	public synchronized void setConnectionPoolSize (int poolSize) throws SQLException {
+		assert (poolSize > 0);
 
+		if (poolSize > this.connPoolSize) {
+			for (int i = this.connPoolSize; i <= poolSize ; i++) {
+				Connection conn = createConnection ();
+				connections.add (conn);				
+			}
+		} else if (poolSize < this.connPoolSize) {
+			while (connections.size () > poolSize) {
+				connections.pollFirst ().close ();
+			}
+		}
+
+		this.connPoolSize = poolSize;
+	}
+
+	private Connection createConnection () throws SQLException {
+		org.sqlite.SQLiteConfig config = new org.sqlite.SQLiteConfig ();
+		config.enforceForeignKeys (true);
+
+		// TODO: Escape path
+		Connection conn = DriverManager.getConnection ("jdbc:sqlite:" + name,
+			config.toProperties());
+
+		Statement stmt = conn.createStatement();
+		stmt.executeUpdate (ENABLE_FOREIGN_KEYS);
+		stmt.close ();
+
+		return conn;
+	}
 	
 	
 	//
@@ -397,264 +615,319 @@ public class Model {
 		return proj;
 	}
 
-	public synchronized void setDefaultStatus (Status status) throws SQLException {
+	public void setDefaultStatus (Status status) throws SQLException {
 		assert (status != null);
 		assert (status.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (UPDATE_DEFAULT_STATUS);
-	
-		stmt.setInt (1, status.getId ());
-		stmt.setInt (2, status.getProject ().getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (UPDATE_DEFAULT_STATUS);
+		
+			stmt.setInt (1, status.getId ());
+			stmt.setInt (2, status.getProject ().getId ());
+			stmt.executeUpdate();
+			stmt.close ();
+		} finally {
+			pushConnection (conn);
+		}
 	}
 	
-	public synchronized void add (Project project) throws SQLException {
+	public void add (Project project) throws SQLException {
 		assert (project != null);
 		assert (project.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (PROJECT_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
+		Connection conn = popConnection ();
 
-		stmt.setString (1, dateFormat.format (project.getDate ()));
-		stmt.setString (2, project.getDomain ());
-		stmt.setString (3, project.getProduct ());
-		stmt.setString (4, project.getRevision ());
-		stmt.executeUpdate();
-
-		project.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-
-		for (ModelModificationListener listener : listeners) {
-			listener.projectAdded (project);
+		try {
+			PreparedStatement stmt = conn.prepareStatement (PROJECT_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setString (1, dateFormat.format (project.getDate ()));
+			stmt.setString (2, project.getDomain ());
+			stmt.setString (3, project.getProduct ());
+			stmt.setString (4, project.getRevision ());
+			stmt.executeUpdate();
+	
+			project.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+	
+			for (ModelModificationListener listener : listeners) {
+				listener.projectAdded (project);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
 	
-	public synchronized User addUser (Project project, String name) throws SQLException {
+	public User addUser (Project project, String name) throws SQLException {
 		User user = new User (null, project, name);
 		add (user);
 		return user;
 	}
 
-	public synchronized void add (User user) throws SQLException {
+	public void add (User user) throws SQLException {
 		assert (user != null);
 		Project project = user.getProject ();
 		assert (project.getId () != null);
 		assert (user.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (USER_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
+		Connection conn = popConnection ();
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString (2, user.getName ());
-		stmt.executeUpdate();
-
-		user.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
+		try {
+			PreparedStatement stmt = conn.prepareStatement (USER_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
 	
-		for (ModelModificationListener listener : listeners) {
-			listener.userAdded (user);
+			stmt.setInt (1, project.getId ());
+			stmt.setString (2, user.getName ());
+			stmt.executeUpdate();
+	
+			user.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+		
+			for (ModelModificationListener listener : listeners) {
+				listener.userAdded (user);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 	
 	
-	public synchronized Identity addIdentity (String mail, String name, User user) throws SQLException {
+	public Identity addIdentity (String mail, String name, User user) throws SQLException {
 		Identity identity = new Identity (null, mail, name, user);
 		add (identity);
 		return identity;
 	}
 
-	public synchronized void add (Identity identity) throws SQLException {
+	public void add (Identity identity) throws SQLException {
 		assert (identity != null);
 		assert (identity.getUser ().getId () != null);
 		assert (identity.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (IDENTITY_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
+		Connection conn = popConnection ();
 
-		stmt.setString (1, identity.getMail ());
-		stmt.setString (2, identity.getName ());
-		stmt.setInt (3, identity.getUser ().getId ());
-		stmt.executeUpdate();
-
-		identity.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-
-		for (ModelModificationListener listener : listeners) {
-			listener.identityAdded (identity);
+		try {
+			PreparedStatement stmt = conn.prepareStatement (IDENTITY_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setString (1, identity.getMail ());
+			stmt.setString (2, identity.getName ());
+			stmt.setInt (3, identity.getUser ().getId ());
+			stmt.executeUpdate();
+	
+			identity.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+	
+			for (ModelModificationListener listener : listeners) {
+				listener.identityAdded (identity);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 	
 	
-	public synchronized Interaction addInteraction (User from, User to, boolean closed, int quotes, float pos, float neg, Date date) throws SQLException {
+	public Interaction addInteraction (User from, User to, boolean closed, int quotes, float pos, float neg, Date date) throws SQLException {
 		Interaction relation = new Interaction (null, from, to, closed, quotes, pos, neg, date);
 		add (relation);
 		return relation;
 	}
 
-	public synchronized void add (Interaction relation) throws SQLException {
+	public void add (Interaction relation) throws SQLException {
 		assert (relation != null);
 		assert (relation.getFrom ().getId () != null);
 		assert (relation.getTo ().getId () != null);
-		
-		PreparedStatement stmt = conn.prepareStatement (INTERACTION_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
 
-		stmt.setInt (1, relation.getFrom ().getId ());
-		stmt.setInt (2, relation.getTo ().getId ());
-		stmt.setInt (3, relation.getQuotes ());
-		stmt.setFloat (4, relation.getPos ());
-		stmt.setFloat (5, relation.getNeg ());
-		stmt.setString (6, dateFormat.format (relation.getDate ()));
-		stmt.setInt (7, (relation.isClosed ())? 1 : 0);
-		stmt.executeUpdate();
+		Connection conn = popConnection ();
 
-		relation.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-
-		for (ModelModificationListener listener : listeners) {
-			listener.interactionAdded (relation);
+		try {
+			PreparedStatement stmt = conn.prepareStatement (INTERACTION_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, relation.getFrom ().getId ());
+			stmt.setInt (2, relation.getTo ().getId ());
+			stmt.setInt (3, relation.getQuotes ());
+			stmt.setFloat (4, relation.getPos ());
+			stmt.setFloat (5, relation.getNeg ());
+			stmt.setString (6, dateFormat.format (relation.getDate ()));
+			stmt.setInt (7, (relation.isClosed ())? 1 : 0);
+			stmt.executeUpdate();
+	
+			relation.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+	
+			for (ModelModificationListener listener : listeners) {
+				listener.interactionAdded (relation);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
 		
-	public synchronized Severity addSeverity (Project project, String name) throws SQLException {
+	public Severity addSeverity (Project project, String name) throws SQLException {
 		Severity sev = new Severity (null, project, name);
 		add (sev);
 		return sev;
 	}
 
-	public synchronized void add (Severity severity) throws SQLException {
+	public void add (Severity severity) throws SQLException {
 		assert (severity != null);
 		Project project = severity.getProject ();
 		assert (project.getId () != null);
 		assert (severity.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (SEVERITY_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
+		Connection conn = popConnection ();
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, severity.getName ());
-		stmt.executeUpdate();
-
-		severity.setId (getLastInsertedId (stmt));
-
-		stmt.close ();		
-
+		try {
+			PreparedStatement stmt = conn.prepareStatement (SEVERITY_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
 	
-		for (ModelModificationListener listener : listeners) {
-			listener.severityAdded (severity);
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, severity.getName ());
+			stmt.executeUpdate();
+	
+			severity.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();		
+	
+		
+			for (ModelModificationListener listener : listeners) {
+				listener.severityAdded (severity);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
 	
-	public synchronized Priority addPriority (Project project, String name) throws SQLException {
+	public Priority addPriority (Project project, String name) throws SQLException {
 		Priority priority = new Priority (null, project, name);
 		add (priority);
 		return priority;
 	}
 	
-	public synchronized void add (Priority priority) throws SQLException {
+	public void add (Priority priority) throws SQLException {
 		assert (priority != null);
 		Project project = priority.getProject ();
 		assert (project.getId () != null);
 		assert (priority.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (PRIORITY_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
+		Connection conn = popConnection ();
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, priority.getName ());
-		stmt.executeUpdate();
-
-		priority.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
+		try {
+			PreparedStatement stmt = conn.prepareStatement (PRIORITY_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
 	
-		for (ModelModificationListener listener : listeners) {
-			listener.priorityAdded (priority);
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, priority.getName ());
+			stmt.executeUpdate();
+	
+			priority.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+		
+			for (ModelModificationListener listener : listeners) {
+				listener.priorityAdded (priority);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
 
-	public synchronized Category addCategory (Project project, String name) throws SQLException {
+	public Category addCategory (Project project, String name) throws SQLException {
 		Category category = new Category (null, project, name);
 		add (category);
 		return category;
 	}
 
-	public synchronized void add (Category category) throws SQLException {
+	public void add (Category category) throws SQLException {
 		assert (category != null);
 		Project project = category.getProject ();
 		assert (project.getId () != null);
 		assert (category.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (CATEGORY_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
+		Connection conn = popConnection ();
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, category.getName ());
-		stmt.executeUpdate();
-
-		category.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
+		try {
+			PreparedStatement stmt = conn.prepareStatement (CATEGORY_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
 	
-		for (ModelModificationListener listener : listeners) {
-			listener.categoryAdded (category);
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, category.getName ());
+			stmt.executeUpdate();
+	
+			category.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+		
+			for (ModelModificationListener listener : listeners) {
+				listener.categoryAdded (category);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
 
-	public synchronized Component addComponent (Project project, String name) throws SQLException {
+	public Component addComponent (Project project, String name) throws SQLException {
 		Component component = new Component (null, project, name);
 		add (component);
 		return component;
 	}
 
-	public synchronized void add (Component component) throws SQLException {
+	public void add (Component component) throws SQLException {
 		assert (component != null);
 		Project project = component.getProject ();
 		assert (project.getId () != null);
 		assert (component.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (COMPONENT_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
+		Connection conn = popConnection ();
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, component.getName ());
-		stmt.executeUpdate();
-
-		component.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
+		try {
+			PreparedStatement stmt = conn.prepareStatement (COMPONENT_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
 	
-		for (ModelModificationListener listener : listeners) {
-			listener.componentAdded (component);
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, component.getName ());
+			stmt.executeUpdate();
+	
+			component.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+		
+			for (ModelModificationListener listener : listeners) {
+				listener.componentAdded (component);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
 
-	public synchronized Bug addBug (Identity identity, Component component,
+	public Bug addBug (Identity identity, Component component,
 			String title, Date creation, Priority priority, Severity severity, Category category) throws SQLException {
 		Bug bug = new Bug (null, identity, component, title, creation, priority, severity, category);
 		add (bug);
+
 		return bug;
 	}
 	
-	public synchronized void add (Bug bug) throws SQLException {
+	public void add (Bug bug) throws SQLException {
 		assert (bug != null);
 		assert (bug.getId () == null);
 		assert (bug.getIdentity () != null);
@@ -667,129 +940,151 @@ public class Model {
 		assert (bug.getSeverity().getId () != null);
 		assert (bug.getCategory () == null || bug.getCategory ().getId () != null);
 
+		Connection conn = popConnection ();
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
-
-		stmt.setInt (1, bug.getIdentity ().getId ());
-		stmt.setInt (2, bug.getComponent ().getId ());
-		stmt.setString (3, bug.getTitle ());
-		stmt.setString (4, dateFormat.format (bug.getCreation ()));
-		stmt.setInt (5, bug.getPriority ().getId ());
-		stmt.setInt (6, bug.getSeverity ().getId ());
-		if (bug.getCategory () != null) {
-			stmt.setInt (7, bug.getCategory ().getId ());
-		} else {
-			stmt.setNull (7, Types.INTEGER);
-		}
-		stmt.setInt (8, bug.getComponent ().getProject ().getId ());
-		stmt.executeUpdate();
-
-		bug.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-
-		for (ModelModificationListener listener : listeners) {
-			listener.bugAdded (bug);
+		try {
+			PreparedStatement stmt = conn.prepareStatement (BUG_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, bug.getIdentity ().getId ());
+			stmt.setInt (2, bug.getComponent ().getId ());
+			stmt.setString (3, bug.getTitle ());
+			stmt.setString (4, dateFormat.format (bug.getCreation ()));
+			stmt.setInt (5, bug.getPriority ().getId ());
+			stmt.setInt (6, bug.getSeverity ().getId ());
+			if (bug.getCategory () != null) {
+				stmt.setInt (7, bug.getCategory ().getId ());
+			} else {
+				stmt.setNull (7, Types.INTEGER);
+			}
+			stmt.setInt (8, bug.getComponent ().getProject ().getId ());
+			stmt.executeUpdate();
+	
+			bug.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+	
+			for (ModelModificationListener listener : listeners) {
+				listener.bugAdded (bug);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
 
-	public synchronized BugHistory addBugHistory (Bug bug, Status status, Identity identity, Date date) throws SQLException {
+	public BugHistory addBugHistory (Bug bug, Status status, Identity identity, Date date) throws SQLException {
 		BugHistory history = new BugHistory(null, bug, status, identity, date);
 		add (history);
 		return history;
 	}
 
-	public synchronized void add (BugHistory history) throws SQLException {
+	public void add (BugHistory history) throws SQLException {
 		assert (history != null);
 		assert (history.getId () == null);
 		assert (history.getBug ().getId () != null);
 		assert (history.getStatus ().getId () != null);
 		assert (history.getIdentity ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_HISTORY_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
+		Connection conn = popConnection ();
 
-		stmt.setInt (1, history.getBug ().getId ());
-		stmt.setInt (2, history.getStatus ().getId ());
-		stmt.setInt (3, history.getIdentity ().getId ());
-		stmt.setString (4, dateFormat.format (history.getDate ()));
-		stmt.executeUpdate();
-
-		history.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
+		try {
+			PreparedStatement stmt = conn.prepareStatement (BUG_HISTORY_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
 	
-		for (ModelModificationListener listener : listeners) {
-			listener.bugHistoryAdded (history);
+			stmt.setInt (1, history.getBug ().getId ());
+			stmt.setInt (2, history.getStatus ().getId ());
+			stmt.setInt (3, history.getIdentity ().getId ());
+			stmt.setString (4, dateFormat.format (history.getDate ()));
+			stmt.executeUpdate();
+	
+			history.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+		
+			for (ModelModificationListener listener : listeners) {
+				listener.bugHistoryAdded (history);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
-
-	public synchronized Comment addComment (Bug bug, Date creation, Identity identity, String content) throws SQLException {
+	public Comment addComment (Bug bug, Date creation, Identity identity, String content) throws SQLException {
 		Comment cmnt = new Comment(null, bug, creation, identity, content);
 		add (cmnt);
 		return cmnt;
 	}
 	
-	public synchronized void add (Comment cmnt) throws SQLException {
+	public void add (Comment cmnt) throws SQLException {
 		assert (cmnt != null);
 		assert (cmnt.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (COMMENT_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
+		Connection conn = popConnection ();
 
-		stmt.setInt (1, cmnt.getBug ().getId ());
-		stmt.setString (2, dateFormat.format (cmnt.getCreationDate ()));
-		stmt.setInt (3, cmnt.getIdentity ().getId ());
-		stmt.setString (4, cmnt.getContent ());
-		stmt.executeUpdate();
-
-		cmnt.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
+		try {
+			PreparedStatement stmt = conn.prepareStatement (COMMENT_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
 	
-		for (ModelModificationListener listener : listeners) {
-			listener.commentAdded (cmnt);
+			stmt.setInt (1, cmnt.getBug ().getId ());
+			stmt.setString (2, dateFormat.format (cmnt.getCreationDate ()));
+			stmt.setInt (3, cmnt.getIdentity ().getId ());
+			stmt.setString (4, cmnt.getContent ());
+			stmt.executeUpdate();
+	
+			cmnt.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+		
+			for (ModelModificationListener listener : listeners) {
+				listener.commentAdded (cmnt);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
 
-	public synchronized Status addStatus (Project project, String name) throws SQLException {
+	public Status addStatus (Project project, String name) throws SQLException {
 		Status status = new Status (null, project, name);
 		add (status);
 		return status;
 	}	
 	
-	public synchronized void add (Status status) throws SQLException {
+	public void add (Status status) throws SQLException {
 		assert (status != null);
 		Project project = status.getProject ();
 		assert (project.getId () != null);
 		assert (status.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (STATUS_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
+		Connection conn = popConnection ();
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, status.getName ());
-		stmt.executeUpdate();
-
-		status.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
+		try {
+			PreparedStatement stmt = conn.prepareStatement (STATUS_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
 	
-		for (ModelModificationListener listener : listeners) {
-			listener.statusAdded (status);
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, status.getName ());
+			stmt.executeUpdate();
+	
+			status.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+		
+			for (ModelModificationListener listener : listeners) {
+				listener.statusAdded (status);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
 		
-	public synchronized Commit addCommit (Project project, Identity author,
+	public Commit addCommit (Project project, Identity author,
 			Identity committer, Date date, String title, int linesAdded,
 			int linesRemoved, Category category)
 		throws SQLException
@@ -801,7 +1096,7 @@ public class Model {
 		return commit;
 	}
 	
-	public synchronized void add (Commit commit) throws SQLException {
+	public void add (Commit commit) throws SQLException {
 		assert (commit != null);
 		Project project = commit.getProject ();
 		assert (commit.getId () == null);
@@ -809,53 +1104,65 @@ public class Model {
 		assert (commit.getCommitter ().getId () != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (COMMIT_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
-		stmt.setInt (1, project.getId ());
-		stmt.setInt (2, commit.getAuthor ().getId ());
-		stmt.setInt (3, commit.getCommitter ().getId ());
-		stmt.setString (4, dateFormat.format (commit.getDate ()));
-		stmt.setString (5, commit.getTitle ());
-		stmt.setInt (6, commit.getLinesAdded ());
-		stmt.setInt (7, commit.getLinesRemoved ());
-		if (commit.getCategory () != null) {
-			stmt.setInt (8, commit.getCategory ().getId ());
-		} else {
-			stmt.setNull (8, Types.INTEGER);
-		}
-		stmt.executeUpdate();
+		Connection conn = popConnection ();
 
-		commit.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
+		try {
+			PreparedStatement stmt = conn.prepareStatement (COMMIT_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+			stmt.setInt (1, project.getId ());
+			stmt.setInt (2, commit.getAuthor ().getId ());
+			stmt.setInt (3, commit.getCommitter ().getId ());
+			stmt.setString (4, dateFormat.format (commit.getDate ()));
+			stmt.setString (5, commit.getTitle ());
+			stmt.setInt (6, commit.getLinesAdded ());
+			stmt.setInt (7, commit.getLinesRemoved ());
+			if (commit.getCategory () != null) {
+				stmt.setInt (8, commit.getCategory ().getId ());
+			} else {
+				stmt.setNull (8, Types.INTEGER);
+			}
+			stmt.executeUpdate();
 	
-		for (ModelModificationListener listener : listeners) {
-			listener.commitAdded (commit);
+			commit.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+		
+			for (ModelModificationListener listener : listeners) {
+				listener.commitAdded (commit);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
 	
-	public synchronized BugfixCommit addBugfixCommit (Commit commit, Bug bug) throws SQLException {
+	public BugfixCommit addBugfixCommit (Commit commit, Bug bug) throws SQLException {
 		BugfixCommit bugfix = new BugfixCommit (commit, bug);
 		add (bugfix);
 		return bugfix;
 	}
 
-	public synchronized void add (BugfixCommit bugfix) throws SQLException {
+	public void add (BugfixCommit bugfix) throws SQLException {
 		assert (bugfix != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUGFIX_COMMIT_INSERTION);
+		Connection conn = popConnection ();
 
-		stmt.setInt (1, bugfix.getBug ().getId ());
-		stmt.setInt (2, bugfix.getCommit ().getId ());
-		stmt.executeUpdate();
-
-		stmt.close ();
-
+		try {
+			PreparedStatement stmt = conn.prepareStatement (BUGFIX_COMMIT_INSERTION);
 	
-		for (ModelModificationListener listener : listeners) {
-			listener.bugfixCommitAdded (bugfix);
+			stmt.setInt (1, bugfix.getBug ().getId ());
+			stmt.setInt (2, bugfix.getCommit ().getId ());
+			stmt.executeUpdate();
+	
+			stmt.close ();
+	
+		
+			for (ModelModificationListener listener : listeners) {
+				listener.bugfixCommitAdded (bugfix);
+			}
+		} finally {
+			pushConnection (conn);
 		}
 	}
 
@@ -863,8 +1170,8 @@ public class Model {
 	//
 	// Get Data:
 	//
-	
-	private synchronized PreparedStatement buildPreparedStmt (Query queryConfig, Map<String, Object> vars) throws SemanticException, SQLException {
+
+	private PreparedStatement buildPreparedStmt (Query queryConfig, Map<String, Object> vars, Connection conn) throws SemanticException, SQLException {
 		assert (queryConfig != null);
 		assert (vars != null);
 		
@@ -922,7 +1229,60 @@ public class Model {
 		return stmt;
 	}
 
-	public synchronized DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException {
+	private PreparedStatement buildPreparedStmt (String query, Map<String, Object> vars, Connection conn) throws SemanticException, SQLException {
+		assert (query != null);
+		assert (vars != null);
+		
+		// System.out.println ("queryCofnig: " + queryConfig);
+		// System.out.println ("vars: " + vars);
+		
+		LinkedList<Query.VariableSegment> paramOrder = new LinkedList<Query.VariableSegment> ();
+
+		// Create the query:
+		PreparedStatement stmt = conn.prepareStatement (query);
+		int i = 1;
+
+		for (Query.VariableSegment param : paramOrder) {
+			Object val = vars.get (param.getName ());
+
+			if (val instanceof Integer) {
+				stmt.setInt (i, (Integer) val);
+			} else if (val instanceof Long) {
+				stmt.setLong (i, (Long) val);
+			} else if (val instanceof String) {
+				stmt.setString(i, (String) val);
+			} else if (val instanceof Date) {
+				stmt.setString (i, dateFormat.format ((Date) val));
+			} else if (val instanceof Integer[]) {
+				Array arr = conn.createArrayOf ("INTEGER", (Integer[]) val);
+				stmt.setArray(i, arr);
+			} else if (val instanceof Long[]) {
+				Array arr = conn.createArrayOf ("INTEGER", (Long[]) val);
+				stmt.setArray(i, arr);			
+			} else if (val instanceof String[]) {
+				Array arr = conn.createArrayOf ("TEXT", (String[]) val);
+				stmt.setArray(i, arr);
+			} else if (val instanceof Date[]) {
+				Date[] origArr = (Date[]) val;
+				String[] resArr = new String[origArr.length];
+
+				for (int ai = 0; ai < origArr.length ; ai++) {
+					resArr[ai] = dateFormat.format (origArr[ai]);
+				}
+
+				Array arr = conn.createArrayOf ("TEXT", resArr);
+				stmt.setArray(i, arr);
+			} else {
+				throw new SemanticException ("semantic error: Unsupported type " + val.getClass ().getName ()
+					+ " for `" + param.getName () + "'", param.getStart (), param.getEnd ());
+			}
+			i++;
+		}
+		
+		return stmt;
+	}
+
+	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (config != null);
 		assert (vars != null);
 
@@ -936,7 +1296,7 @@ public class Model {
 		return data;
 	}
 	
-	public synchronized DistributionChartOptionConfigData getDistributionChartOptionConfigData (DistributionChartOptionConfig config, Map<String, Object> vars) throws SemanticException {
+	public DistributionChartOptionConfigData getDistributionChartOptionConfigData (DistributionChartOptionConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (config != null);
 		assert (vars != null);
 
@@ -951,13 +1311,14 @@ public class Model {
 		return data;
 	}
 	
-	public synchronized TrendChartData getTrendChartData (TrendChartPlotConfig trendChartPlotConfig, Map<String, Object> vars) throws SemanticException {
+	public TrendChartData getTrendChartData (TrendChartPlotConfig trendChartPlotConfig, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (trendChartPlotConfig != null);
 		assert (vars != null);
 
 		Query queryConfig = trendChartPlotConfig.getDataQuery ();
+		Connection conn = popConnection ();
 		try {
-			PreparedStatement stmt = buildPreparedStmt (queryConfig, vars);
+			PreparedStatement stmt = buildPreparedStmt (queryConfig, vars, conn);
 			TrendChartData data = new TrendChartData ();
 
 
@@ -997,16 +1358,15 @@ public class Model {
 			}
 			
 			return data;
-		} catch (SQLException e) {
-			throw new SemanticException ("semantic error: " + e.getMessage (),
-				queryConfig.getStart (), queryConfig.getEnd ());
 		} catch (IllegalArgumentException e) {
 			throw new SemanticException ("semantic error: " + e.getMessage (),
 					queryConfig.getStart (), queryConfig.getEnd ());
+		} finally {
+			pushConnection (conn);
 		}
 	}
 	
-	public synchronized TrendChartConfigData getChartGroupConfigData (TrendChartConfig config, Map<String, Object> vars) throws SemanticException {
+	public TrendChartConfigData getChartGroupConfigData (TrendChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (config != null);
 		assert (vars != null);
 
@@ -1021,13 +1381,14 @@ public class Model {
 		return data;
 	}
 	
-	private synchronized DropDownData getDropDownData (DropDownConfig config, Map<String, Object> vars) throws SemanticException {
+	private DropDownData getDropDownData (DropDownConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (config != null);
 		assert (vars != null);
 
 		Query queryConfig = config.getQuery();
+		Connection conn = popConnection ();
 		try {
-			PreparedStatement stmt = buildPreparedStmt (queryConfig, vars);
+			PreparedStatement stmt = buildPreparedStmt (queryConfig, vars, conn);
 	
 			// Execution:
 			ResultSet res = stmt.executeQuery ();
@@ -1066,19 +1427,19 @@ public class Model {
 			}
 			
 			return data;
-		} catch (SQLException e) {
-			throw new SemanticException ("semantic error: " + e.getMessage (),
-				queryConfig.getStart (), queryConfig.getEnd ());
+		} finally {
+			pushConnection (conn);
 		}
 	}
 	
-	private synchronized OptionListConfigData getOptionListData (OptionListConfig config, Map<String, Object> vars) throws SemanticException {
+	private OptionListConfigData getOptionListData (OptionListConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (config != null);
 		assert (vars != null);
 
 		Query queryConfig = config.getQuery();
+		Connection conn = popConnection ();
 		try {
-			PreparedStatement stmt = buildPreparedStmt (queryConfig, vars);
+			PreparedStatement stmt = buildPreparedStmt (queryConfig, vars, conn);
 
 			// Execution:
 			ResultSet res = stmt.executeQuery ();
@@ -1117,19 +1478,19 @@ public class Model {
 			}
 			
 			return data;
-		} catch (SQLException e) {
-			throw new SemanticException ("semantic error: " + e.getMessage (),
-				queryConfig.getStart (), queryConfig.getEnd ());
+		} finally {
+			pushConnection (conn);
 		}
 	}
 	
-	public synchronized PieChartData getPieChart (PieChartConfig config, Map<String, Object> vars) throws SemanticException {
+	public PieChartData getPieChart (PieChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (config != null);
 		assert (vars != null);
 
 		Query queryConfig = config.getQuery();
+		Connection conn = popConnection ();
 		try {
-			PreparedStatement stmt = buildPreparedStmt (queryConfig, vars);
+			PreparedStatement stmt = buildPreparedStmt (queryConfig, vars, conn);
 
 			// Execution:
 			ResultSet res = stmt.executeQuery ();
@@ -1168,21 +1529,21 @@ public class Model {
 			}
 			
 			return data;
-		} catch (SQLException e) {
-			throw new SemanticException ("semantic error: " + e.getMessage (),
-				queryConfig.getStart (), queryConfig.getEnd ());
+		} finally {
+			pushConnection (conn);
 		}
 	}
 	
-	public synchronized DistributionChartData getDistributionChartData (Query query, Map<String, Object> vars) throws SemanticException {
+	public DistributionChartData getDistributionChartData (Query query, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (query != null);
 		assert (vars != null);
 
 
 		double[][] data = new double[12][7];
+		Connection conn = popConnection ();
 
 		try {
-			PreparedStatement stmt = buildPreparedStmt (query, vars);
+			PreparedStatement stmt = buildPreparedStmt (query, vars, conn);
 
 			// Execution:
 			ResultSet res = stmt.executeQuery ();
@@ -1235,25 +1596,362 @@ public class Model {
 	
 				} while (res.next());
 			}
-		} catch (SQLException e) {
-			throw new SemanticException ("semantic error: " + e.getMessage (),
-				query.getStart (), query.getEnd ());
+		} finally {
+			pushConnection (conn);
 		}
 		
 		return new DistributionChartData (data);
 	}
 
-	public synchronized void rawSelect (Query query, Map<String, Object> vars, SelectCallback callback) throws SemanticException, SQLException, Exception {
+	public void foreachCommit (Project proj, ObjectCallback<Commit> callback) throws SQLException, Exception {
+		assert (proj != null);
+		assert (proj.getId () != null);
+		assert (callback != null);
+
+		Map<Integer, Category> categories = getCategories (proj);
+
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_COMMITS);
+			stmt.setInt (1, proj.getId ());
+	
+			// Execution:
+			ResultSet res = stmt.executeQuery ();
+			boolean do_next = true;
+			while (res.next () && do_next) {
+				Integer id = res.getInt (1);
+				Date date = res.getDate (2);
+				String title = res.getString (3);
+				Integer linesAdded = res.getInt (4);
+				Integer linesRemoved = res.getInt (5);
+				Category category = categories.get (res.getInt (6));
+				User authorUser = userFromResult (res, proj, 10, 11);
+				Identity author = identityFromResult (res, authorUser, 7, 8, 9);
+				User committerUser = userFromResult (res, proj, 15, 16);
+				Identity committer = identityFromResult (res, committerUser, 12, 13, 14);
+	
+				Commit commit = new Commit (id, proj, author, committer, date, title, linesAdded, linesRemoved, category);
+				do_next = callback.processResult (commit);
+			}
+	
+			res.close ();
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	public void foreachBug (Project proj, ObjectCallback<Bug> callback) throws SQLException, Exception {
+		assert (proj != null);
+		assert (proj.getId () != null);
+		assert (callback != null);
+
+		// Cache some values:
+		Map<Integer, Category> categories = getCategories (proj);
+		Map<Integer, Severity> severities = getSeverities (proj);
+		//Map<Integer, Status> statuses = getStatuses (proj);
+		Map<Integer, Priority> priorities = getPriorities (proj);
+		Map<Integer, Component> components = getComponents (proj);
+
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUGS);
+			stmt.setInt (1, proj.getId ());
+	
+			// Execution:
+			ResultSet res = stmt.executeQuery ();
+			boolean do_next = true;
+			while (res.next () && do_next) {
+				Integer id = res.getInt (1);
+				User user = userFromResult (res, proj, 5, 6);
+				Identity identity = identityFromResult (res, user, 2, 3, 4);
+				Component component = components.get (res.getInt (7));
+				String title = res.getString (8);
+				Date creation = res.getDate (9);
+				Priority priority = priorities.get (res.getInt (10));
+				Severity severity = severities.get (res.getInt (11));
+				Category category = categories.get (res.getInt (12));
+				// Integer comments = res.getInt (13);
+				// Status status = statuses.get (res.getInt (14));
+	
+				Bug bug = new Bug (id, identity, component,
+					title, creation, priority, severity,
+					category);
+				do_next = callback.processResult (bug);
+			}
+	
+			res.close ();
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	private User userFromResult (ResultSet res, Project proj, int idCol, int nameCol) throws SQLException {
+		Integer id = res.getInt (idCol);
+		String name = res.getString (nameCol);
+		return new User (id, proj, name);
+	}
+
+	private Identity identityFromResult (ResultSet res, User user, int idCol, int nameCol, int mailCol) throws SQLException {
+		Integer id = res.getInt (idCol);
+		String mail = res.getString (mailCol);
+		String name = res.getString (nameCol);		
+		return new Identity (id, mail, name, user);
+	}
+	
+	public void rawForeach (Query query, Map<String, Object> vars, ResultCallback callback) throws SQLException, Exception {
 		assert (query != null);
 		assert (vars != null);
 		assert (callback != null);
 
-		PreparedStatement stmt = buildPreparedStmt (query, vars);
+		Connection conn = popConnection ();
 
-		// Execution:
-		ResultSet res = stmt.executeQuery ();
-		callback.processResult (res);
+		try {
+			PreparedStatement stmt = buildPreparedStmt (query, vars, conn);
+	
+			// Execution:
+			ResultSet res = stmt.executeQuery ();
+			callback.processResult (res);
+		} finally {
+			pushConnection (conn);
+		}
 	}
+
+	public void rawForeach (String query, Map<String, Object> vars, ResultCallback callback) throws SQLException, Exception {
+		assert (query != null);
+		assert (callback != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = buildPreparedStmt (query, vars, conn);
+		
+			// Execution:
+			ResultSet res = stmt.executeQuery ();
+			callback.processResult (res);
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	public Map<Integer, Category> getCategories (Project proj) throws SQLException {
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			// Statement:
+			PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_CATEGORIES);
+			stmt.setInt (1, proj.getId ());
+	
+			// Collect data:
+			HashMap<Integer, Category> categories = new HashMap<Integer, Category> ();
+			ResultSet res = stmt.executeQuery ();
+			while (res.next ()) {
+				Category category = new Category (res.getInt (1), proj, res.getString (2));
+				categories.put (category.getId (), category);
+			}
+	
+			return categories;
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	public Map<Integer, Component> getComponents (Project proj) throws SQLException {
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			// Statement:
+			PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_COMPONENTS);
+			stmt.setInt (1, proj.getId ());
+	
+			// Collect data:
+			HashMap<Integer, Component> components = new HashMap<Integer, Component> ();
+			ResultSet res = stmt.executeQuery ();
+			while (res.next ()) {
+				Component category = new Component (res.getInt (1), proj, res.getString (2));
+				components.put (category.getId (), category);
+			}
+	
+			return components;
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	public Map<Integer, Severity> getSeverities (Project proj) throws SQLException {
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			// Statement:
+			PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_SEVERITIES);
+			stmt.setInt (1, proj.getId ());
+	
+			// Collect data:
+			HashMap<Integer, Severity> severities = new HashMap<Integer, Severity> ();
+			ResultSet res = stmt.executeQuery ();
+			while (res.next ()) {
+				Severity severity = new Severity (res.getInt (1), proj, res.getString (2));
+				severities.put (severity.getId (), severity);
+			}
+	
+			return severities;
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	public Map<Integer, Status> getStatuses (Project proj) throws SQLException {
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			// Statement:
+			PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_STATUSES);
+			stmt.setInt (1, proj.getId ());
+	
+			// Collect data:
+			HashMap<Integer, Status> statuses = new HashMap<Integer, Status> ();
+			ResultSet res = stmt.executeQuery ();
+			while (res.next ()) {
+				Status status = new Status (res.getInt (1), proj, res.getString (2));
+				statuses.put (status.getId (), status);
+			}
+	
+			return statuses;
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	public Map<Integer, Priority> getPriorities (Project proj) throws SQLException {
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			// Statement:
+			PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_PRIORITIES);
+			stmt.setInt (1, proj.getId ());
+	
+			// Collect data:
+			HashMap<Integer, Priority> priorities = new HashMap<Integer, Priority> ();
+			ResultSet res = stmt.executeQuery ();
+			while (res.next ()) {
+				Priority priority = new Priority (res.getInt (1), proj, res.getString (2));
+				priorities.put (priority.getId (), priority);
+			}
+	
+			return priorities;
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	public List<BugHistory> getBugHistory (Project proj, Bug bug) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+
+		Connection conn = popConnection ();
+
+		try {
+			// Statement:
+			PreparedStatement stmt = conn.prepareStatement (SELECT_FULL_HISTORY);
+			stmt.setInt (1, bug.getId ());
+	
+			// Collect data:
+			LinkedList<BugHistory> history = new LinkedList<BugHistory> ();
+			ResultSet res = stmt.executeQuery ();
+			while (res.next ()) {
+				Integer id = res.getInt (1);
+				Status status = new Status (res.getInt (2), proj, res.getString (3));
+				User user = userFromResult (res, proj, 7, 8);
+				Identity identity = identityFromResult (res, user, 4, 5, 6);
+				Date creation = res.getDate (9);
+
+				BugHistory entry = new BugHistory (id, bug, status, identity, creation);
+				history.add (entry);
+			}
+	
+			return history;
+		} finally {
+			pushConnection (conn);
+		}	
+	}
+	
+	public List<Comment> getComments (Project proj, Bug bug) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			// Statement:
+			PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_COMMENTS);
+			stmt.setInt (1, bug.getId ());
+	
+			// Collect data:
+			LinkedList<Comment> comments = new LinkedList<Comment> ();
+			ResultSet res = stmt.executeQuery ();
+			while (res.next ()) {
+				Integer id = res.getInt (1);
+				Date creation = res.getDate (2);
+				User user = userFromResult (res, proj, 6, 7);
+				Identity identity = identityFromResult (res, user, 3, 4, 5);
+				String content = res.getString (8);
+
+				Comment comment = new Comment (id, bug, creation, identity, content);
+				comments.add (comment);
+			}
+	
+			return comments;
+		} finally {
+			pushConnection (conn);
+		}
+	}
+	
+	public List<Project> getProjects () throws SQLException {
+		Connection conn = popConnection ();
+
+		try {
+			// Statement:
+			PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_PROJECTS);
+	
+			// Collect data:
+			LinkedList<Project> projects = new LinkedList<Project> ();
+			ResultSet res = stmt.executeQuery ();
+			while (res.next ()) {
+				Integer id = res.getInt (1);
+				Date date = res.getDate (2);
+				String domain = res.getString (3);
+				String product = res.getString (4);
+				String revision = res.getString (5);
+	
+				Project proj = new Project (id, date, domain, product, revision);
+				projects.add (proj);
+			}
+	
+			return projects;
+		} finally {
+			pushConnection (conn);
+		}
+	}
+	
 
 	//
 	// Listener:
@@ -1276,7 +1974,6 @@ public class Model {
 	// Helper:
 	//
 
-
 	private Integer getLastInsertedId (PreparedStatement stmt) throws SQLException {
 		assert (stmt != null);
 
@@ -1287,25 +1984,30 @@ public class Model {
 	}
 
 	private void createTables () throws SQLException {
-		Statement stmt = conn.createStatement();
-		stmt.executeUpdate (ENABLE_FOREIGN_KEYS);
-		stmt.executeUpdate (PROJECT_TABLE);
-		stmt.executeUpdate (USER_TABLE);
-		stmt.executeUpdate (IDENTITY_TABLE);
-		stmt.executeUpdate (INTERACTION_TABLE);
-		stmt.executeUpdate (COMPONENT_TABLE);
-		stmt.executeUpdate (PRIORITY_TABLE);
-		stmt.executeUpdate (SEVERITY_TABLE);
-		stmt.executeUpdate (BUG_TABLE);
-		stmt.executeUpdate (COMMENT_TABLE);
-		stmt.executeUpdate (STATUS_TABLE);
-		stmt.executeUpdate (BUG_HISTORY_TABLE);
-		stmt.executeUpdate (CATEGORY_TABLE);
-		stmt.executeUpdate (COMMIT_TABLE);
-		stmt.executeUpdate (BUGFIX_COMMIT_TABLE);
+		Connection conn = popConnection ();
 
-		stmt.executeUpdate (BUG_STATUS_UPDATE_TRIGGER);
-		stmt.executeUpdate (BUG_COMMENT_COUNT_UPDATE_TRIGGER);
-		stmt.close ();
+		try {
+			Statement stmt = conn.createStatement();
+			stmt.executeUpdate (PROJECT_TABLE);
+			stmt.executeUpdate (USER_TABLE);
+			stmt.executeUpdate (IDENTITY_TABLE);
+			stmt.executeUpdate (INTERACTION_TABLE);
+			stmt.executeUpdate (COMPONENT_TABLE);
+			stmt.executeUpdate (PRIORITY_TABLE);
+			stmt.executeUpdate (SEVERITY_TABLE);
+			stmt.executeUpdate (BUG_TABLE);
+			stmt.executeUpdate (COMMENT_TABLE);
+			stmt.executeUpdate (STATUS_TABLE);
+			stmt.executeUpdate (BUG_HISTORY_TABLE);
+			stmt.executeUpdate (CATEGORY_TABLE);
+			stmt.executeUpdate (COMMIT_TABLE);
+			stmt.executeUpdate (BUGFIX_COMMIT_TABLE);
+	
+			stmt.executeUpdate (BUG_STATUS_UPDATE_TRIGGER);
+			stmt.executeUpdate (BUG_COMMENT_COUNT_UPDATE_TRIGGER);
+			stmt.close ();
+		} finally {
+			pushConnection (conn);
+		}
 	}
 }

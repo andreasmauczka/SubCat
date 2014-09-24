@@ -31,10 +31,10 @@
 package at.ac.tuwien.inso.subcat.reporter;
 
 import at.ac.tuwien.inso.subcat.miner.Settings;
-import at.ac.tuwien.inso.subcat.model.SelectCallback;
+import at.ac.tuwien.inso.subcat.model.ResultCallback;
 import at.ac.tuwien.inso.subcat.model.Project;
 
-public abstract class ReportWriter implements SelectCallback {
+public abstract class ReportWriter implements ResultCallback {
 	public abstract String getTypeName ();
 	public abstract String getLabel ();
 

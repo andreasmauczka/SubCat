@@ -246,8 +246,6 @@ public class BugzillaMiner extends Miner {
 		for (Worker worker : workers) {
 			worker.interrupt ();
 		}
-
-		emitStop ();
 	}
 	
 	public void _run () throws MinerException, SQLException, BugzillaException, InterruptedException {
@@ -265,7 +263,6 @@ public class BugzillaMiner extends Miner {
 			context.login (settings.bugLoginUser, settings.bugLoginPw);
 		}
 
-		
 		BugzillaProduct product = getBugzillaProduct (settings.bugProductName);
 		if (product == null) {
 			throw new MinerException ("Unknown product `" + settings.bugProductName + "'");
@@ -298,6 +295,7 @@ public class BugzillaMiner extends Miner {
 		queue.clear ();
 		run = false;
 		abortRun (null);
+		emitStop ();
 	}
 
 

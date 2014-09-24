@@ -30,6 +30,7 @@
 
 package at.ac.tuwien.inso.subcat.ui.controller;
 
+import java.sql.SQLException;
 import java.util.Map;
 
 import at.ac.tuwien.inso.subcat.config.PieChartConfig;
@@ -58,6 +59,11 @@ public class PieChartController extends ChartController {
 				view.add (pieData);
 			}
 		} catch (SemanticException e) {
+			// TODO
+			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO 
+			e.printStackTrace();
 		}
 	}
 

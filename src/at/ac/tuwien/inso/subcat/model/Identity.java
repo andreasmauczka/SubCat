@@ -37,7 +37,7 @@ public class Identity {
 	private String name;
 	private User user;
 
-	public Identity(Integer id, String mail, String name, User user) {
+	public Identity (Integer id, String mail, String name, User user) {
 		assert (name != null);
 		assert (user != null);
 

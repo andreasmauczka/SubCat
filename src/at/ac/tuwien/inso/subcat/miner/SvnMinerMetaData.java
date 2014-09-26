@@ -38,6 +38,7 @@ import at.ac.tuwien.inso.subcat.miner.Miner.MetaData;
 import at.ac.tuwien.inso.subcat.miner.Miner.MinerType;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Project;
+import at.ac.tuwien.inso.subcat.utility.XmlReader;
 
 
 public class SvnMinerMetaData implements MetaData {
@@ -61,12 +62,12 @@ public class SvnMinerMetaData implements MetaData {
 			return false;
 		}
 
-		File file = new File (settings.srcLocalPath);
-		if (!file.exists () || file.isDirectory ()) {
-			return false;
+		File dir = new File (settings.srcLocalPath);
+		if (dir.isFile ()) {
+			return XmlReader.isXml (settings.srcLocalPath, "log");
 		}
 
-		return true;
+		return Miner.inRepository (settings.srcLocalPath, ".svn");
 	}
 
 	

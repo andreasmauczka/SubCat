@@ -30,6 +30,7 @@
 
 package at.ac.tuwien.inso.subcat.miner;
 
+import java.io.File;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -95,6 +96,31 @@ public abstract class Miner {
 		for (MinerListener listener : listeners) {
 			listener.stop (this);
 		}
+	}
+
+
+	//
+	// Helper:
+	//
+
+	public static boolean inRepository (String filePath, String hiddenDirName) {
+		File dir = new File (filePath);
+		if (!dir.exists() || !dir.isDirectory()) {
+			return false;
+		}
+	
+		dir = dir.getAbsoluteFile ();
+	
+		do {
+			File girDir = new File (dir, hiddenDirName);
+			if (girDir.exists() && girDir.isDirectory()) {
+				return true;
+			}
+			
+			dir = dir.getParentFile ();
+		} while (dir != null);
+		
+		return false;
 	}
 }
 

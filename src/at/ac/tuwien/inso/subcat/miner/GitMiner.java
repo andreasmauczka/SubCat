@@ -298,7 +298,6 @@ public class GitMiner extends Miner {
 			}
 
 			for (DiffEntry de : entries) {
-
 				int linesAddedStart = outputStream.getTotalLinesAdded ();
 				int linesRemovedStart = outputStream.getTotalLinesRemoved ();
 				int chunksStart = outputStream.getTotalChunks ();

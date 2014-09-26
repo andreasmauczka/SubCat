@@ -23,6 +23,7 @@
 package at.ac.tuwien.inso.subcat.utility;
 
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.FileInputStream;
 
@@ -248,6 +249,37 @@ public class XmlReader {
 
 		default:
 			return "<unknown>";
+		}
+	}
+
+	public static boolean isXml (String path, String expectedRootElement) {
+		try {
+			InputStream input = new FileInputStream (path);
+			XMLInputFactory factory = XMLInputFactory.newFactory();
+			XMLStreamReader xmlReader = factory.createXMLStreamReader(input);
+			int token = xmlReader.next ();
+
+			if (token == XMLEvent.PROCESSING_INSTRUCTION) {
+				token = xmlReader.next ();
+			}
+
+			while (token == XMLEvent.COMMENT || token == XMLEvent.SPACE) {
+				token = xmlReader.next ();
+			}
+			
+			if (token != XMLEvent.START_ELEMENT) {
+				return false;
+			}
+			
+			if (!expectedRootElement.equals (xmlReader.getLocalName ())) {
+				return false;
+			}
+			
+			return true;
+		} catch (IOException e) {
+			return false;
+		} catch (XMLStreamException e) {
+			return false;
 		}
 	}
 }

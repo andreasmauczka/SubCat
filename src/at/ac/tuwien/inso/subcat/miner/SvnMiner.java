@@ -100,7 +100,7 @@ public class SvnMiner extends Miner {
 		assert (date != null || msg != null || path != null);
 		
 		System.out.println ("Commit: " + author);
-		model.addCommit (project, author, committer, date, msg, 0, 0, null);
+		model.addCommit (project, author, committer, date, msg, 0, 0, 0, null);
 		// TODO store path
 	
 	}

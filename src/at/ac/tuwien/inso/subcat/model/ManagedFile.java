@@ -1,4 +1,4 @@
-/* ModelModificationListener.java
+/* ManagedFile.java
  *
  * Copyright (C) 2014 Florian Brosch
  *
@@ -30,44 +30,63 @@
 
 package at.ac.tuwien.inso.subcat.model;
 
-public interface ModelModificationListener {
+public class ManagedFile {
+	private Integer id;
+	private Project project;
+	private String name;
+	private int touched;
+	private int linesAdded;
+	private int linesRemoved;
+	private int chunksChanged;
 
-	public void projectAdded (Project project);
+	public ManagedFile (Integer id, Project project, String name,
+			Commit deletionCommit, int touched, int linesAdded,
+			int linesRemoved, int chunksChanged) {
+		assert (project != null);
+		assert (name != null);
+		assert (touched > 0);
+		assert (linesAdded >= 0);
+		assert (linesRemoved >= 0);
+		assert (chunksChanged > 0);
 
-	public void userAdded (User user);
+		this.id = id;
+		this.project = project;
+		this.name = name;
+		this.touched = touched;
+		this.linesAdded = linesAdded;
+		this.linesRemoved = linesRemoved;
+		this.chunksChanged = chunksChanged;
+	}
+	
+	public Integer getId () {
+		return id;
+	}
 
-	public void identityAdded (Identity identity);
+	public void setId (Integer id) {
+		this.id = id;
+	}
+	
+	public Project getProject () {
+		return project;
+	}
 
-	public void interactionAdded (Interaction relation);
+	public String getName () {
+		return name;
+	}
 
-	public void severityAdded (Severity severity);
+	public int getTouched () {
+		return touched;
+	}
 
-	public void priorityAdded (Priority priority);
+	public int getLinesAdded () {
+		return linesAdded;
+	}
 
-	public void categoryAdded (Category category);
+	public int getLinesRemoved () {
+		return linesRemoved;
+	}
 
-	public void componentAdded (Component component);
-
-	public void bugAdded (Bug bug);
-
-	public void bugHistoryAdded (BugHistory history);
-
-	public void commentAdded (Comment cmnt);
-
-	public void statusAdded (Status status);
-
-	public void commitAdded (Commit commit);
-
-	public void bugfixCommitAdded (BugfixCommit bugfix);
-
-	public void fileChangeAdded (FileChange change);
-
-	public void fileRenameAdded (FileRename rename);
-
-	public void managedFileAdded (ManagedFile file);
-
-	public void fileDeletedAdded (FileDeletion deletion);
-
-	public void managedFileCopyAdded (ManagedFileCopy copy);
-
+	public int getChunksChanged () {
+		return chunksChanged;
+	}
 }

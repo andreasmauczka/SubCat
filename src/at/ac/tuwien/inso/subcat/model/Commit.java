@@ -42,16 +42,20 @@ public class Commit {
 	private String title;
 	private int linesAdded;
 	private int linesRemoved;
+	private int changedFiles;
 	private Category category;
 
 	public Commit (Integer id, Project project, Identity author,
-			Identity committer, Date date, String title, int linesAdded,
-			int linesRemoved, Category category) {
+			Identity committer, Date date, String title, int changedFiles,
+			int linesAdded, int linesRemoved, Category category) {
 		assert (project != null);
 		assert (author != null);
 		assert (committer != null);
 		assert (date != null);
 		assert (title != null);
+		assert (linesAdded >= 0);
+		assert (linesRemoved >= 0);
+		assert (changedFiles >= 0);
 		
 		this.id = id;
 		this.project = project;
@@ -132,6 +136,10 @@ public class Commit {
 		this.linesAdded = linesAdded;
 	}
 
+	public int getChangedFiles () {
+		return changedFiles;
+	}
+	
 	public int getLinesRemoved () {
 		return linesRemoved;
 	}

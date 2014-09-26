@@ -141,17 +141,17 @@ public class Reporter {
 			model.addPriority (project, "Low");
 	
 			
-			model.addCommit(project, identity1a, identity1a, new Date (), "commit 1", 5, 5, cat1);
-			model.addCommit(project, identity1a, identity1a, new Date (), "commit 3", 5, 5, cat1);
-			model.addCommit(project, identity1a, identity1a, new Date (), "commit 3", 5, 5, cat1);
+			model.addCommit(project, identity1a, identity1a, new Date (), "commit 1", 1, 5, 5, cat1);
+			model.addCommit(project, identity1a, identity1a, new Date (), "commit 3", 1, 5, 5, cat1);
+			model.addCommit(project, identity1a, identity1a, new Date (), "commit 3", 1, 5, 5, cat1);
 	
-			model.addCommit(project, identity2a, identity2a, new Date (), "commit 4", 5, 5, cat2);
-			model.addCommit(project, identity2a, identity2a, new Date (), "commit 5", 5, 5, cat2);
-			model.addCommit(project, identity2a, identity2a, new Date (), "commit 6", 5, 5, cat2);
+			model.addCommit(project, identity2a, identity2a, new Date (), "commit 4", 1, 5, 5, cat2);
+			model.addCommit(project, identity2a, identity2a, new Date (), "commit 5", 1, 5, 5, cat2);
+			model.addCommit(project, identity2a, identity2a, new Date (), "commit 6", 1, 5, 5, cat2);
 	
-			model.addCommit(project, identity3a, identity1a, new Date (), "commit 7", 5, 5, cat3);
-			model.addCommit(project, identity3a, identity1a, new Date (), "commit 8", 5, 5, cat3);
-			model.addCommit(project, identity3a, identity1a, new Date (), "commit 9", 5, 5, cat3);
+			model.addCommit(project, identity3a, identity1a, new Date (), "commit 7", 1, 5, 5, cat3);
+			model.addCommit(project, identity3a, identity1a, new Date (), "commit 8", 1, 5, 5, cat3);
+			model.addCommit(project, identity3a, identity1a, new Date (), "commit 9", 1, 5, 5, cat3);
 	
 			
 	

@@ -213,7 +213,6 @@ public class Model {
 		+ "UNIQUE (project, name)"
 		+ ")";
 
-	// TODO: modified_files : int
 	private static final String COMMIT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Commits ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -222,6 +221,7 @@ public class Model {
 		+ "committer	INT									NOT NULL,"	// TODO: Rename to Pusher
 		+ "date			TEXT								NOT NULL,"
 		+ "title		TEXT								NOT NULL,"
+		+ "changedFiles INT									NOT NULL,"
 		+ "linesAdded	INT									NOT NULL,"
 		+ "linesRemoved	INT									NOT NULL,"
 		+ "category		INT									        ,"
@@ -231,6 +231,63 @@ public class Model {
 		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
 		+ ")";
 
+	private static final String FILE_TABLE =
+		"CREATE TABLE IF NOT EXISTS Files ("
+		+ "id				INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+		+ "project			INT									NOT NULL,"
+		+ "name				TEXT								NOT NULL,"
+		+ "touched			INTEGER				DEFAULT 1		NOT NULL,"
+		+ "linesAdded		INTEGER								NOT NULL,"
+		+ "linesRemoved		INTEGER				DEFAULT 0		NOT NULL,"
+		+ "chunksChanged	INTEGER				DEFAULT	1		NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
+		+ ")";
+
+	private static final String FILE_DELETION_TABLE =
+		"CREATE TABLE IF NOT EXISTS FileDeletion ("
+		+ "fileId			INTEGER		NOT NULL,"
+		+ "commitId			INTEGER		NOT NULL,"
+		+ "PRIMARY KEY (fileId, commitId),"
+		+ "FOREIGN KEY(fileId) REFERENCES Files (id),"
+		+ "FOREIGN KEY(commitId) REFERENCES Commits (id)"
+		+ ")";
+
+	private static final String FILE_COPY_TABLE =
+		"CREATE TABLE IF NOT EXISTS FileCopy ("
+		+ "fileId			INTEGER		NOT NULL,"
+		+ "commitId			INTEGER		NOT NULL,"
+		+ "originalFileId	INTEGER		NOT NULL,"
+		+ "PRIMARY KEY (fileId, commitId),"
+		+ "FOREIGN KEY(fileId) REFERENCES Files (id),"
+		+ "FOREIGN KEY(originalFileId) REFERENCES Files (id),"
+		+ "FOREIGN KEY(commitId) REFERENCES Commits (id)"
+		+ ")";
+	
+	private static final String FILE_RENAMES_TABLE =
+		"CREATE TABLE IF NOT EXISTS FileRenames ("
+		+ "file			INTEGER		NOT NULL,"
+		+ "commitId		INTEGER		NOT NULL,"
+		+ "oldName		TEXT		NOT NULL,"
+		+ "PRIMARY KEY (commitId, file),"
+		+ "FOREIGN KEY(file) REFERENCES Files (id),"
+		+ "FOREIGN KEY(commitId) REFERENCES Commits (id)"
+		+ ")";
+
+	private static final String FILE_CHANGES_TABLE =
+		"CREATE TABLE IF NOT EXISTS FileChanges ("
+		+ "commitId			INTEGER		NOT NULL,"
+		+ "file				INTEGER		NOT NULL,"
+		+ "linesAdded		INTEGER		NOT NULL,"
+		+ "linesRemoved		INTEGER		NOT NULL,"
+		+ "chunksChanged	INTEGER		NOT NULL,"
+		+ "PRIMARY KEY (commitId, file),"
+		+ "FOREIGN KEY(commitId) REFERENCES Commits (id),"
+		+ "FOREIGN KEY(file) REFERENCES Files (id)"
+		+ ")";
+
+	// TODO: Files.touched handler
+	// TODO: creation functions fertig stellen
+	
 	private static final String BUGFIX_COMMIT_TABLE =
 		"CREATE TABLE IF NOT EXISTS BugfixCommit ("
 		+ "bug			INTEGER								NOT NULL,"
@@ -239,7 +296,7 @@ public class Model {
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
 		+ "PRIMARY KEY(bug, commitId)"
 		+ ")";
-		
+
 	
 	// TODO: Commit<>Bug
 
@@ -283,7 +340,8 @@ public class Model {
 		+ " CommitterIdentity.name	AS aiName,"
 		+ " CommitterIdentity.mail	AS aiName,"
 		+ " CommitterUser.id		AS auId,"
-		+ " CommitterUser.name		AS auName "
+		+ " CommitterUser.name		AS auName,"
+		+ " Commits.changedFiles "
 		+ "FROM"
 		+ " Commits "
 		+ "LEFT JOIN Identities AuthorIdentity"
@@ -485,8 +543,8 @@ public class Model {
 
 	private static final String COMMIT_INSERTION =
 		"INSERT INTO Commits"
-		+ "(project, author, committer, date, title, linesAdded, linesRemoved, category)"
-		+ "VALUES (?,?,?,?,?,?,?,?)";
+		+ "(project, author, committer, date, title, linesAdded, linesRemoved, changedFiles, category)"
+		+ "VALUES (?,?,?,?,?,?,?,?,?)";
 
 	private static final String BUGFIX_COMMIT_INSERTION =
 		"INSERT INTO BugfixCommit"
@@ -498,8 +556,34 @@ public class Model {
 		+ "(project, name)"
 		+ "VALUES (?,?)";
 
+	private static final String FILE_INSERTION =
+		"INSERT INTO Files "
+		+ "(project, name, linesAdded)"
+		+ "VALUES (?,?,?)";
+	
+	private static final String FILE_RENAME_INSERTION =
+		"INSERT INTO FileRenames"
+		+ "(file, commitId, oldName)"
+		+ "VALUES (?,?,?)";
+
+	private static final String FILE_CHANGE_INSERTION =
+		"INSERT INTO FileChanges"
+		+ "(commitId, file, linesAdded, linesRemoved, chunksChanged)"
+		+ "VALUES (?,?,?,?,?)";
+
+	private static final String FILE_DELETION_INSERTION =
+		"INSERT INTO FileDeletion"
+		+ "(fileId, commitId)"
+		+ "VALUES (?,?)";
+
+	private static final String FILE_COPY_INSERTION =
+		"INSERT INTO FileCopy"
+		+ "(fileId, commitId, originalFileId)"
+		+ "VALUES (?,?,?)";
+	
 	private static final String UPDATE_DEFAULT_STATUS =
 		"UPDATE Projects SET defaultStatusId = ? WHERE id = ?";
+
 
 
 	
@@ -1085,13 +1169,13 @@ public class Model {
 
 		
 	public Commit addCommit (Project project, Identity author,
-			Identity committer, Date date, String title, int linesAdded,
-			int linesRemoved, Category category)
+			Identity committer, Date date, String title, int changedFiles,
+			int changedLines, int linesRemoved, Category category)
 		throws SQLException
 	{
 		Commit commit = new Commit (null, project, author,
-				committer, date, title, linesAdded,
-				linesRemoved, category);
+				committer, date, title, changedFiles,
+				changedLines, linesRemoved, category);
 		add (commit);
 		return commit;
 	}
@@ -1116,10 +1200,11 @@ public class Model {
 			stmt.setString (5, commit.getTitle ());
 			stmt.setInt (6, commit.getLinesAdded ());
 			stmt.setInt (7, commit.getLinesRemoved ());
+			stmt.setInt (8, commit.getChangedFiles ());
 			if (commit.getCategory () != null) {
-				stmt.setInt (8, commit.getCategory ().getId ());
+				stmt.setInt (9, commit.getCategory ().getId ());
 			} else {
-				stmt.setNull (8, Types.INTEGER);
+				stmt.setNull (9, Types.INTEGER);
 			}
 			stmt.executeUpdate();
 	
@@ -1135,7 +1220,179 @@ public class Model {
 			pushConnection (conn);
 		}
 	}
+		
+	
+	public ManagedFileCopy addIsCopy (ManagedFile copy, Commit commit, ManagedFile original) throws SQLException {
+		ManagedFileCopy _copy = new ManagedFileCopy (copy, commit, original);
+		add (_copy);
+		return _copy;
+	}
 
+	public void add (ManagedFileCopy copy) throws SQLException {
+		assert (copy != null);
+		assert (copy.getFile ().getId () != null);
+		assert (copy.getOriginal ().getId () != null);
+		assert (copy.getCommit ().getId () != null);
+
+	
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (FILE_COPY_INSERTION);
+	
+			stmt.setInt (1, copy.getFile ().getId ());
+			stmt.setInt (2, copy.getCommit ().getId ());
+			stmt.setInt (3, copy.getOriginal ().getId ());
+			stmt.executeUpdate();
+			stmt.close ();
+
+	
+			for (ModelModificationListener listener : listeners) {
+				listener.managedFileCopyAdded (copy);
+			}
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	// TODO: calculate lines-added, lines-removed, chunks-changed
+	public ManagedFile addManagedFile (Project project, String name) throws SQLException {
+		ManagedFile file = new ManagedFile (null, project, name, null, 1, 0, 0, 1);
+		add (file);
+		return file;
+	}
+
+	public void add (ManagedFile file) throws SQLException {
+		assert (file != null);
+		assert (file.getId () == null);
+		assert (file .getChunksChanged () == 1);
+		assert (file.getLinesRemoved () == 0);
+		assert (file.getTouched () == 1);
+		assert (file.getProject ().getId () != null);
+
+		
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (FILE_INSERTION);
+	
+			stmt.setInt (1, file.getProject ().getId ());
+			stmt.setString (2, file.getName ());
+			stmt.setInt (3, file.getLinesAdded ());
+			stmt.executeUpdate();
+			stmt.close ();
+
+			file.setId (getLastInsertedId (stmt));
+			
+			for (ModelModificationListener listener : listeners) {
+				listener.managedFileAdded (file);
+			}
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	
+	public FileDeletion addFileDeletion (ManagedFile file, Commit commit) throws SQLException {
+		FileDeletion deletion = new FileDeletion (file, commit);
+		add (deletion);
+		return deletion;
+	}
+
+	public void add (FileDeletion deletion) throws SQLException {
+		assert (deletion != null);
+		assert (deletion.getCommit ().getId () != null);
+		assert (deletion.getFile ().getId () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (FILE_DELETION_INSERTION);
+	
+			stmt.setInt (1, deletion.getFile ().getId ());
+			stmt.setInt (2, deletion.getCommit ().getId ());
+			stmt.executeUpdate();
+			
+			stmt.close ();
+	
+
+			for (ModelModificationListener listener : listeners) {
+				listener.fileDeletedAdded (deletion);
+			}
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+
+	public FileRename addFileRename (ManagedFile file, Commit commit, String oldName) throws SQLException {
+		FileRename rename = new FileRename (file, commit, oldName);
+		add (rename);
+		return rename;
+	}
+
+	public void add (FileRename rename) throws SQLException {
+		assert (rename != null);
+		assert (rename.getCommit ().getId () != null);
+		assert (rename.getFile ().getId () != null);
+		assert (rename.getOldName () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (FILE_RENAME_INSERTION);
+	
+			stmt.setInt (1, rename.getFile ().getId ());
+			stmt.setInt (2, rename.getCommit ().getId ());
+			stmt.setString (3, rename.getOldName ());
+			stmt.executeUpdate();
+			
+			stmt.close ();
+	
+
+			for (ModelModificationListener listener : listeners) {
+				listener.fileRenameAdded (rename);
+			}
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	
+	public FileChange addFileChange (Commit commit, ManagedFile file, int linesAdded, int linesRemoved, int changedChunks) throws SQLException {
+		FileChange change = new FileChange (commit, file, linesAdded, linesRemoved, changedChunks);
+		add (change);
+		return change;
+	}
+
+	public void add (FileChange change) throws SQLException {
+		assert (change != null);
+		assert (change.getCommit ().getId () != null);
+		assert (change.getFile ().getId () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (FILE_CHANGE_INSERTION);
+	
+			stmt.setInt (1, change.getCommit ().getId ());
+			stmt.setInt (2, change.getFile ().getId ());
+			stmt.setInt (3, change.getLinesAdded ());
+			stmt.setInt (4, change.getLinesRemoved ());
+			stmt.setInt (5, change.getChangedChunks ());
+			stmt.executeUpdate();
+			
+			stmt.close ();
+	
+
+			for (ModelModificationListener listener : listeners) {
+				listener.fileChangeAdded (change);
+			}
+		} finally {
+			pushConnection (conn);
+		}
+	}
+	
 	
 	public BugfixCommit addBugfixCommit (Commit commit, Bug bug) throws SQLException {
 		BugfixCommit bugfix = new BugfixCommit (commit, bug);
@@ -1156,8 +1413,8 @@ public class Model {
 			stmt.executeUpdate();
 	
 			stmt.close ();
-	
-		
+
+
 			for (ModelModificationListener listener : listeners) {
 				listener.bugfixCommitAdded (bugfix);
 			}
@@ -1630,8 +1887,9 @@ public class Model {
 				Identity author = identityFromResult (res, authorUser, 7, 8, 9);
 				User committerUser = userFromResult (res, proj, 15, 16);
 				Identity committer = identityFromResult (res, committerUser, 12, 13, 14);
+				Integer changedFiles = res.getInt (15);
 	
-				Commit commit = new Commit (id, proj, author, committer, date, title, linesAdded, linesRemoved, category);
+				Commit commit = new Commit (id, proj, author, committer, date, title, changedFiles, linesAdded, linesRemoved, category);
 				do_next = callback.processResult (commit);
 			}
 	
@@ -2002,7 +2260,11 @@ public class Model {
 			stmt.executeUpdate (CATEGORY_TABLE);
 			stmt.executeUpdate (COMMIT_TABLE);
 			stmt.executeUpdate (BUGFIX_COMMIT_TABLE);
-	
+			stmt.executeUpdate (FILE_TABLE);
+			stmt.executeUpdate (FILE_RENAMES_TABLE);
+			stmt.executeUpdate (FILE_CHANGES_TABLE);
+			stmt.executeUpdate (FILE_DELETION_TABLE);
+			stmt.executeUpdate (FILE_COPY_TABLE);
 			stmt.executeUpdate (BUG_STATUS_UPDATE_TRIGGER);
 			stmt.executeUpdate (BUG_COMMENT_COUNT_UPDATE_TRIGGER);
 			stmt.close ();

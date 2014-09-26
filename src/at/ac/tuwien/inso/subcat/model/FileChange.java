@@ -1,4 +1,4 @@
-/* ModelModificationListener.java
+/* FileChange.java
  *
  * Copyright (C) 2014 Florian Brosch
  *
@@ -30,44 +30,47 @@
 
 package at.ac.tuwien.inso.subcat.model;
 
-public interface ModelModificationListener {
+public class FileChange {
+	private Commit commit;
+	private ManagedFile file;
+	private int linesAdded;
+	private int linesRemoved;
+	private int changedChunks;
 
-	public void projectAdded (Project project);
+	public FileChange (Commit commit, ManagedFile file, int linesAdded,
+			int linesRemoved, int changedChunks) {
+		
+		assert (commit != null);
+		assert (file != null);
+		assert (linesAdded >= 0);
+		assert (linesRemoved >= 0);
+		assert ((linesAdded + linesRemoved) > 0);
 
-	public void userAdded (User user);
+		this.commit = commit;
+		this.file = file;
+		this.linesAdded = linesAdded;
+		this.linesRemoved = linesRemoved;
+		this.changedChunks = changedChunks;
+	}
 
-	public void identityAdded (Identity identity);
+	public Commit getCommit () {
+		return commit;
+	}
 
-	public void interactionAdded (Interaction relation);
+	public ManagedFile getFile () {
+		return file;
+	}
 
-	public void severityAdded (Severity severity);
+	public int getLinesAdded () {
+		return linesAdded;
+	}
 
-	public void priorityAdded (Priority priority);
+	public int getLinesRemoved () {
+		return linesRemoved;
+	}
 
-	public void categoryAdded (Category category);
-
-	public void componentAdded (Component component);
-
-	public void bugAdded (Bug bug);
-
-	public void bugHistoryAdded (BugHistory history);
-
-	public void commentAdded (Comment cmnt);
-
-	public void statusAdded (Status status);
-
-	public void commitAdded (Commit commit);
-
-	public void bugfixCommitAdded (BugfixCommit bugfix);
-
-	public void fileChangeAdded (FileChange change);
-
-	public void fileRenameAdded (FileRename rename);
-
-	public void managedFileAdded (ManagedFile file);
-
-	public void fileDeletedAdded (FileDeletion deletion);
-
-	public void managedFileCopyAdded (ManagedFileCopy copy);
-
+	public int getChangedChunks () {
+		return changedChunks;
+	}
+	
 }

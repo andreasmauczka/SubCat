@@ -1,4 +1,4 @@
-/* ModelModificationListener.java
+/* FileRename.java
  *
  * Copyright (C) 2014 Florian Brosch
  *
@@ -30,44 +30,30 @@
 
 package at.ac.tuwien.inso.subcat.model;
 
-public interface ModelModificationListener {
+public class FileRename {
+	private ManagedFile file;
+	private Commit commit;
+	private String oldName;
 
-	public void projectAdded (Project project);
+	public FileRename (ManagedFile file, Commit commit, String oldName) {
+		assert (file != null);
+		assert (commit != null);
+		assert (oldName != null);
 
-	public void userAdded (User user);
+		this.file = file;
+		this.commit = commit;
+		this.oldName = oldName;
+	}
+	
+	public ManagedFile getFile () {
+		return file;
+	}
 
-	public void identityAdded (Identity identity);
+	public Commit getCommit () {
+		return commit;
+	}
 
-	public void interactionAdded (Interaction relation);
-
-	public void severityAdded (Severity severity);
-
-	public void priorityAdded (Priority priority);
-
-	public void categoryAdded (Category category);
-
-	public void componentAdded (Component component);
-
-	public void bugAdded (Bug bug);
-
-	public void bugHistoryAdded (BugHistory history);
-
-	public void commentAdded (Comment cmnt);
-
-	public void statusAdded (Status status);
-
-	public void commitAdded (Commit commit);
-
-	public void bugfixCommitAdded (BugfixCommit bugfix);
-
-	public void fileChangeAdded (FileChange change);
-
-	public void fileRenameAdded (FileRename rename);
-
-	public void managedFileAdded (ManagedFile file);
-
-	public void fileDeletedAdded (FileDeletion deletion);
-
-	public void managedFileCopyAdded (ManagedFileCopy copy);
-
+	public String getOldName () {
+		return oldName;
+	}
 }

@@ -76,10 +76,12 @@ public class BugzillaMinerMetaData extends MetaData {
 			String name = entry.getKey ();
 			Object val = entry.getValue ();
 
-			if (name.equalsIgnoreCase ("process-comments")) {
+			if (name.equals ("process-comments")) {
 				assertBoolean (name, val, errors);
-			} else if (name.equalsIgnoreCase ("process-history")) {
+			} else if (name.equals ("process-history")) {
 				assertBoolean (name, val, errors);
+			} else if (name.equals ("pass-size")) {
+				assertInteger (name, val, 1, Integer.MAX_VALUE, errors);
 			} else {
 				errors.put (name, "unknown parameter");
 			}

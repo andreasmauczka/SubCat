@@ -155,7 +155,7 @@ public class Model {
 	private static final String BUG_TABLE =
 		"CREATE TABLE IF NOT EXISTS Bugs ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
-		+ "identity		INT									NOT NULL,"
+		+ "identity		INT											,"
 		+ "component	INT									NOT NULL,"
 		+ "title		TEXT								NOT NULL,"
 		+ "creation		TEXT								NOT NULL,"
@@ -1014,11 +1014,10 @@ public class Model {
 	public void add (Bug bug) throws SQLException {
 		assert (bug != null);
 		assert (bug.getId () == null);
-		assert (bug.getIdentity () != null);
 		assert (bug.getComponent () != null);
 		assert (bug.getPriority () != null);
 		assert (bug.getSeverity() != null);
-		assert (bug.getIdentity ().getId () != null);
+		assert (bug.getIdentity () == null || bug.getIdentity ().getId () != null);
 		assert (bug.getComponent ().getId () != null);
 		assert (bug.getPriority ().getId () != null);
 		assert (bug.getSeverity().getId () != null);
@@ -1030,7 +1029,11 @@ public class Model {
 			PreparedStatement stmt = conn.prepareStatement (BUG_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
 	
-			stmt.setInt (1, bug.getIdentity ().getId ());
+			if (bug.getIdentity () != null) {
+				stmt.setInt (1, bug.getIdentity ().getId ());
+			} else {
+				stmt.setNull (1, Types.INTEGER);
+			}
 			stmt.setInt (2, bug.getComponent ().getId ());
 			stmt.setString (3, bug.getTitle ());
 			stmt.setString (4, dateFormat.format (bug.getCreation ()));
@@ -1921,9 +1924,14 @@ public class Model {
 			ResultSet res = stmt.executeQuery ();
 			boolean do_next = true;
 			while (res.next () && do_next) {
+				User user = null;
+				Identity identity = null;
+
 				Integer id = res.getInt (1);
-				User user = userFromResult (res, proj, 5, 6);
-				Identity identity = identityFromResult (res, user, 2, 3, 4);
+				if (res.getObject (2, Integer.class) != null) {
+					user = userFromResult (res, proj, 5, 6);
+					identity = identityFromResult (res, user, 2, 3, 4);
+				}
 				Component component = components.get (res.getInt (7));
 				String title = res.getString (8);
 				Date creation = res.getDate (9);

@@ -60,6 +60,7 @@ import at.ac.tuwien.inso.subcat.model.User;
 
 public class BugzillaMiner extends Miner {
 	private final int PAGE_SIZE = 10;
+	private int passSize = 5;
 
 	// LinkedBlockingQueue does not allow `null`
 	// as poison
@@ -95,15 +96,24 @@ public class BugzillaMiner extends Miner {
 
 		@Override
 		public void run () {
-			while (!Thread.currentThread().isInterrupted ()) {
+			LinkedList<BugzillaBug> bbugs = new LinkedList<BugzillaBug> ();
+			LinkedList<Integer> bzBugIds = new LinkedList<Integer> ();
+			boolean stopped = false;
+
+			while (!Thread.currentThread().isInterrupted () && !stopped) {
 				try {
-					BugzillaBug bbug = queue.take ().bug;
-					if (bbug == null) {
-						// stop thread, done
-						break;
+					for (int i = 0; i < passSize; i++) {
+						BugzillaBug bbug = queue.take ().bug;
+						if (bbug == null) {
+							stopped = true;
+							break;
+						}
+
+						bzBugIds.add (bbug.getId ());
+						bbugs.add (bbug);
 					}
 
-					process (bbug);
+					process (bbugs, bzBugIds);
 
 					Thread.sleep (settings.bugCooldownTime);
 				} catch (InterruptedException e) {
@@ -112,39 +122,47 @@ public class BugzillaMiner extends Miner {
 					abortRun (new MinerException ("Bugzilla-Exception: " + e.getMessage (), e));
 				} catch (SQLException e) {
 					abortRun (new MinerException ("SQL-Exception: " + e.getMessage (), e));
+				} finally {
+					bbugs.clear ();
+					bzBugIds.clear ();
 				}
 			}
 		}
 
-		private void process (BugzillaBug bzBug) throws BugzillaException, SQLException {
-			assert (bzBug != null);
-			
-			Integer bugId = bzBug.getId ();
+		private void process (List<BugzillaBug> bzBugs, List<Integer> bzBugIds) throws BugzillaException, SQLException {
+			assert (bzBugs != null);
+			assert (bzBugIds != null);
+			assert (bzBugs.size () == bzBugIds.size ());
 
 			// Get data:
-			Map<Integer, BugzillaHistory[]> _histories = context.getHistory (bugId);
-			Map<Integer, BugzillaComment[]> _comments = context.getComments (bugId);
-			BugzillaHistory[] histories = _histories.get (bugId);
-			BugzillaComment[] comments = _comments.get (bugId);
-			assert (comments != null);
+			Map<Integer, BugzillaHistory[]> _histories = context.getHistory (bzBugIds);
+			Map<Integer, BugzillaComment[]> _comments = context.getComments (bzBugIds);
 
+			for (BugzillaBug bzBug : bzBugs) {
+				BugzillaComment[] comments = _comments.get (bzBug.getId ());
+				Identity creator = null;
+				if (comments != null) {
+					resolveIdentity (comments[0].getCreator ());
+				}
 
-			Identity creator = resolveIdentity (comments[0].getCreator ());
-			Component component = resolveComponent (bzBug.getComponent ());
-			Severity severity = resolveSeverity (bzBug.getSeverity ());
-			Priority priority = resolvePriority (bzBug.getPriority ());
-			Date creation = bzBug.getCreationTime ();
-			String title = bzBug.getSummary ();
-			
-
-			// Add to model:
-			Bug bug = model.addBug (creator, component, title, creation, priority, severity, null);
-			if (processComments) {
-				addComments (bug, comments);
-			}
-
-			if (processHistory) {
-				addHistory (bug, histories);
+				Component component = resolveComponent (bzBug.getComponent ());
+				Severity severity = resolveSeverity (bzBug.getSeverity ());
+				Priority priority = resolvePriority (bzBug.getPriority ());
+				Date creation = bzBug.getCreationTime ();
+				String title = bzBug.getSummary ();
+				
+	
+				// Add to model:
+				Bug bug = model.addBug (creator, component, title, creation, priority, severity, null);
+				if (processComments) {
+					assert (comments != null);
+					addComments (bug, comments);
+				}
+	
+				if (processHistory) {
+					BugzillaHistory[] histories = _histories.get (bzBug.getId ());
+					addHistory (bug, histories);
+				}
 			}
 		}
 
@@ -173,7 +191,6 @@ public class BugzillaMiner extends Miner {
 				return ;
 			}
 
-
 			for (BugzillaHistory entry : history) {
 				BugzillaChange[] changes = entry.getChanges ();
 				for (BugzillaChange change : changes) {
@@ -186,7 +203,7 @@ public class BugzillaMiner extends Miner {
 						Identity identity = resolveIdentity (entry.getWho ());
 						Status bugStat = resolveStatus (change.getAdded ());
 						Date date = entry.getWhen ();
-	
+
 						model.addBugHistory (bug, bugStat, identity, date);
 					}
 				}
@@ -209,7 +226,8 @@ public class BugzillaMiner extends Miner {
 	public void run () throws MinerException {
 		processComments = settings.srcGetParameter ("process-comments", true);
 		processHistory = settings.srcGetParameter ("process-history", true);
-
+		passSize = settings.srcGetParameter ("pass-size", 5);
+		
 		for (int i = 0; i < settings.bugThreads; i++) {
 			Worker worker = new Worker ();
 			workers.add (worker);

@@ -33,6 +33,7 @@ package at.ac.tuwien.inso.subcat.bugzilla;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.GeneralSecurityException;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -508,6 +509,13 @@ public class BugzillaContext {
 		return bugs;
 	}
 	
+	public Map<Integer, BugzillaComment[]> getComments (Collection<Integer> ids) throws BugzillaException {
+		Integer[] arr = new Integer[ids.size ()];
+		ids.toArray (arr);
+
+		return getComments (arr);
+	}
+
 	public Map<Integer, BugzillaComment[]> getComments (Integer... ids) throws BugzillaException {
 		// Get the resutl map:
 		Map<String, Object[]> params = new HashMap<String, Object[]> ();
@@ -570,6 +578,13 @@ public class BugzillaContext {
 		}
 
 		return bugs;
+	}
+
+	public Map<Integer, BugzillaHistory[]> getHistory (Collection<Integer> ids) throws BugzillaException {
+		Integer[] arr = new Integer[ids.size ()];
+		ids.toArray (arr);
+
+		return getHistory (arr);
 	}
 
 	public Map<Integer, BugzillaHistory[]> getHistory (Integer... ids) throws BugzillaException {

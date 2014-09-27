@@ -46,7 +46,6 @@ public class Bug {
 	public Bug (Integer id, Identity identity, Component component,
 			String title, Date creation, Priority priority, Severity severity,
 			Category category) {
-		assert (identity != null);
 		assert (component != null);
 		assert (title != null);
 		assert (creation != null);
@@ -76,8 +75,6 @@ public class Bug {
 	}
 
 	public void setIdentity (Identity identity) {
-		assert (identity != null);
-
 		this.identity = identity;
 	}
 

@@ -34,6 +34,7 @@ import java.io.File;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Project;
@@ -44,6 +45,11 @@ public abstract class Miner {
 		BUG
 	}
 
+	public enum ParamType {
+		INTEGER,
+		BOOLEAN
+	}
+	
 	public static interface MetaData {
 		public abstract MinerType getType ();
 		
@@ -52,6 +58,10 @@ public abstract class Miner {
 		public abstract boolean is (Settings settings);
 		
 		public abstract Miner create (Settings settings, Project project, Model model);
+
+		public abstract boolean checkSpecificParams (Map<String, Object> params, Map<String, String> errors);
+
+		public abstract Map<String, ParamType> getSpecificParams ();
 	}
 
 	

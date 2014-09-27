@@ -30,8 +30,12 @@
 
 package at.ac.tuwien.inso.subcat.miner;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import at.ac.tuwien.inso.subcat.miner.Miner.MetaData;
 import at.ac.tuwien.inso.subcat.miner.Miner.MinerType;
+import at.ac.tuwien.inso.subcat.miner.Miner.ParamType;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Project;
 
@@ -63,6 +67,24 @@ public class GitMinerMetaData implements MetaData {
 	@Override
 	public Miner create (Settings settings, Project project, Model model) {
 		return new GitMiner (settings, project, model);
+	}
+
+	@Override
+	public boolean checkSpecificParams (Map<String, Object> params, Map<String, String> errors) {
+		assert (params != null);
+		assert (errors != null);
+
+		if (params.size () != 0) {
+			errors.put (null, "Unexpected parameter count");
+			return false;
+		}
+		
+		return true;
+	}
+
+	@Override
+	public Map<String, ParamType> getSpecificParams () {
+		return new HashMap<String, ParamType> ();
 	}
 
 }

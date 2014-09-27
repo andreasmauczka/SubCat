@@ -30,6 +30,9 @@
 
 package at.ac.tuwien.inso.subcat.miner;
 
+import java.util.HashMap;
+import java.util.Map;
+
 
 public class Settings {
 
@@ -45,6 +48,16 @@ public class Settings {
 	public boolean bugEnableUntrustedCertificates = false;
 	public int bugThreads = 1;
 	public long bugCooldownTime = 0;
+	public Map<String, Object> bugSpecificParams
+		= new HashMap<String, Object> ();
+
+	public boolean bugGetParameter (String name, boolean defaultValue) {
+		return getParameter (bugSpecificParams, name, defaultValue);
+	}
+
+	public int bugGetParameter (String name, int defaultValue) {
+		return getParameter (bugSpecificParams, name, defaultValue);
+	}
 
 
 	//
@@ -55,5 +68,39 @@ public class Settings {
 	public String srcRemote = "";
 	public String srcRemotePw = null;
 	public String srcRemoteUser = null;
+	public Map<String, Object> srcSpecificParams
+		= new HashMap<String, Object> ();
 
+	public boolean srcGetParameter (String name, boolean defaultValue) {
+		return getParameter (srcSpecificParams, name, defaultValue);
+	}
+
+	public int srcGetParameter (String name, int defaultValue) {
+		return getParameter (srcSpecificParams, name, defaultValue);
+	}
+
+	
+	//
+	// Helper:
+	//
+	
+	private boolean getParameter (Map<String, Object> params, String name, boolean defaultValue) {
+		Object obj = params.get (name);
+		if (obj == null) {
+			return defaultValue;
+		}
+
+		assert (obj instanceof Boolean);
+		return (Boolean) obj;
+	}
+
+	private int getParameter (Map<String, Object> params, String name, int defaultValue) {
+		Object obj = params.get (name);
+		if (obj == null) {
+			return defaultValue;
+		}
+
+		assert (obj instanceof Integer);
+		return (Integer) obj;		
+	}
 }

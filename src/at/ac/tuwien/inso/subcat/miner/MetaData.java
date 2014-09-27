@@ -54,4 +54,48 @@ public abstract class MetaData {
 	public abstract boolean checkSpecificParams (Map<String, Object> params, Map<String, String> errors);
 
 	public abstract Map<String, ParamType> getSpecificParams ();
+	
+
+	protected boolean assertBoolean (String name, Object obj, Map<String, String> errors) {
+		assert (name != null);
+		assert (errors != null);
+		assert (obj != null);
+
+		if (obj instanceof Boolean == false) {
+			errors.put (name, "invalid type, expected booleans");
+			return false;
+		}
+
+		return true;
+	}
+	
+	protected boolean assertInteger (String name, Object obj, Map<String, String> errors) {
+		return assertInteger (name, obj, Integer.MIN_VALUE, Integer.MAX_VALUE, errors);
+	}
+
+	protected boolean assertInteger (String name, Object obj, int min, int max, Map<String, String> errors) {
+		assert (name != null);
+		assert (obj != null);
+		assert (errors != null);
+		assert (max >= min);
+		
+		if (obj instanceof Integer == false) {
+			errors.put (name, "invalid type, expected int");
+			return false;
+		}
+
+		int val = (Integer) obj;
+		
+		if (val < min) {
+			errors.put (name, "invalid value, name < " + min);			
+			return false;
+		}
+
+		if (val > max) {
+			errors.put (name, "invalid value, name > " + max);			
+			return false;
+		}
+
+		return true;
+	}
 }

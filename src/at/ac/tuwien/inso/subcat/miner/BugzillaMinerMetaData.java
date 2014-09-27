@@ -34,12 +34,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 import at.ac.tuwien.inso.subcat.miner.Miner.MinerType;
-import at.ac.tuwien.inso.subcat.miner.Miner.ParamType;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Project;
 
 
-public class BugzillaMinerMetaData extends Miner.MetaData {
+public class BugzillaMinerMetaData extends MetaData {
 	private static final String name = "Bugzilla";
 
 	@Override

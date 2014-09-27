@@ -40,7 +40,7 @@ import at.ac.tuwien.inso.subcat.model.Project;
 
 
 public class MinerRunner {
-	private static LinkedList<Miner.MetaData> registeredMiner;
+	private static LinkedList<MetaData> registeredMiner;
 
 	private List<MinerListener> listeners = new LinkedList<MinerListener> ();
 	private LinkedList<RunnableMiner> miners = new LinkedList<RunnableMiner> ();
@@ -49,7 +49,7 @@ public class MinerRunner {
 
 	private static void init () {
 		if (registeredMiner == null) {
-			registeredMiner = new LinkedList<Miner.MetaData> ();
+			registeredMiner = new LinkedList<MetaData> ();
 			registeredMiner.add (new BugzillaMinerMetaData ());
 			registeredMiner.add (new GitMinerMetaData ());
 			//registeredMiner.add (new SvnMinerMetaData ());
@@ -81,7 +81,7 @@ public class MinerRunner {
 
 		LinkedList<Miner.MinerType> foundMinerTypes = new LinkedList<Miner.MinerType> ();
 		
-		for (Miner.MetaData meta : registeredMiner) {
+		for (MetaData meta : registeredMiner) {
 			if (foundMinerTypes.contains (meta.getType ())) {
 				continue ;
 			}

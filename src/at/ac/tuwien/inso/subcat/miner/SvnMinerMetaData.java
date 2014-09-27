@@ -36,9 +36,7 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
-import at.ac.tuwien.inso.subcat.miner.Miner.MetaData;
 import at.ac.tuwien.inso.subcat.miner.Miner.MinerType;
-import at.ac.tuwien.inso.subcat.miner.Miner.ParamType;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.utility.XmlReader;

@@ -1,4 +1,4 @@
-/* GitMinerMetaData.java
+/* MetaData.java
  *
  * Copyright (C) 2014 Florian Brosch
  *
@@ -30,60 +30,28 @@
 
 package at.ac.tuwien.inso.subcat.miner;
 
-import java.util.HashMap;
 import java.util.Map;
 
-import at.ac.tuwien.inso.subcat.miner.MetaData;
 import at.ac.tuwien.inso.subcat.miner.Miner.MinerType;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Project;
 
 
-public class GitMinerMetaData extends MetaData {
-	private final static String name = "GIT";
+public abstract class MetaData {
+	public enum ParamType {
+		INTEGER,
+		BOOLEAN
+	}
+
+	public abstract MinerType getType ();
 	
-	@Override
-	public MinerType getType () {
-		return MinerType.SOURCE;
-	}
+	public abstract String name ();
+	
+	public abstract boolean is (Settings settings);
+	
+	public abstract Miner create (Settings settings, Project project, Model model);
 
-	@Override
-	public String name () {
-		return name;
-	}
+	public abstract boolean checkSpecificParams (Map<String, Object> params, Map<String, String> errors);
 
-	@Override
-	public boolean is (Settings settings) {
-		assert (settings !=null);
-
-		if (settings.srcLocalPath == null) {
-			return false;
-		}
-
-		return Miner.inRepository (settings.srcLocalPath, ".git");
-	}
-
-	@Override
-	public Miner create (Settings settings, Project project, Model model) {
-		return new GitMiner (settings, project, model);
-	}
-
-	@Override
-	public boolean checkSpecificParams (Map<String, Object> params, Map<String, String> errors) {
-		assert (params != null);
-		assert (errors != null);
-
-		if (params.size () != 0) {
-			errors.put (null, "Unexpected parameter count");
-			return false;
-		}
-		
-		return true;
-	}
-
-	@Override
-	public Map<String, ParamType> getSpecificParams () {
-		return new HashMap<String, ParamType> ();
-	}
-
+	public abstract Map<String, ParamType> getSpecificParams ();
 }

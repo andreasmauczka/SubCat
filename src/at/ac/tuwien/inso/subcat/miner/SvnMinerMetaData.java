@@ -44,7 +44,7 @@ import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.utility.XmlReader;
 
 
-public class SvnMinerMetaData implements MetaData {
+public class SvnMinerMetaData extends MetaData {
 	private final static String name = "SVN";
 	
 	@Override

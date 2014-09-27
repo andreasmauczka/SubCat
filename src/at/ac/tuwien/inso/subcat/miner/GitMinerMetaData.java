@@ -40,7 +40,7 @@ import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Project;
 
 
-public class GitMinerMetaData implements MetaData {
+public class GitMinerMetaData extends MetaData {
 	private final static String name = "GIT";
 	
 	@Override

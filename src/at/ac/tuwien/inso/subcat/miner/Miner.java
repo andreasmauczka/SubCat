@@ -50,7 +50,7 @@ public abstract class Miner {
 		BOOLEAN
 	}
 	
-	public static interface MetaData {
+	public static abstract class MetaData {
 		public abstract MinerType getType ();
 		
 		public abstract String name ();

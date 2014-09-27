@@ -39,7 +39,7 @@ import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Project;
 
 
-public class BugzillaMinerMetaData implements Miner.MetaData {
+public class BugzillaMinerMetaData extends Miner.MetaData {
 	private static final String name = "Bugzilla";
 
 	@Override

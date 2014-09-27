@@ -78,6 +78,8 @@ public class BugzillaMinerMetaData extends MetaData {
 
 			if (name.equalsIgnoreCase ("process-comments")) {
 				assertBoolean (name, val, errors);
+			} else if (name.equalsIgnoreCase ("process-history")) {
+				assertBoolean (name, val, errors);
 			} else {
 				errors.put (name, "unknown parameter");
 			}

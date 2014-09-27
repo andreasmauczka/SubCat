@@ -87,8 +87,9 @@ public class BugzillaMiner extends Miner {
 
 	private List<Worker> workers = new LinkedList<Worker> ();
 	private MinerException storedException;
-	private boolean processComments;
 	
+	private boolean processComments;
+	private boolean processHistory;
 	
 	private class Worker extends Thread {
 
@@ -142,7 +143,9 @@ public class BugzillaMiner extends Miner {
 				addComments (bug, comments);
 			}
 
-			addHistory (bug, histories);
+			if (processHistory) {
+				addHistory (bug, histories);
+			}
 		}
 
 		private void addComments (Bug bug, BugzillaComment[] comments) throws SQLException, BugzillaException {
@@ -205,6 +208,7 @@ public class BugzillaMiner extends Miner {
 	@Override
 	public void run () throws MinerException {
 		processComments = settings.srcGetParameter ("process-comments", true);
+		processHistory = settings.srcGetParameter ("process-history", true);
 
 		for (int i = 0; i < settings.bugThreads; i++) {
 			Worker worker = new Worker ();

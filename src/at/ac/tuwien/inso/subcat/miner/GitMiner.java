@@ -68,7 +68,8 @@ public class GitMiner extends Miner {
 	private Settings settings;
 	private Project project;
 	private Model model;
-
+	private boolean stopped;
+	
 	private static class DiffOutputStream extends OutputStream {
 		private boolean lastWasNewline = false;
 		private int totalAdded = 0;
@@ -161,6 +162,8 @@ public class GitMiner extends Miner {
 	
 	@Override
 	public void run () throws MinerException {
+		stopped = false;
+
 		try {
 			emitStart ();
 			_run ();
@@ -200,6 +203,10 @@ public class GitMiner extends Miner {
 		Map<String, ManagedFile> fileCache = new HashMap<String, ManagedFile> ();
 
 		for (RevCommit rev : walk) {
+			if (stopped == true) {
+				break;
+			}
+
 			processCommit (repository, walk, rev, fileCache);
 		}
 		
@@ -224,6 +231,10 @@ public class GitMiner extends Miner {
 		Commit commit = model.addCommit (project, author, committer, date, message, fileCount, totalLinesAdded, totalLinesRemoved, null);
 
 		for (Map.Entry<String, FileStats> item : fileStats.entrySet ()) {
+			if (stopped == true) {
+				break;
+			}
+			
 			FileStats stats = item.getValue ();
 			String path = item.getKey ();
 			
@@ -298,6 +309,10 @@ public class GitMiner extends Miner {
 			}
 
 			for (DiffEntry de : entries) {
+				if (stopped == true) {
+					break;
+				}
+
 				int linesAddedStart = outputStream.getTotalLinesAdded ();
 				int linesRemovedStart = outputStream.getTotalLinesRemoved ();
 				int chunksStart = outputStream.getTotalChunks ();
@@ -348,7 +363,7 @@ public class GitMiner extends Miner {
 	
 	@Override
 	public void stop () {
-		// TODO
+		stopped = true;
 		emitStop ();
 	}
 }

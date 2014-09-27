@@ -82,6 +82,8 @@ public class BugzillaMinerMetaData extends MetaData {
 				assertBoolean (name, val, errors);
 			} else if (name.equals ("pass-size")) {
 				assertInteger (name, val, 1, Integer.MAX_VALUE, errors);
+			} else if (name.equals ("page-size")) {
+				assertInteger (name, val, 1, Integer.MAX_VALUE, errors);
 			} else {
 				errors.put (name, "unknown parameter");
 			}

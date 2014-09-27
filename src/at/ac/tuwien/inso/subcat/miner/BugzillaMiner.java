@@ -59,7 +59,7 @@ import at.ac.tuwien.inso.subcat.model.User;
 
 
 public class BugzillaMiner extends Miner {
-	private final int PAGE_SIZE = 10;
+	private int pageSize = 50;
 	private int passSize = 5;
 
 	// LinkedBlockingQueue does not allow `null`
@@ -227,6 +227,7 @@ public class BugzillaMiner extends Miner {
 		processComments = settings.srcGetParameter ("process-comments", true);
 		processHistory = settings.srcGetParameter ("process-history", true);
 		passSize = settings.srcGetParameter ("pass-size", 5);
+		pageSize = settings.srcGetParameter ("page-size", 50);
 		
 		for (int i = 0; i < settings.bugThreads; i++) {
 			Worker worker = new Worker ();
@@ -298,7 +299,7 @@ public class BugzillaMiner extends Miner {
 		model.setDefaultStatus (resolveStatus ("UNCO"));
 
 		for (int page = 1; run && !Thread.currentThread().isInterrupted () ; page++) {
-			BugzillaBug[] bugs = context.getBugs (settings.bugProductName, page, PAGE_SIZE);
+			BugzillaBug[] bugs = context.getBugs (settings.bugProductName, page, pageSize);
 			if (bugs.length < 1) {
 				break;
 			}

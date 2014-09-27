@@ -72,9 +72,15 @@ public class BugzillaMinerMetaData extends MetaData {
 		assert (params != null);
 		assert (errors != null);
 
-		if (params.size () != 0) {
-			errors.put (null, "Unexpected parameter count");
-			return false;
+		for (Map.Entry<String, Object> entry : params.entrySet ()) {
+			String name = entry.getKey ();
+			Object val = entry.getValue ();
+
+			if (name.equalsIgnoreCase ("process-comments")) {
+				assertBoolean (name, val, errors);
+			} else {
+				errors.put (name, "unknown parameter");
+			}
 		}
 		
 		return true;

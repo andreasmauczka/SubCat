@@ -69,7 +69,10 @@ public class GitMiner extends Miner {
 	private Project project;
 	private Model model;
 	private boolean stopped;
-	
+
+	private boolean processDiffs;
+
+
 	private static class DiffOutputStream extends OutputStream {
 		private boolean lastWasNewline = false;
 		private int totalAdded = 0;
@@ -163,6 +166,8 @@ public class GitMiner extends Miner {
 	@Override
 	public void run () throws MinerException {
 		stopped = false;
+
+		processDiffs = settings.srcGetParameter ("process-diffs", true);
 
 		try {
 			emitStart ();
@@ -290,6 +295,10 @@ public class GitMiner extends Miner {
 		assert (current != null);
 		assert (outputStream != null);
 		assert (fileStatsMap != null);
+
+		if (processDiffs == false) {
+			return ;
+		}
 		
 		try {
 			DiffFormatter df = new DiffFormatter (outputStream);
@@ -349,10 +358,11 @@ public class GitMiner extends Miner {
 
 				df.format(de);
 				df.flush();
-
+	
 				fileStats.linesAdded += outputStream.getTotalLinesAdded () - linesAddedStart;
 				fileStats.linesRemoved += outputStream.getTotalLinesRemoved () - linesRemovedStart;
 				fileStats.chunks += outputStream.getTotalChunks () - chunksStart;
+
 				fileStats.type = de.getChangeType ();
 				fileStats.oldPath = oldPath;
 			}

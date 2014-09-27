@@ -73,9 +73,15 @@ public class GitMinerMetaData extends MetaData {
 		assert (params != null);
 		assert (errors != null);
 
-		if (params.size () != 0) {
-			errors.put (null, "Unexpected parameter count");
-			return false;
+		for (Map.Entry<String, Object> entry : params.entrySet ()) {
+			String name = entry.getKey ();
+			Object val = entry.getValue ();
+
+			if (name.equalsIgnoreCase ("process-diffs")) {
+				assertBoolean (name, val, errors);
+			} else {
+				errors.put (name, "unknown parameter");
+			}
 		}
 		
 		return true;
@@ -83,7 +89,9 @@ public class GitMinerMetaData extends MetaData {
 
 	@Override
 	public Map<String, ParamType> getSpecificParams () {
-		return new HashMap<String, ParamType> ();
+		Map<String, ParamType> params = new HashMap<String, ParamType> ();
+		params.put ("process-diffs", ParamType.BOOLEAN);
+		return params;
 	}
 
 }

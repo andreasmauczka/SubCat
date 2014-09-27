@@ -164,6 +164,7 @@ public class MinerRunner {
 		settings.bugThreads = 1;
 		/* GIT Test: */
 		settings.srcLocalPath = System.getProperty("user.dir");
+		settings.srcSpecificParams.put ("process-diffs", false);
 		/* Svn Test: * /
 		settings.srcLocalPath = "/home/mog/student-project-netcracker-read-only";
 		settings.srcRemote = "http://student-project-netcracker.googlecode.com/svn/trunk/";

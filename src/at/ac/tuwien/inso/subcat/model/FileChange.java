@@ -36,21 +36,28 @@ public class FileChange {
 	private int linesAdded;
 	private int linesRemoved;
 	private int changedChunks;
+	private int emptyLinesAdded;
+	private int emptyLinesRemoved;
 
 	public FileChange (Commit commit, ManagedFile file, int linesAdded,
-			int linesRemoved, int changedChunks) {
+			int linesRemoved, int emptyLinesAdded, int emptyLinesRemoved,
+			int changedChunks) {
 		
 		assert (commit != null);
 		assert (file != null);
 		assert (linesAdded >= 0);
 		assert (linesRemoved >= 0);
 		assert ((linesAdded + linesRemoved) > 0);
+		assert (emptyLinesRemoved >= 0);
+		assert (emptyLinesAdded >= 0);
 
 		this.commit = commit;
 		this.file = file;
 		this.linesAdded = linesAdded;
 		this.linesRemoved = linesRemoved;
 		this.changedChunks = changedChunks;
+		this.emptyLinesAdded = emptyLinesAdded;
+		this.emptyLinesRemoved = emptyLinesRemoved;
 	}
 
 	public Commit getCommit () {
@@ -71,6 +78,14 @@ public class FileChange {
 
 	public int getChangedChunks () {
 		return changedChunks;
+	}
+
+	public int getEmptyLinesAdded () {
+		return emptyLinesAdded;
+	}
+
+	public int getEmptyLinesRemoved () {
+		return emptyLinesRemoved;
 	}
 	
 }

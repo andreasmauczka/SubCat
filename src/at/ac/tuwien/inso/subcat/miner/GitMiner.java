@@ -75,17 +75,36 @@ public class GitMiner extends Miner {
 
 
 	private static class DiffOutputStream extends OutputStream {
+		private enum State {
+			NONE,
+			ADDED,
+			REMOVED
+		}
+		
 		private boolean lastWasNewline = false;
 		private int totalAdded = 0;
 		private int totalRemoved = 0;
 		private int totalChunks = 0;
+		private int totalAddedEmpty = 0;
+		private int totalRemovedEmpty = 0;
 
+		private State state = State.NONE;
+		private boolean empty = false;
+		
 		public int getTotalLinesAdded () {
 			return this.totalAdded;
 		}
 
+		public int getTotalEmptyLinesAdded () {
+			return this.totalAddedEmpty;
+		}
+
 		public int getTotalLinesRemoved () {
 			return this.totalRemoved;
+		}
+
+		public int getTotalEmptyLinesRemoved () {
+			return this.totalRemovedEmpty;
 		}
 
 		public int getTotalChunks () {
@@ -96,21 +115,41 @@ public class GitMiner extends Miner {
 		public void reset () {
 			this.totalAdded = 0;
 			this.totalRemoved = 0;
-			this.totalAdded = 0;
+			this.totalAddedEmpty = 0;
+			this.totalRemovedEmpty = 0;
+			this.totalChunks = 0;
+			this.lastWasNewline = false;
+			this.state = State.NONE;
+			this.empty = false;
 		}
 		
 		@Override
-		public void write (int b) throws IOException {
+		public void write (int b) {
 			if (b == '\n') {
 				lastWasNewline = true;
+				if (empty == true) {
+					if (state == State.ADDED) {
+						totalAddedEmpty++;
+					} else if (state == State.REMOVED) {
+						totalRemovedEmpty++;				
+					}
+				}
+				state = State.NONE;
+				empty = true;
 			} else if (lastWasNewline == true) {
 				if (b == '+') {
 					totalAdded++;
+					state = State.ADDED;
 				} else if (b == '-') {
+					state = State.REMOVED;
 					totalRemoved++;
 				} else if (b == '@') {
-					totalAdded++;
+					totalChunks++;
 				}
+
+				lastWasNewline = false;
+			} else if (b != '\r' && b != ' ' && b != '\t') {
+				empty = false;
 			}
 		}
 	}
@@ -155,6 +194,8 @@ public class GitMiner extends Miner {
 	private class FileStats {
 		public int linesAdded = 0;
 		public int linesRemoved = 0;
+		public int emptyLinesAdded = 0;
+		public int emptyLinesRemoved = 0;
 		public int chunks = 0;
 		public String oldPath;
 		public ChangeType type;
@@ -265,7 +306,7 @@ public class GitMiner extends Miner {
 			switch (stats.type) {
 			case ADD:
 				ManagedFile addedFile = model.addManagedFile (project, path);
-				model.addFileChange (commit, addedFile, stats.linesAdded, 0, stats.chunks);
+				model.addFileChange (commit, addedFile, stats.linesAdded, stats.linesRemoved, stats.emptyLinesAdded, stats.emptyLinesRemoved, stats.chunks);
 				fileCache.put (path, addedFile);
 				break;
 
@@ -279,7 +320,7 @@ public class GitMiner extends Miner {
 			case MODIFY:
 				ManagedFile modifiedFile = fileCache.get (path);
 				assert (modifiedFile != null);
-				model.addFileChange (commit, modifiedFile, stats.linesAdded, stats.linesRemoved, stats.chunks);
+				model.addFileChange (commit, modifiedFile, stats.linesAdded, stats.linesRemoved, stats.emptyLinesAdded, stats.emptyLinesRemoved, stats.chunks);
 				break;
 
 			case COPY:
@@ -287,7 +328,7 @@ public class GitMiner extends Miner {
 				assert (originalFile != null);
 
 				ManagedFile copiedFile = model.addManagedFile (project, path);
-				model.addFileChange (commit, copiedFile, stats.linesAdded, 0, stats.chunks);
+				model.addFileChange (commit, copiedFile, stats.linesAdded, stats.linesRemoved, stats.emptyLinesAdded, stats.emptyLinesRemoved, stats.chunks);
 				model.addIsCopy (copiedFile, commit, originalFile);
 				fileCache.put (path, copiedFile);
 				break;
@@ -341,6 +382,8 @@ public class GitMiner extends Miner {
 					break;
 				}
 
+				int emptyLinesAddedStart = outputStream.getTotalEmptyLinesAdded ();
+				int emptyLinesRemovedStart = outputStream.getTotalEmptyLinesRemoved ();
 				int linesAddedStart = outputStream.getTotalLinesAdded ();
 				int linesRemovedStart = outputStream.getTotalLinesRemoved ();
 				int chunksStart = outputStream.getTotalChunks ();
@@ -377,7 +420,9 @@ public class GitMiner extends Miner {
 
 				df.format(de);
 				df.flush();
-	
+
+				fileStats.emptyLinesAdded = outputStream.getTotalEmptyLinesAdded () - emptyLinesAddedStart;
+				fileStats.emptyLinesRemoved = outputStream.getTotalEmptyLinesRemoved () - emptyLinesRemovedStart;
 				fileStats.linesAdded += outputStream.getTotalLinesAdded () - linesAddedStart;
 				fileStats.linesRemoved += outputStream.getTotalLinesRemoved () - linesRemovedStart;
 				fileStats.chunks += outputStream.getTotalChunks () - chunksStart;

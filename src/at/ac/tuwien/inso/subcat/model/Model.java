@@ -275,11 +275,13 @@ public class Model {
 
 	private static final String FILE_CHANGES_TABLE =
 		"CREATE TABLE IF NOT EXISTS FileChanges ("
-		+ "commitId			INTEGER		NOT NULL,"
-		+ "file				INTEGER		NOT NULL,"
-		+ "linesAdded		INTEGER		NOT NULL,"
-		+ "linesRemoved		INTEGER		NOT NULL,"
-		+ "chunksChanged	INTEGER		NOT NULL,"
+		+ "commitId				INTEGER		NOT NULL,"
+		+ "file					INTEGER		NOT NULL,"
+		+ "linesAdded			INTEGER		NOT NULL,"
+		+ "linesRemoved			INTEGER		NOT NULL,"
+		+ "emptyLinesAdded		INTEGER		NOT NULL,"
+		+ "emptyLinesRemoved	INTEGER 	NOT NULL,"
+		+ "chunksChanged		INTEGER		NOT NULL,"
 		+ "PRIMARY KEY (commitId, file),"
 		+ "FOREIGN KEY(commitId) REFERENCES Commits (id),"
 		+ "FOREIGN KEY(file) REFERENCES Files (id)"
@@ -568,8 +570,8 @@ public class Model {
 
 	private static final String FILE_CHANGE_INSERTION =
 		"INSERT INTO FileChanges"
-		+ "(commitId, file, linesAdded, linesRemoved, chunksChanged)"
-		+ "VALUES (?,?,?,?,?)";
+		+ "(commitId, file, linesAdded, linesRemoved, emptyLinesAdded, emptyLinesRemoved, chunksChanged)"
+		+ "VALUES (?,?,?,?,?,?,?)";
 
 	private static final String FILE_DELETION_INSERTION =
 		"INSERT INTO FileDeletion"
@@ -1362,8 +1364,8 @@ public class Model {
 	}
 
 	
-	public FileChange addFileChange (Commit commit, ManagedFile file, int linesAdded, int linesRemoved, int changedChunks) throws SQLException {
-		FileChange change = new FileChange (commit, file, linesAdded, linesRemoved, changedChunks);
+	public FileChange addFileChange (Commit commit, ManagedFile file, int linesAdded, int linesRemoved, int emptyLinesAdded, int emptyLinesRemoved, int changedChunks) throws SQLException {
+		FileChange change = new FileChange (commit, file, linesAdded, linesRemoved, emptyLinesAdded, emptyLinesRemoved, changedChunks);
 		add (change);
 		return change;
 	}
@@ -1382,7 +1384,9 @@ public class Model {
 			stmt.setInt (2, change.getFile ().getId ());
 			stmt.setInt (3, change.getLinesAdded ());
 			stmt.setInt (4, change.getLinesRemoved ());
-			stmt.setInt (5, change.getChangedChunks ());
+			stmt.setInt (5, change.getEmptyLinesAdded ());
+			stmt.setInt (6, change.getEmptyLinesRemoved ());
+			stmt.setInt (7, change.getChangedChunks ());
 			stmt.executeUpdate();
 			
 			stmt.close ();

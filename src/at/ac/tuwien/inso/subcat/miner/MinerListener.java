@@ -32,10 +32,22 @@ package at.ac.tuwien.inso.subcat.miner;
 
 public interface MinerListener {
 
+	//
+	// States:
+	//
+	
 	public void start (Miner miners);
 
 	public void end (Miner miner);
 
 	public void stop (Miner miner);
+
+	//
+	// Progress:
+	//
+
+	public void tasksTotal (Miner miner, int count);
+
+	public void tasksProcessed (Miner miner, int processed);
 }
 

@@ -32,8 +32,10 @@ package at.ac.tuwien.inso.subcat.miner;
 
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Project;
@@ -156,15 +158,15 @@ public class MinerRunner {
 	public static void main (String[] args) {
 		Settings settings = new Settings ();
 
-		/* Bugzilla Test: * /
+		/* Bugzilla Test: */
 		settings.bugRepository = "https://bugzilla.gnome.org";
 		settings.bugProductName = "valadoc";
 		settings.bugTrackerName = "Bugzilla";
 		settings.bugEnableUntrustedCertificates = true;
 		settings.bugThreads = 1;
-		/* GIT Test: */
+		/* GIT Test: * /
 		settings.srcLocalPath = System.getProperty("user.dir");
-		settings.srcSpecificParams.put ("process-diffs", false);
+		settings.srcSpecificParams.put ("process-diffs", true);
 		/* Svn Test: * /
 		settings.srcLocalPath = "/home/mog/student-project-netcracker-read-only";
 		settings.srcRemote = "http://student-project-netcracker.googlecode.com/svn/trunk/";
@@ -172,6 +174,8 @@ public class MinerRunner {
 		try {
 			MinerRunner runner = new MinerRunner (settings);
 			runner.addListener (new MinerListener () {
+				private Map<Miner, Integer> totals = new HashMap<Miner, Integer> ();
+				
 				@Override
 				public void start (Miner miners) {
 					System.out.println ("START");
@@ -185,6 +189,17 @@ public class MinerRunner {
 				@Override
 				public void stop (Miner miner) {
 					System.out.println ("STOP");
+				}
+
+				@Override
+				public void tasksTotal (Miner miner, int count) {
+					totals.put (miner, count);
+				}
+
+				@Override
+				public void tasksProcessed (Miner miner, int processed) {
+					Integer total = totals.get (miner);
+					System.out.println ("PROCESSED: " + processed + "/" + ((total == null)? "?" : total));
 				}
 			});
 			runner.run ();

@@ -43,6 +43,7 @@ public abstract class Miner {
 	}
 	
 	private List<MinerListener> listeners = new LinkedList<MinerListener> ();
+	private int processed = 0;
 	
 	public void removeListener (MinerListener listener) {
 		listeners.remove (listener);
@@ -85,6 +86,20 @@ public abstract class Miner {
 		}
 	}
 
+	protected synchronized void emitTasksTotal (int total) {
+		for (MinerListener listener : listeners) {
+			listener.tasksTotal (this, total);
+		}		
+	}
+
+	protected synchronized void emitTasksProcessed (int newlyProcessed) {
+		processed += newlyProcessed;
+		
+		for (MinerListener listener : listeners) {
+			listener.tasksProcessed (this, processed);
+		}
+	}
+	
 
 	//
 	// Helper:

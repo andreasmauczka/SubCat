@@ -36,6 +36,7 @@ import java.io.OutputStream;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -205,6 +206,22 @@ public class GitMiner extends Miner {
 		walk.markStart (commit);
 		walk.sort (RevSort.REVERSE);
 
+		// count commit: (fast)
+		int commitCount = 0;
+		Iterator<RevCommit> iter = walk.iterator ();
+		while (iter.hasNext ()) {
+			iter.next ();
+			commitCount++;
+		}
+
+		emitTasksTotal (commitCount);
+		
+
+		// process commits: (slow)
+		walk.reset ();
+		walk.markStart (commit);
+		walk.sort (RevSort.REVERSE);
+
 		Map<String, ManagedFile> fileCache = new HashMap<String, ManagedFile> ();
 
 		for (RevCommit rev : walk) {
@@ -218,7 +235,7 @@ public class GitMiner extends Miner {
 		walk.dispose();
 		repository.close();
 	}
-
+	
 	private void processCommit (Repository repository, RevWalk walk, RevCommit rev, Map<String, ManagedFile> fileCache) throws SQLException, IOException {
 		Identity author = resolveIdentity (rev.getAuthorIdent ());
 		Identity committer = resolveIdentity (rev.getCommitterIdent ());
@@ -287,6 +304,8 @@ public class GitMiner extends Miner {
 				assert (false);
 			}
 		}
+
+		emitTasksProcessed (1);
 	}
 	
 	private void processDiff (Repository repository, RevWalk walk, RevCommit current, DiffOutputStream outputStream, Map<String, FileStats> fileStatsMap) throws IOException {

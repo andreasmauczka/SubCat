@@ -114,6 +114,7 @@ public class BugzillaMiner extends Miner {
 					}
 
 					process (bbugs, bzBugIds);
+					emitTasksProcessed (bbugs.size ());
 
 					Thread.sleep (settings.bugCooldownTime);
 				} catch (InterruptedException e) {
@@ -298,12 +299,16 @@ public class BugzillaMiner extends Miner {
 
 		model.setDefaultStatus (resolveStatus ("UNCO"));
 
+		int bugsTotal = 0;
 		for (int page = 1; run && !Thread.currentThread().isInterrupted () ; page++) {
 			BugzillaBug[] bugs = context.getBugs (settings.bugProductName, page, pageSize);
 			if (bugs.length < 1) {
 				break;
 			}
-			
+
+			bugsTotal += bugs.length;
+			this.emitTasksTotal (bugsTotal);
+
 			for (BugzillaBug bzBug : bugs) {
 				queue.add (new QueueEntry (bzBug));
 			}

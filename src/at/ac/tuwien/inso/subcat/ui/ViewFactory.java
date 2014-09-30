@@ -34,6 +34,7 @@ import java.io.File;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.ScrolledComposite;
@@ -48,9 +49,11 @@ import at.ac.tuwien.inso.subcat.config.ChartGroupConfig;
 import at.ac.tuwien.inso.subcat.config.ConfigVisitor;
 import at.ac.tuwien.inso.subcat.config.Configuration;
 import at.ac.tuwien.inso.subcat.config.DistributionChartConfig;
+import at.ac.tuwien.inso.subcat.config.OptionalConfigNode;
 import at.ac.tuwien.inso.subcat.config.Parser;
 import at.ac.tuwien.inso.subcat.config.PieChartGroupConfig;
 import at.ac.tuwien.inso.subcat.config.ProjectViewConfig;
+import at.ac.tuwien.inso.subcat.config.Requires;
 import at.ac.tuwien.inso.subcat.config.SemanticException;
 import at.ac.tuwien.inso.subcat.config.TrendChartGroupConfig;
 import at.ac.tuwien.inso.subcat.config.ViewConfig;
@@ -75,6 +78,7 @@ import at.ac.tuwien.inso.subcat.ui.widgets.TrendView;
 public class ViewFactory {
 	private Configuration config;
 	private Model model;
+	private List<String> flags;
 
 	private class ViewBuilder extends ConfigVisitor {
 		private TabFolder folder;
@@ -120,6 +124,9 @@ public class ViewFactory {
 			assert (project != null);
 			assert (folder != null);
 
+			if (!groupConfig.show (flags)) {
+				return ;
+			}
 			
 			TabItem page = new TabItem (folder, SWT.NONE);
 			page.setText (groupConfig.getName ());
@@ -128,7 +135,7 @@ public class ViewFactory {
 			scroll.setLayout (new FillLayout ());
 
 			PieChartView view = new PieChartView (scroll, SWT.NONE);
-			new PieChartController (model, view, groupConfig, viewController);
+			new PieChartController (model, view, groupConfig, flags, viewController);
 
 			scroll.setExpandHorizontal(true);
 			scroll.setExpandVertical(true);
@@ -143,12 +150,15 @@ public class ViewFactory {
 			assert (project != null);
 			assert (folder != null);
 
+			if (!groupConfig.show (flags)) {
+				return ;
+			}
 			
 			TabItem page = new TabItem (folder, SWT.NONE);
 			page.setText (groupConfig.getName ());
 
 			TrendView view = new TrendView (folder, SWT.NONE);
-			view.addTrendViewListener (new TrendViewController (model, view, groupConfig, viewController));
+			view.addTrendViewListener (new TrendViewController (model, flags, view, groupConfig, viewController));
 			page.setControl (view);
 		}
 
@@ -157,12 +167,15 @@ public class ViewFactory {
 			assert (project != null);
 			assert (folder != null);
 
+			if (!config.show (flags)) {
+				return ;
+			}
 	
 			TabItem page = new TabItem (folder, SWT.NONE);
 			page.setText (config.getName ());
 
 			DistributionView view = new DistributionView (folder, SWT.NONE);
-			view.addDistributionViewListener (new DistributionChartController (model, view, config, viewController));
+			view.addDistributionViewListener (new DistributionChartController (model, flags, view, config, viewController));
 			page.setControl (view);
 		}
 	}
@@ -177,7 +190,9 @@ public class ViewFactory {
 		assert (config != null);
 		assert (proj != null);
 		assert (proj.getId () != null);
-		
+
+		this.flags = model.getFlags (proj);
+
 		Composite composite = new Composite (parent, style);
 		composite.setLayout (new FillLayout ());
 		
@@ -203,11 +218,12 @@ public class ViewFactory {
 	public static void main (String[] args) {
 		try {
 			// Dummy Model:
-			Model model = new Model (":memory:");
+			Model model = new Model ("foo.db");
 			Project project = model.addProject (new Date (), "", "", "");
+			model.addFlag (project, "FOO");
 			Component component1 = model.addComponent(project, "Component 1");
 
-						Status status1 = model.addStatus(project, "OPEN");
+			Status status1 = model.addStatus(project, "OPEN");
 			model.addStatus(project, "CLOSED");
 			model.setDefaultStatus (status1);
 
@@ -284,23 +300,26 @@ public class ViewFactory {
 
 					+ "	     Filter = {\n"
 					+ "        VarName = priority;\n"
-					+ "	       Query = \"SELECT id, name FROM Priorities\";\n"
+					+ "	       Query = \"SELECT id, name FROM Priorities WHERE project = \" + project;\n"
 					+ "	     };\n"
 
 					+ "      Filter = {\n"
 					+ "        VarName = severity;\n"
-					+ "        Query = \"SELECT id, name FROM Severity\";\n"
+					+ "        Query = \"SELECT id, name FROM Severity WHERE project = \" + project;\n"
 					+ "	     };\n"
 
 					+ "      Filter = {\n"
 					+ "        VarName = status;\n"
-					+ "        Query = \"SELECT id, name FROM Status\";\n"
+					+ "        Query = \"SELECT id, name FROM Status WHERE project = \" + project;\n"
 					+ "	     };\n"
 
 					+ "      Attributes = {\n"
-					
 					+ "        Attribute = {\n"
 					+ "          Name = \"Comments\";\n"
+					+ "          Query = \"SELECT CAST(strftime('%m', creation) AS INTEGER), avg(comments), median(comments), lower_quartile(comments), upper_quartile(comments), min(comments), max(comments), count (*) FROM Bugs\";\n"
+					+ "        };\n"
+					+ "        Attribute = {\n"
+					+ "          Name = \"Patches\";\n"
 					+ "          Query = \"SELECT CAST(strftime('%m', creation) AS INTEGER), avg(comments), median(comments), lower_quartile(comments), upper_quartile(comments), min(comments), max(comments), count (*) FROM Bugs\";\n"
 					+ "        };\n"
 					+ "      };\n"

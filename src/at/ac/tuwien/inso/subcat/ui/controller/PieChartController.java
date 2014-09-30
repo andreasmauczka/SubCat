@@ -31,6 +31,7 @@
 package at.ac.tuwien.inso.subcat.ui.controller;
 
 import java.sql.SQLException;
+import java.util.List;
 import java.util.Map;
 
 import at.ac.tuwien.inso.subcat.config.PieChartConfig;
@@ -43,7 +44,7 @@ import at.ac.tuwien.inso.subcat.ui.widgets.PieChartView;
 
 public class PieChartController extends ChartController {
 
-	public PieChartController(Model model, PieChartView view, PieChartGroupConfig groupConfig, ViewController viewController) {
+	public PieChartController(Model model, PieChartView view, PieChartGroupConfig groupConfig, List<String> flags, ViewController viewController) {
 		super(model, viewController);
 
 		assert (model != null);
@@ -54,9 +55,11 @@ public class PieChartController extends ChartController {
 
 		try {
 			for (PieChartConfig pieConf : groupConfig.getCharts ()) {
-				Map<String, Object> vars = getVariables ();
-				PieChartData pieData = model.getPieChart (pieConf, vars);
-				view.add (pieData);
+				if (pieConf.show (flags)) {
+					Map<String, Object> vars = getVariables ();
+					PieChartData pieData = model.getPieChart (pieConf, vars);
+					view.add (pieData);
+				}
 			}
 		} catch (SemanticException e) {
 			// TODO

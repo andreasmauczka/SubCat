@@ -221,15 +221,17 @@ public class DistributionView extends Composite {
 		sizePlot.setDomainGridlinesVisible (true);
 	}
 	
-	public void addConfiguration (DistributionChartConfigData config) {
+	public void addConfiguration (DistributionChartConfigData config, List<String> flags) {
 		assert (config != null);
 
 		for (DistributionChartOptionConfigData optionConf : config.getOptions ()) {
-			addOptionConfiguration (optionConf);
+			if (optionConf.getConfig ().show (flags)) {
+				addOptionConfiguration (optionConf, flags);
+			}
 		}
 	}
 
-	private void addOptionConfiguration (DistributionChartOptionConfigData config) {
+	private void addOptionConfiguration (DistributionChartOptionConfigData config, List<String> flags) {
 		assert (config != null);
 		assert (config.getAttributes() != null);
 
@@ -250,36 +252,48 @@ public class DistributionView extends Composite {
 		Helper.setLabelStyle (lblTitle, SWT.BOLD);
 		lblTitle.setText (config.getName ());
 
+		DropDownData firstDropdownData = null;
 		Iterator<DropDownData> filterIter = config.getFilter ().iterator ();
-		if (filterIter.hasNext ()) {
+		while (filterIter.hasNext ()) {
+			DropDownData data = filterIter.next ();
+			if (data.getConfig ().show (flags)) {
+				firstDropdownData = data;
+				break;
+			}
+		}
+
+		if (firstDropdownData != null) {
 			Combo filterCombo = new Combo (optionComposite, SWT.DROP_DOWN | SWT.READ_ONLY);
 			filterCombo.setLayoutData (new GridData (SWT.FILL, SWT.CENTER, true, false, 1, 1));
-			fillCombo (filterCombo, filterIter.next (), identifier);
+			fillCombo (filterCombo, firstDropdownData, identifier);
 			identifier.filter.add (filterCombo);
 		} else {
 			new Label (optionComposite, SWT.NONE);
 		}
 
 		Combo attCombo = new Combo (optionComposite, SWT.DROP_DOWN | SWT.READ_ONLY);
-		fillAttributeCombo (attCombo, config.getAttributes (), identifier);
+		fillAttributeCombo (attCombo, config.getAttributes (), flags, identifier);
 		attCombo.setLayoutData (new GridData (SWT.FILL, SWT.CENTER, true, false, 1, 1));
 		identifier.attributes = attCombo;
 
 		while (filterIter.hasNext ()) {
-			new Label (optionComposite, SWT.NONE);
-			Combo filterCombo = new Combo (optionComposite, SWT.DROP_DOWN | SWT.READ_ONLY);
-			filterCombo.setLayoutData (new GridData (SWT.FILL, SWT.CENTER, true, false, 1, 1));
-			new Label (optionComposite, SWT.NONE);
-
-			fillCombo (filterCombo, filterIter.next (), identifier);
-			identifier.filter.add (filterCombo);
+			DropDownData iterValue = filterIter.next ();
+			if (iterValue.getConfig ().show (flags)) {
+				new Label (optionComposite, SWT.NONE);
+				Combo filterCombo = new Combo (optionComposite, SWT.DROP_DOWN | SWT.READ_ONLY);
+				filterCombo.setLayoutData (new GridData (SWT.FILL, SWT.CENTER, true, false, 1, 1));
+				new Label (optionComposite, SWT.NONE);
+	
+				fillCombo (filterCombo, iterValue, identifier);
+				identifier.filter.add (filterCombo);
+			}
 		}
 
 		identifier.paint = drawingSupplier.getNextPaint();
 		optionCount++;
 	}
 
-	private void fillAttributeCombo(Combo combo, DistributionAttributesConfig attributes, ChartIdentifier identifier) {
+	private void fillAttributeCombo(Combo combo, DistributionAttributesConfig attributes, List<String> flags, ChartIdentifier identifier) {
 		assert (combo != null);
 		assert (attributes != null);
 		assert (identifier != null);
@@ -288,7 +302,9 @@ public class DistributionView extends Composite {
 		combo.setData (attributes);
 
 		for (DistributionAttributeConfig item : attributes.getData()) {
-			combo.add (item.getName ());
+			if (item.show (flags)) {
+				combo.add (item.getName ());
+			}
 		}
 
 		combo.select (0);

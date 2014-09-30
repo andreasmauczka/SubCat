@@ -32,6 +32,7 @@ package at.ac.tuwien.inso.subcat.ui.controller;
 
 import java.sql.SQLException;
 import java.util.Calendar;
+import java.util.List;
 import java.util.Map;
 
 import org.jfree.chart.JFreeChart;
@@ -50,7 +51,7 @@ import at.ac.tuwien.inso.subcat.ui.widgets.DistributionView;
 public class DistributionChartController extends ChartController implements DistributionViewListener {
 	private DistributionView view;
 	
-	public DistributionChartController (Model model, DistributionView view, DistributionChartConfig config, ViewController viewController) {
+	public DistributionChartController (Model model, List<String> flags, DistributionView view, DistributionChartConfig config, ViewController viewController) {
 		super (model, viewController);
 
 		assert (model != null);
@@ -71,7 +72,7 @@ public class DistributionChartController extends ChartController implements Dist
 
 		try {
 			DistributionChartConfigData configData =  model.getDistributionChartData (config, vars);
-			view.addConfiguration (configData);
+			view.addConfiguration (configData, flags);
 
 			for (DistributionView.ChartIdentifier identifier : view.getIdentifiers ()) {
 				drawLine (identifier);

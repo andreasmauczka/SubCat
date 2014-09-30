@@ -310,7 +310,7 @@ public class TrendView extends Composite {
 		}
 	}
 
-	public void addConfiguration (TrendChartConfigData config) {
+	public void addConfiguration (TrendChartConfigData config, List<String> flags) {
 		assert (config != null);
 
 		LinkedList<Combo> combos = new LinkedList<Combo> ();
@@ -327,18 +327,20 @@ public class TrendView extends Composite {
 		topOptions.setLayout (new GridLayout (config.getDropDowns ().size(), true));
 
 		for (DropDownData dropData : config.getDropDowns ()) {
-			Combo comboDropDown = new Combo (topOptions, SWT.DROP_DOWN | SWT.BORDER | SWT.READ_ONLY);
-			comboDropDown.setLayoutData (new GridData(SWT.CENTER, SWT.CENTER, true, false, 1, 1));
-			comboDropDown.setData (dropData);
-			combos.add (comboDropDown);
-
-			for (DropDownData.Pair data : dropData.getData()) {
-				comboDropDown.add (data.name);
+			if (dropData.getConfig ().show (flags)) {
+				Combo comboDropDown = new Combo (topOptions, SWT.DROP_DOWN | SWT.BORDER | SWT.READ_ONLY);
+				comboDropDown.setLayoutData (new GridData(SWT.CENTER, SWT.CENTER, true, false, 1, 1));
+				comboDropDown.setData (dropData);
+				combos.add (comboDropDown);
+	
+				for (DropDownData.Pair data : dropData.getData()) {
+					comboDropDown.add (data.name);
+				}
+	
+				comboDropDown.select (0);
+	
+				comboDropDown.addSelectionListener(this.comboListener);
 			}
-
-			comboDropDown.select (0);
-
-			comboDropDown.addSelectionListener(this.comboListener);
 		}
 
 

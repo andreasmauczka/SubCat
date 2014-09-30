@@ -33,6 +33,7 @@ package at.ac.tuwien.inso.subcat.ui.controller;
 import java.sql.SQLException;
 import java.util.Calendar;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import org.jfree.chart.JFreeChart;
@@ -54,7 +55,7 @@ public class TrendViewController extends ChartController implements TrendViewLis
 	private TrendView view;
 
 
-	public TrendViewController (Model model, TrendView view, TrendChartGroupConfig groupConfig, ViewController viewController) {
+	public TrendViewController (Model model, List<String> flags, TrendView view, TrendChartGroupConfig groupConfig, ViewController viewController) {
 		super (model, viewController);
 
 		assert (model != null);
@@ -78,7 +79,7 @@ public class TrendViewController extends ChartController implements TrendViewLis
 			for (TrendChartConfig trendConf : groupConfig.getTrendChartConfigs ()) {
 				TrendChartConfigData trendConfData;
 					trendConfData = model.getChartGroupConfigData (trendConf, vars);
-				view.addConfiguration (trendConfData);
+				view.addConfiguration (trendConfData, flags);
 			}
 		} catch (SemanticException e) {
 			// TODO

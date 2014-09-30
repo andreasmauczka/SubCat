@@ -39,7 +39,6 @@ public class PieChartGroupConfig extends ChartGroupConfig {
 	
 	public PieChartGroupConfig(String name, SourcePos start, SourcePos end) {
 		super (name, start, end);
-
 		charts = new LinkedList<PieChartConfig> ();
 	}
 

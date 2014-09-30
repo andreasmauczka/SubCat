@@ -37,7 +37,7 @@ import java.util.List;
 public class DistributionChartConfig extends ChartGroupConfig {
 	private LinkedList<DistributionChartOptionConfig> options;
 
-
+	
 	public DistributionChartConfig (String name, SourcePos start, SourcePos end) {
 		super (name, start, end);
 

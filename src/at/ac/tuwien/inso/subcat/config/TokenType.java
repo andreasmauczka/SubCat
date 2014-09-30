@@ -40,7 +40,10 @@ public enum TokenType {
 	OPEN_BRACE,		// {
 	CLOSE_BRACE,	// }
 	
-	SEMICOLON,		// ;
+	SEMICOLON,			// ;
+	OPEN_PARENTHESIS,	// (
+	CLOSE_PARENTHESIS,	// )
+	BAR,				// |
 
 	ID,				// <id>
 	TAB,			// Tab
@@ -70,4 +73,6 @@ public enum TokenType {
 	
 	STRING,			// "<whatever>"
 	BOOLEAN,		// true, false
+
+	REQUIRES		// Requires
 }

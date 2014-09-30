@@ -34,7 +34,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 
-public class DistributionChartOptionConfig extends ConfigNode {
+public class DistributionChartOptionConfig extends OptionalConfigNode {
 	private String name;
 	private LinkedList<DropDownConfig> filter;
 	private DistributionAttributesConfig attributes;

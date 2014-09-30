@@ -32,6 +32,9 @@ package at.ac.tuwien.inso.subcat.config;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 
 
 public class Parser {
@@ -116,6 +119,7 @@ public class Parser {
 	private void parseReporter (Configuration config) throws ParserException {
 		assert (config != null);
 
+		List<Requires> requires;
 		String name;
 		Query query;
 
@@ -125,17 +129,19 @@ public class Parser {
 		expect (TokenType.ASSIGN);
 		expect (TokenType.OPEN_BRACE);
 
+		requires = parseRequires (); 
 		name = parseName ();
 		query = parseQuery ();
 
 		ExporterConfig expConf = new ExporterConfig (name, query, current.getStart (), current.getEnd ());
+		expConf.setRequirements (requires);
 		if (!config.addExporterConfig (expConf)) {
 			throw new ParserException ("Exporter `" + expConf.getName () + "' already defined.", current.getStart (), current.getEnd ());
 		}
 		
 		expect (TokenType.CLOSE_BRACE);
 	}
-
+	
 	private void parseView (Configuration config, TokenType tabTokenType, ViewConfig view) throws ParserException {
 		assert (config != null);
 		assert (tabTokenType != null);
@@ -183,6 +189,7 @@ public class Parser {
 		assert (view != null);
 
 		String name;
+		List<Requires> requires;
 
 		Token current = getCurrent ();
 		expect (TokenType.DISTRIBUTION_CHARTS);
@@ -190,10 +197,12 @@ public class Parser {
 		expect (TokenType.ASSIGN);
 		expect (TokenType.OPEN_BRACE);
 
+		requires = parseRequires ();
 		name = parseName ();
 		DistributionChartConfig distributionChart = new DistributionChartConfig (name, current.getStart (), current.getEnd ());
 		view.addChart (distributionChart);
-
+		distributionChart.setRequirements (requires);
+		
 		while (!accept (TokenType.CLOSE_BRACE)) {
 			parseDistributionOption (distributionChart);
 		}		
@@ -204,6 +213,7 @@ public class Parser {
 	private void parseDistributionOption (DistributionChartConfig distributionChart) throws ParserException {
 		assert (distributionChart != null);
 
+		List<Requires> requires;
 		String name;
 
 		Token current = getCurrent ();
@@ -212,8 +222,10 @@ public class Parser {
 		expect (TokenType.ASSIGN);
 		expect (TokenType.OPEN_BRACE);
 
+		requires = parseRequires ();
 		name = parseName ();
 		DistributionChartOptionConfig optionConfig = new DistributionChartOptionConfig (name, current.getStart (), current.getEnd ());
+		optionConfig.setRequirements (requires);
 		distributionChart.addOption (optionConfig);
 
 		while (getCurrentType () == TokenType.FILTER) {
@@ -255,6 +267,7 @@ public class Parser {
 	private void parseDistributionAttribute (DistributionAttributesConfig option) throws ParserException {
 		assert (option != null);
 
+		List<Requires> requires;
 		String name;
 		Query query;
 
@@ -264,10 +277,12 @@ public class Parser {
 		expect (TokenType.ASSIGN);
 		expect (TokenType.OPEN_BRACE);
 
+		requires = parseRequires ();
 		name = parseName ();
 		query = parseQuery ();
 
 		DistributionAttributeConfig conf = new DistributionAttributeConfig (name, query, current.getStart (), current.getEnd ());
+		conf.setRequirements (requires);
 		option.add (conf);
 
 		expect (TokenType.CLOSE_BRACE);		
@@ -277,6 +292,7 @@ public class Parser {
 	private void parsePieCharts (ViewConfig view) throws ParserException {
 		assert (view != null);
 
+		List<Requires> requires;
 		String name;
 
 		Token current = getCurrent ();
@@ -285,8 +301,10 @@ public class Parser {
 		expect (TokenType.ASSIGN);
 		expect (TokenType.OPEN_BRACE);
 
+		requires = parseRequires ();
 		name = parseName ();
 		PieChartGroupConfig chartGroup = new PieChartGroupConfig (name, current.getStart (), current.getEnd ());
+		chartGroup.setRequirements (requires);
 		view.addChart(chartGroup);
 
 		while (!accept (TokenType.CLOSE_BRACE)) {
@@ -299,6 +317,7 @@ public class Parser {
 	private void parsePieChart (PieChartGroupConfig chartGroup) throws ParserException {
 		assert (chartGroup != null);
 
+		List<Requires> requiers;
 		String name;
 		Query query;
 		boolean showTotal;
@@ -308,6 +327,7 @@ public class Parser {
 		expect (TokenType.ASSIGN);
 
 		expect (TokenType.OPEN_BRACE);
+		requiers = parseRequires ();
 		name = parseName ();
 		query = parseQuery ();
 
@@ -322,12 +342,14 @@ public class Parser {
 		expect (TokenType.SEMICOLON);
 
 		PieChartConfig chart = new PieChartConfig (name, query, showTotal, current.getStart (), current.getEnd ());
+		chart.setRequirements (requiers);
 		chartGroup.addChart (chart);
 	}
 
 	private void parseTrendCharts (ViewConfig view) throws ParserException {
 		assert (view != null);
 
+		List<Requires> requires;
 		String name;
 
 		Token current = getCurrent ();
@@ -335,9 +357,11 @@ public class Parser {
 		expect (TokenType.ASSIGN);
 
 		expect (TokenType.OPEN_BRACE);
+		requires = parseRequires ();
 		name = parseName ();
 
 		TrendChartGroupConfig chart = new TrendChartGroupConfig (name, current.getStart (), current.getEnd ());
+		chart.setRequirements (requires);
 		view.addChart (chart);
 
 		while (!accept (TokenType.CLOSE_BRACE)) {
@@ -350,6 +374,7 @@ public class Parser {
 	private void parseTrendChart (TrendChartGroupConfig parent) throws ParserException {
 		assert (parent != null);
 
+		List<Requires> requires;
 		String name;
 
 		Token current = getCurrent ();
@@ -357,9 +382,11 @@ public class Parser {
 		expect (TokenType.ASSIGN);
 
 		expect (TokenType.OPEN_BRACE);
+		requires = parseRequires ();
 		name = parseName ();
 
 		TrendChartConfig chart = new TrendChartConfig (name, current.getStart (), current.getEnd ());
+		chart.setRequirements (requires);
 		parent.addChart (chart);
 
 		current = getCurrent ();
@@ -412,6 +439,7 @@ public class Parser {
 	private DropDownConfig parseDropDownTemplate (TokenType startToken, boolean isTrendChartPlotConfig) throws ParserException {
 		assert (startToken != null);
 
+		List<Requires> requires;
 		String varName;
 		Query query;
 		Query dataQuery;
@@ -421,6 +449,7 @@ public class Parser {
 		expect (TokenType.ASSIGN);
 
 		expect (TokenType.OPEN_BRACE);
+		requires = parseRequires ();
 		varName = parseVarName ();
 		query = parseQuery ();
 
@@ -431,6 +460,7 @@ public class Parser {
 		} else {
 			dropDown = new DropDownConfig (varName, query, current.getStart (), current.getEnd ());
 		}
+		dropDown.setRequirements (requires);
 
 		expect (TokenType.CLOSE_BRACE);
 		expect (TokenType.SEMICOLON);
@@ -509,6 +539,28 @@ public class Parser {
 		Token token = getCurrent ();
 		expect (TokenType.BOOLEAN);
 		return token.getValue ().equals ("true");
+	}
+
+	private List<Requires> parseRequires () throws ParserException {
+		LinkedList<Requires> requires = new LinkedList<Requires> ();
+		Token token = getCurrent ();
+
+		while (accept (TokenType.REQUIRES)) {
+			HashSet<String> flags = new HashSet<String> ();
+
+			expect (TokenType.OPEN_PARENTHESIS);
+			do {
+				String flag = parseId ();
+				flags.add (flag);
+			} while (accept (TokenType.BAR));
+			expect (TokenType.CLOSE_PARENTHESIS);
+			Requires requirement = new Requires (token.getStart (), getCurrent ().getEnd ());
+			requirement.setRequirements (flags);
+			requires.add (requirement);
+			expect (TokenType.SEMICOLON);
+		}
+
+		return requires;
 	}
 
 

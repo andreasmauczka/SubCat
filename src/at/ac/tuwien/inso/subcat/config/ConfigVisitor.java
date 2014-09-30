@@ -90,4 +90,7 @@ public class ConfigVisitor {
 	public void visitExporterConfig (ExporterConfig exporterConfig) {
 	}
 
+	public void visitRequires (Requires requires) {
+	}
+
 }

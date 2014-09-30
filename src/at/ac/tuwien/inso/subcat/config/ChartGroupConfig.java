@@ -31,7 +31,7 @@
 package at.ac.tuwien.inso.subcat.config;
 
 
-public abstract class ChartGroupConfig extends ConfigNode {
+public abstract class ChartGroupConfig extends OptionalConfigNode {
 	private String name;
 	
 	public ChartGroupConfig (String name, SourcePos start, SourcePos end) {

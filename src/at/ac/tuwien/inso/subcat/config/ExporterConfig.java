@@ -1,6 +1,7 @@
 package at.ac.tuwien.inso.subcat.config;
 
-public class ExporterConfig extends ConfigNode {
+
+public class ExporterConfig extends OptionalConfigNode {
 	private String name;
 	private Query query;
 

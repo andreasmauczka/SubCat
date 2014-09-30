@@ -32,7 +32,7 @@
 package at.ac.tuwien.inso.subcat.config;
 
 
-public class PieChartConfig extends ConfigNode {
+public class PieChartConfig extends OptionalConfigNode {
 	private String name;
 	private Query query;
 	private boolean showTotal;
@@ -70,7 +70,7 @@ public class PieChartConfig extends ConfigNode {
 	@Override
 	public void acceptChildren (ConfigVisitor visitor) {
 		super.acceptChildren (visitor);
-		
+	
 		if (query != null) {
 			query.accept (visitor);
 		}

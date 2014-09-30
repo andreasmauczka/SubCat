@@ -34,7 +34,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 
-public class TrendChartConfig extends ConfigNode implements OptionListOwner {
+public class TrendChartConfig extends OptionalConfigNode implements OptionListOwner {
 	private String name;
 	private Query query;
 

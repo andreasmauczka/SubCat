@@ -31,7 +31,7 @@
 package at.ac.tuwien.inso.subcat.config;
 
 
-public class DropDownConfig extends ConfigNode {
+public class DropDownConfig extends OptionalConfigNode {
 	private String variableName;
 	private Query query;
 	

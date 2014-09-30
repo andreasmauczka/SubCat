@@ -117,6 +117,20 @@ public class Scanner {
 			pos++;
 			return new Token (TokenType.SEMICOLON, start, getCurrentPos (-1), ";");
 
+		case '(':
+			column++;
+			pos++;
+			return new Token (TokenType.OPEN_PARENTHESIS, start, getCurrentPos (-1), ";");
+
+		case ')':
+			column++;
+			pos++;
+			return new Token (TokenType.CLOSE_PARENTHESIS, start, getCurrentPos (-1), ";");
+
+		case '|':
+			column++;
+			pos++;
+			return new Token (TokenType.BAR, start, getCurrentPos (-1), ";");
 
 		// Literals:
 		case '"':
@@ -234,6 +248,9 @@ public class Scanner {
 		}
 		if (idStr.equals ("true") || idStr.equals ("false")) {
 			return new Token (TokenType.BOOLEAN, start, getCurrentPos (-1), idStr);
+		}
+		if (idStr.equals ("Requires")) {
+			return new Token (TokenType.REQUIRES, start, getCurrentPos (-1), idStr);			
 		}
 		
 		return new Token (TokenType.ID, start, getCurrentPos (-1), idStr);

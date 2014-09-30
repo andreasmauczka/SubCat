@@ -31,7 +31,7 @@
 package at.ac.tuwien.inso.subcat.config;
 
 
-public class DistributionAttributeConfig extends ConfigNode {
+public class DistributionAttributeConfig extends OptionalConfigNode {
 	private String name;
 	private Query query;
 	

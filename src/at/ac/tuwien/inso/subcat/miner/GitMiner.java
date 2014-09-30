@@ -209,10 +209,16 @@ public class GitMiner extends Miner {
 	public void run () throws MinerException {
 		stopped = false;
 
-		processDiffs = settings.srcGetParameter ("process-diffs", true);
-
 		try {
 			emitStart ();
+
+			model.addFlag (project, Model.FLAG_SRC_INFO);
+			processDiffs = settings.srcGetParameter ("process-diffs", true);
+			if (processDiffs == true) {
+				model.addFlag (project, Model.FLAG_SRC_FILE_STATS);
+				model.addFlag (project, Model.FLAG_SRC_LINE_STATS);
+			}
+
 			_run ();
 			emitEnd ();
 		} catch (IOException e) {

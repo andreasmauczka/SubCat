@@ -64,7 +64,8 @@ public class Model {
 	public static final String FLAG_SRC_LINE_STATS = "SRC_LINE_STATS";
 	public static final String FLAG_BUG_COMMENTS = "BUG_COMMENTS";
 	public static final String FLAG_BUG_HISTORY = "BUG_HISTORY";
-	
+	public static final String FLAG_SRC_INFO = "SRC_INFO";
+
 	private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	private String name;
 

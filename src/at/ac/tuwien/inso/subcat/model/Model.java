@@ -60,6 +60,11 @@ import at.ac.tuwien.inso.subcat.config.TrendChartPlotConfig;
 
 
 public class Model {
+	public static final String FLAG_SRC_FILE_STATS = "SRC_FILE_STATS";
+	public static final String FLAG_SRC_LINE_STATS = "SRC_LINE_STATS";
+	public static final String FLAG_BUG_COMMENTS = "BUG_COMMENTS";
+	public static final String FLAG_BUG_HISTORY = "BUG_HISTORY";
+	
 	private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	private String name;
 
@@ -94,6 +99,14 @@ public class Model {
 //		+ "FOREIGN KEY (defaultStatusId) REFERENCES StatusTable"
 		+ ")";
 
+	private static final String PROJECT_FLAG_TABLE =
+		"CREATE TABLE IF NOT EXISTS ProjectFlags ("
+		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+		+ "project		INT									NOT NULL,"
+		+ "flag			TEXT								NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
+		+ ")";
+	
 	private static final String USER_TABLE =
 		"CREATE TABLE IF NOT EXISTS Users ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -439,6 +452,14 @@ public class Model {
 		+ "FROM"
 		+ " Projects";
 
+	private static final String SELECT_ALL_FLAGS =
+		"SELECT"
+		+ " flag "
+		+ "FROM"
+		+ " ProjectFlags "
+		+ "WHERE"
+		+ " project = ?";
+	
 	private static final String SELECT_ALL_COMMENTS =
 		"SELECT"
 		+ " Comments.id,"
@@ -492,6 +513,11 @@ public class Model {
 		+ "(date, domain, product, revision, defaultStatusId)"
 		+ "VALUES (?,?,?,?,?)";
 
+	private static final String PROJECT_FLAG_INSERTION =
+			"INSERT INTO ProjectFlags"
+			+ "(project, flag)"
+			+ "VALUES (?,?)";
+	
 	private static final String USER_INSERTION =
 		"INSERT INTO Users"
 		+ "(project, name)"
@@ -694,6 +720,50 @@ public class Model {
 	// Data Insertion API:
 	//
 
+	
+	public void addFlag (Project proj, String flag) throws SQLException {
+		assert (proj != null);
+		assert (proj.getId () != null);
+		assert (flag != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (PROJECT_FLAG_INSERTION);
+		
+			stmt.setInt (1, proj.getId ());
+			stmt.setString (2, flag);
+			stmt.executeUpdate();
+			stmt.close ();
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	public List<String> getFlags (Project proj) throws SQLException {
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			// Statement:
+			PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_FLAGS);
+			stmt.setInt (1, proj.getId ());
+
+			// Collect data:
+			LinkedList<String> flags = new LinkedList<String> ();
+			ResultSet res = stmt.executeQuery ();
+			while (res.next ()) {
+				String flag = res.getString (1);	
+				flags.add (flag);
+			}
+	
+			return flags;
+		} finally {
+			pushConnection (conn);
+		}
+	}
 	
 	public Project addProject (Date date, String domain, String product, String revision) throws SQLException {
 		Project proj = new Project (null, date, domain, product, revision);
@@ -2279,6 +2349,7 @@ public class Model {
 			stmt.executeUpdate (FILE_COPY_TABLE);
 			stmt.executeUpdate (BUG_STATUS_UPDATE_TRIGGER);
 			stmt.executeUpdate (BUG_COMMENT_COUNT_UPDATE_TRIGGER);
+			stmt.executeUpdate (PROJECT_FLAG_TABLE);
 			stmt.close ();
 		} finally {
 			pushConnection (conn);

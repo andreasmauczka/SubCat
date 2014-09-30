@@ -239,6 +239,14 @@ public class BugzillaMiner extends Miner {
 		emitStart ();
 
 		try {
+			model.addFlag (project, Model.FLAG_BUG_INFO);
+			if (processComments == true) {
+				model.addFlag (project, Model.FLAG_BUG_COMMENTS);
+			}
+			if (processHistory == true) {
+				model.addFlag (project, Model.FLAG_BUG_HISTORY);
+			}
+
 			_run ();
 		} catch (SQLException e) {
 			abortRun (new MinerException ("SQL-Error: " + e.getMessage (), e));

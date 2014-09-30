@@ -149,12 +149,13 @@ public class BugzillaMiner extends Miner {
 				Component component = resolveComponent (bzBug.getComponent ());
 				Severity severity = resolveSeverity (bzBug.getSeverity ());
 				Priority priority = resolvePriority (bzBug.getPriority ());
+				String identifier = new Integer (bzBug.getId ()).toString ();
 				Date creation = bzBug.getCreationTime ();
 				String title = bzBug.getSummary ();
 				
 	
 				// Add to model:
-				Bug bug = model.addBug (creator, component, title, creation, priority, severity, null);
+				Bug bug = model.addBug (identifier, creator, component, title, creation, priority, severity, null);
 				if (processComments) {
 					assert (comments != null);
 					addComments (bug, comments);

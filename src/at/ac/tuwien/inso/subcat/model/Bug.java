@@ -42,8 +42,9 @@ public class Bug {
 	private Priority priority;
 	private Severity severity;
 	private Category category;
+	private String identifier;
 
-	public Bug (Integer id, Identity identity, Component component,
+	public Bug (Integer id, String identifier, Identity identity, Component component,
 			String title, Date creation, Priority priority, Severity severity,
 			Category category) {
 		assert (component != null);
@@ -53,6 +54,7 @@ public class Bug {
 		//assert (category != null);
 
 		this.id = id;
+		this.identifier = identifier;
 		this.identity = identity;
 		this.component = component;
 		this.title = title;
@@ -60,6 +62,10 @@ public class Bug {
 		this.priority = priority;
 		this.category = category;
 		this.severity = severity;
+	}
+
+	public String getIdentifier () {
+		return identifier;
 	}
 
 	public Integer getId () {

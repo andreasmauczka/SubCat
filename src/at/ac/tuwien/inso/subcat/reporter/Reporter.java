@@ -155,16 +155,16 @@ public class Reporter {
 	
 			
 	
-			model.addBug(identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug(identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug(identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug(identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug(identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug(identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug(identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug(identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug(identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug(identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
+			model.addBug("1", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
+			model.addBug("2", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
+			model.addBug("3", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
+			model.addBug("4", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
+			model.addBug("5", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
+			model.addBug("6", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
+			model.addBug("7", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
+			model.addBug("8", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
+			model.addBug("9", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
+			model.addBug("10", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
 
 		
 			// Config:

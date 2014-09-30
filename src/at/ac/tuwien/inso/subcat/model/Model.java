@@ -170,6 +170,7 @@ public class Model {
 	private static final String BUG_TABLE =
 		"CREATE TABLE IF NOT EXISTS Bugs ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+		+ "identifier	TEXT								NOT NULL,"
 		+ "identity		INT											,"
 		+ "component	INT									NOT NULL,"
 		+ "title		TEXT								NOT NULL,"
@@ -375,6 +376,7 @@ public class Model {
 	private static final String SELECT_ALL_BUGS = 
 		"SELECT"
 		+ " Bugs.id,"
+		+ " Bugs.identifier,"
 		+ " Identity.id				AS aiId,"
 		+ " Identity.name			AS aiName,"
 		+ " Identity.mail			AS aiName,"
@@ -552,8 +554,8 @@ public class Model {
 
 	private static final String BUG_INSERTION =
 		"INSERT INTO Bugs "
-		+ "(identity, component, title, creation, priority, severity, category, curStat)"
-		+ "SELECT ?, ?, ?, ?, ?, ?, ?, defaultStatusId "
+		+ "(identifier, identity, component, title, creation, priority, severity, category, curStat)"
+		+ "SELECT ?, ?, ?, ?, ?, ?, ?, ?, defaultStatusId "
 		+ "FROM Projects WHERE id=?";
 
 	private static final String COMMENT_INSERTION =
@@ -1077,9 +1079,9 @@ public class Model {
 	}
 
 
-	public Bug addBug (Identity identity, Component component,
+	public Bug addBug (String identifier, Identity identity, Component component,
 			String title, Date creation, Priority priority, Severity severity, Category category) throws SQLException {
-		Bug bug = new Bug (null, identity, component, title, creation, priority, severity, category);
+		Bug bug = new Bug (null, identifier, identity, component, title, creation, priority, severity, category);
 		add (bug);
 
 		return bug;
@@ -1103,22 +1105,23 @@ public class Model {
 			PreparedStatement stmt = conn.prepareStatement (BUG_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
 	
+			stmt.setString (1, bug.getIdentifier ());
 			if (bug.getIdentity () != null) {
-				stmt.setInt (1, bug.getIdentity ().getId ());
+				stmt.setInt (2, bug.getIdentity ().getId ());
 			} else {
-				stmt.setNull (1, Types.INTEGER);
+				stmt.setNull (2, Types.INTEGER);
 			}
-			stmt.setInt (2, bug.getComponent ().getId ());
-			stmt.setString (3, bug.getTitle ());
-			stmt.setString (4, dateFormat.format (bug.getCreation ()));
-			stmt.setInt (5, bug.getPriority ().getId ());
-			stmt.setInt (6, bug.getSeverity ().getId ());
+			stmt.setInt (3, bug.getComponent ().getId ());
+			stmt.setString (4, bug.getTitle ());
+			stmt.setString (5, dateFormat.format (bug.getCreation ()));
+			stmt.setInt (6, bug.getPriority ().getId ());
+			stmt.setInt (7, bug.getSeverity ().getId ());
 			if (bug.getCategory () != null) {
-				stmt.setInt (7, bug.getCategory ().getId ());
+				stmt.setInt (8, bug.getCategory ().getId ());
 			} else {
-				stmt.setNull (7, Types.INTEGER);
+				stmt.setNull (8, Types.INTEGER);
 			}
-			stmt.setInt (8, bug.getComponent ().getProject ().getId ());
+			stmt.setInt (9, bug.getComponent ().getProject ().getId ());
 			stmt.executeUpdate();
 	
 			bug.setId (getLastInsertedId (stmt));
@@ -2004,20 +2007,19 @@ public class Model {
 				Identity identity = null;
 
 				Integer id = res.getInt (1);
-				if (res.getObject (2, Integer.class) != null) {
-					user = userFromResult (res, proj, 5, 6);
-					identity = identityFromResult (res, user, 2, 3, 4);
+				String identifier = res.getString (2);
+				if (res.getInt (3) != 0) {
+					user = userFromResult (res, proj, 6, 7);
+					identity = identityFromResult (res, user, 3, 4, 5);
 				}
-				Component component = components.get (res.getInt (7));
-				String title = res.getString (8);
-				Date creation = res.getDate (9);
-				Priority priority = priorities.get (res.getInt (10));
-				Severity severity = severities.get (res.getInt (11));
-				Category category = categories.get (res.getInt (12));
-				// Integer comments = res.getInt (13);
-				// Status status = statuses.get (res.getInt (14));
+				Component component = components.get (res.getInt (8));
+				String title = res.getString (9);
+				Date creation = res.getDate (10);
+				Priority priority = priorities.get (res.getInt (11));
+				Severity severity = severities.get (res.getInt (12));
+				Category category = categories.get (res.getInt (13));
 	
-				Bug bug = new Bug (id, identity, component,
+				Bug bug = new Bug (id, identifier, identity, component,
 					title, creation, priority, severity,
 					category);
 				do_next = callback.processResult (bug);

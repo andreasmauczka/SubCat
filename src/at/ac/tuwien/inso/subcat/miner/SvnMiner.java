@@ -175,6 +175,10 @@ public class SvnMiner extends Miner {
 		// TODO Auto-generated method stub
 		try {
 			emitStart ();
+
+			model.addFlag (project, Model.FLAG_SRC_INFO);
+			model.addFlag (project, Model.FLAG_SRC_FILE_STATS);
+
 			_run ();
 			emitEnd ();
 		} catch (IOException e) {

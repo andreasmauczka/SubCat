@@ -47,7 +47,6 @@ public class PostProcessor {
 	private List<PostProcessorTask> beginTasks;
 	private List<PostProcessorTask> commitTasks;
 	private List<PostProcessorTask> bugTasks;
-	private List<PostProcessorTask> commentTasks;
 	private List<PostProcessorTask> endTasks;
 
 	private Model model;
@@ -62,7 +61,6 @@ public class PostProcessor {
 		beginTasks = new LinkedList<PostProcessorTask> ();
 		commitTasks = new LinkedList<PostProcessorTask> ();
 		bugTasks = new LinkedList<PostProcessorTask> ();
-		commentTasks = new LinkedList<PostProcessorTask> ();
 		endTasks = new LinkedList<PostProcessorTask> ();
 
 		this.model = model;
@@ -95,10 +93,6 @@ public class PostProcessor {
 
 		if ((task.flags & PostProcessorTask.BUG) > 0) {
 			bugTasks.add (task);
-		}
-
-		if ((task.flags & PostProcessorTask.COMMENT) > 0) {
-			commentTasks.add (task);
 		}
 
 		if ((task.flags & PostProcessorTask.END) > 0) {
@@ -165,7 +159,7 @@ public class PostProcessor {
 	}
 
 	private void emitCommit (Commit commit) throws PostProcessorException {
-		for (PostProcessorTask task : beginTasks) {
+		for (PostProcessorTask task : commitTasks) {
 			if (stopped){
 				break;
 			}
@@ -175,7 +169,7 @@ public class PostProcessor {
 	}
 
 	private void emitBug (Bug bug, List<BugHistory> history, List<Comment> comments) throws PostProcessorException {
-		for (PostProcessorTask task : beginTasks) {
+		for (PostProcessorTask task : bugTasks) {
 			if (stopped){
 				break;
 			}
@@ -185,7 +179,7 @@ public class PostProcessor {
 	}
 
 	private void emitEnd () throws PostProcessorException {
-		for (PostProcessorTask task : beginTasks) {
+		for (PostProcessorTask task : endTasks) {
 			if (stopped){
 				break;
 			}
@@ -203,8 +197,8 @@ public class PostProcessor {
 			Settings settings = new Settings ();
 			Model model = new Model ("my-test.db");
 			Project proj = model.getProjects ().get (0);
-			new PostProcessor (proj, model, settings)
-				.process ();
+			PostProcessor processor = new PostProcessor (proj, model, settings);
+			processor.process ();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

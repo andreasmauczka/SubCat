@@ -188,6 +188,34 @@ public class Model {
 		+ "FOREIGN KEY(curStat) REFERENCES Status (id)"
 		+ ")";
 
+	private static final String ATTACHMENT_TABLE =
+		"CREATE TABLE IF NOT EXISTS Attachments ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "identifier	TEXT								NOT NULL,"
+		+ "comment		INTEGER								NOT NULL,"
+		+ "FOREIGN KEY(comment) REFERENCES Comments (id)"
+		+ ")";
+	
+	private static final String ATTACHMENT_STATUS_TABLE =
+		"CREATE TABLE IF NOT EXISTS AttachmentStatus ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "project		INT									NOT NULL,"
+		+ "name			TEXT								NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
+		+ ")";
+
+	private static final String ATTACHMENT_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS AttachmentHistory ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "date			TEXT								NOT NULL,"
+		+ "identity		INT									NOT NULL,"
+		+ "attachment	INT									NOT NULL,"
+		+ "status		INT									NOT NULL,"
+		+ "FOREIGN KEY(attachment) REFERENCES Attachments (id),"
+		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(status) REFERENCES AttachmentStatus (id)"
+		+ ")";
+
 	private static final String COMMENT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Comments ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -557,6 +585,21 @@ public class Model {
 		+ "(identifier, identity, component, title, creation, priority, severity, category, curStat)"
 		+ "SELECT ?, ?, ?, ?, ?, ?, ?, ?, defaultStatusId "
 		+ "FROM Projects WHERE id=?";
+
+	private static final String ATTACHMENT_INSERTION =
+		"INSERT INTO Attachments"
+		+ "(identifier, comment)"
+		+ "VALUES (?, ?)";
+
+	private static final String ATTACHMENT_STATUS_INSERTION
+		= "INSERT INTO AttachmentStatus"
+		+ "(project, name)"
+		+ "VALUES (?, ?)";
+
+	private static final String ATTACHMENT_HISTORY_INSERTION =
+		"INSERT INTO AttachmentHistory"
+		+ "(identity, attachment, status, date)"
+		+ "VALUES (?, ?, ?, ?)";
 
 	private static final String COMMENT_INSERTION =
 		"INSERT INTO Comments"
@@ -1078,7 +1121,81 @@ public class Model {
 		}
 	}
 
+	public Attachment addAttachment (String identifier, Comment comment) throws SQLException {
+		Attachment att = new Attachment (null, identifier, comment);
+		add (att);
+		return att;
+	}
 
+	public void add (Attachment attachment) throws SQLException {
+		assert (attachment != null);
+		assert (attachment.getId () == null);
+		assert (attachment.getComment () != null);
+		assert (attachment.getComment ().getId () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setString (1, attachment.getIdentifier ());
+			stmt.setInt (2, attachment.getComment ().getId ());
+			stmt.executeUpdate();
+	
+			attachment.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+	
+			for (ModelModificationListener listener : listeners) {
+				listener.attachmentAdded (attachment);
+			}
+		} finally {
+			pushConnection (conn);
+		}
+	}
+
+	public AttachmentHistory addAttachmentHistory (Identity identity, AttachmentStatus status, Attachment attachment, Date date) throws SQLException {
+		AttachmentHistory histo = new AttachmentHistory (null, identity, status, attachment, date);
+		add (histo);
+		return histo;
+	}
+
+	public void add (AttachmentHistory history) throws SQLException {
+		assert (history != null);
+		assert (history.getAttachment () != null);
+		assert (history.getStatus () != null);
+		assert (history.getIdentity () != null);
+		assert (history.getAttachment ().getId () != null);
+		assert (history.getStatus ().getId () != null);
+		assert (history.getIdentity ().getId () != null);
+
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_HISTORY_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+			stmt.setInt (1, history.getIdentity ().getId ());
+			stmt.setInt (2, history.getAttachment ().getId ());
+			stmt.setInt (3, history.getStatus ().getId ());
+			stmt.setString (4, dateFormat.format (history.getDate ()));
+			stmt.executeUpdate();
+	
+			history.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+	
+			for (ModelModificationListener listener : listeners) {
+				listener.attachmentHistoryAdded (history);
+			}
+		} finally {
+			pushConnection (conn);
+		}
+	}
+	
 	public Bug addBug (String identifier, Identity identity, Component component,
 			String title, Date creation, Priority priority, Severity severity, Category category) throws SQLException {
 		Bug bug = new Bug (null, identifier, identity, component, title, creation, priority, severity, category);
@@ -1211,13 +1328,47 @@ public class Model {
 		}
 	}
 
+	public AttachmentStatus addAttachmentStatus (Project project, String name) throws SQLException {
+		AttachmentStatus status = new AttachmentStatus (null, project, name);
+		add (status);
+		return status;
+	}	
+
+	public void add (AttachmentStatus status) throws SQLException {
+		assert (status != null);
+		Project project = status.getProject ();
+		assert (project.getId () != null);
+		assert (status.getId () == null);
+
+		Connection conn = popConnection ();
+
+		try {
+			PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_STATUS_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, status.getName ());
+			stmt.executeUpdate();
+	
+			status.setId (getLastInsertedId (stmt));
+	
+			stmt.close ();
+	
+		
+			for (ModelModificationListener listener : listeners) {
+				listener.attachmentStatusAdded (status);
+			}
+		} finally {
+			pushConnection (conn);
+		}
+	}
 
 	public Status addStatus (Project project, String name) throws SQLException {
 		Status status = new Status (null, project, name);
 		add (status);
 		return status;
 	}	
-	
+
 	public void add (Status status) throws SQLException {
 		assert (status != null);
 		Project project = status.getProject ();
@@ -2354,6 +2505,9 @@ public class Model {
 			stmt.executeUpdate (BUG_STATUS_UPDATE_TRIGGER);
 			stmt.executeUpdate (BUG_COMMENT_COUNT_UPDATE_TRIGGER);
 			stmt.executeUpdate (PROJECT_FLAG_TABLE);
+			stmt.executeUpdate (ATTACHMENT_TABLE);
+			stmt.executeUpdate (ATTACHMENT_STATUS_TABLE);
+			stmt.executeUpdate (ATTACHMENT_HISTORY_TABLE);
 			stmt.close ();
 		} finally {
 			pushConnection (conn);

@@ -47,7 +47,10 @@ import at.ac.tuwien.inso.subcat.bugzilla.BugzillaException;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaHistory;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaProduct;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaUser;
+import at.ac.tuwien.inso.subcat.model.Attachment;
+import at.ac.tuwien.inso.subcat.model.AttachmentStatus;
 import at.ac.tuwien.inso.subcat.model.Bug;
+import at.ac.tuwien.inso.subcat.model.Comment;
 import at.ac.tuwien.inso.subcat.model.Component;
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.Model;
@@ -79,6 +82,7 @@ public class BugzillaMiner extends Miner {
 	private Settings settings;
 	private Model model;
 
+	private Map<String, AttachmentStatus> attachmentStatus = new HashMap<String, AttachmentStatus> ();
 	private Map<String, Component> components = new HashMap<String, Component> ();
 	private Map<String, Priority> priorities = new HashMap<String, Priority> ();
 	private Map<String, Severity> severities = new HashMap<String, Severity> ();
@@ -91,6 +95,18 @@ public class BugzillaMiner extends Miner {
 	
 	private boolean processComments;
 	private boolean processHistory;
+
+	private class BugzillaAttachment {
+		public String id;
+		public Comment comment;
+		public LinkedList<BugzillaAttachmentHistoryEntry> history = new LinkedList<BugzillaAttachmentHistoryEntry> ();
+	}
+	
+	private class BugzillaAttachmentHistoryEntry {
+		public Identity identity;
+		public String status;
+		public Date date;
+	}
 	
 	private class Worker extends Thread {
 
@@ -153,27 +169,59 @@ public class BugzillaMiner extends Miner {
 				Date creation = bzBug.getCreationTime ();
 				String title = bzBug.getSummary ();
 				
-	
+
+				List<BugzillaAttachment> attachments = new LinkedList<BugzillaAttachment> ();
+
 				// Add to model:
 				Bug bug = model.addBug (identifier, creator, component, title, creation, priority, severity, null);
 				if (processComments) {
 					assert (comments != null);
-					addComments (bug, comments);
+					addComments (bug, comments, attachments);
 				}
 	
 				if (processHistory) {
 					BugzillaHistory[] histories = _histories.get (bzBug.getId ());
-					addHistory (bug, histories);
+					addHistory (bug, histories, attachments);
+				}
+
+				for (BugzillaAttachment att : attachments) {
+					Attachment attachment = model.addAttachment (att.id, att.comment);
+					for (BugzillaAttachmentHistoryEntry histo : att.history) {
+						AttachmentStatus attStatus = resolveAttachmentStatus (histo.status);
+						model.addAttachmentHistory (histo.identity, attStatus, attachment, histo.date);
+					}
 				}
 			}
 		}
 
-		private void addComments (Bug bug, BugzillaComment[] comments) throws SQLException, BugzillaException {
+		private void extractBugId (Comment cmnt, List<BugzillaAttachment> attachments) {
+			String text = cmnt.getContent ();
+			final String attachmentPrefix = "Created an attachment (id=";
+			if (!text.startsWith (attachmentPrefix)) {
+				return ;
+			}
+
+			int idStart = attachmentPrefix.length ();
+			int iter = idStart;
+
+			while (Character.isDigit (text.charAt (iter))) {
+				iter++;
+			}
+
+			if (text.charAt (iter) == ')') {
+				BugzillaAttachment attachment = new BugzillaAttachment ();
+				attachment.id = text.substring (idStart, iter);
+				attachment.comment = cmnt;
+				attachments.add (attachment);
+			}
+		}
+		
+		private void addComments (Bug bug, BugzillaComment[] comments, List<BugzillaAttachment> attachments) throws SQLException, BugzillaException {
 			assert (bug != null);
 			assert (comments != null);
 
 			for (BugzillaComment comment : comments) {
-
+				
 				if (Thread.currentThread().isInterrupted ()) {
 					return ;
 				}
@@ -182,11 +230,23 @@ public class BugzillaMiner extends Miner {
 				Date cmntCreation = comment.getTime ();
 				String cmntContent = comment.getText ();
 
-				model.addComment (bug, cmntCreation, cmntCreator, cmntContent);
+				Comment cmnt = model.addComment (bug, cmntCreation, cmntCreator, cmntContent);
+				extractBugId (cmnt, attachments);
 			}
 		}
 		
-		private void addHistory (Bug bug, BugzillaHistory[] history) throws SQLException, BugzillaException {
+		private BugzillaAttachment getAttachment (List<BugzillaAttachment> attachments, String id) {
+			for (BugzillaAttachment att : attachments) {
+				if (att.id.equals (id)) {
+					return att;
+				}
+			}
+
+			assert (false);
+			return null;
+		}
+		
+		private void addHistory (Bug bug, BugzillaHistory[] history, List<BugzillaAttachment> attachments) throws SQLException, BugzillaException {
 			assert (bug != null);
 
 			if (history == null) {
@@ -208,6 +268,31 @@ public class BugzillaMiner extends Miner {
 
 						model.addBugHistory (bug, bugStat, identity, date);
 					}
+					
+					if (change.getAttachmentId () != null) {
+						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
+
+						String status = change.getFieldName ();
+						if (status.equals ("attachments.isobsolete")) {
+							if (change.getAdded ().equals ("1")) {
+								attHisto.status = "obsolete";
+							} else {
+								attHisto.status = "ongoing";
+							}
+						} else if (status.equals ("attachments.status")) {
+							attHisto.status = change.getAdded ();
+						} else {
+							continue;
+						}
+
+
+						attHisto.date = entry.getWhen ();
+						Identity identity = resolveIdentity (entry.getWho ());
+						attHisto.identity = identity;
+
+						BugzillaAttachment bugzillaAttachment = getAttachment (attachments, Integer.toString (change.getAttachmentId ()));
+						bugzillaAttachment.history.add (attHisto);
+					}
 				}
 			}
 		}
@@ -228,7 +313,7 @@ public class BugzillaMiner extends Miner {
 	public void run () throws MinerException {
 		processComments = settings.srcGetParameter ("process-comments", true);
 		processHistory = settings.srcGetParameter ("process-history", true);
-		passSize = settings.srcGetParameter ("pass-size", 5);
+		passSize = settings.srcGetParameter ("pass-size", 10);
 		pageSize = settings.srcGetParameter ("page-size", 50);
 		
 		for (int i = 0; i < settings.bugThreads; i++) {
@@ -422,6 +507,18 @@ public class BugzillaMiner extends Miner {
 		}
 		
 		return priority;
+	}
+
+	private synchronized AttachmentStatus resolveAttachmentStatus (String name) throws SQLException {
+		assert (name != null);
+
+		AttachmentStatus status = attachmentStatus.get (name);
+		if (status == null) {
+			status = model.addAttachmentStatus (project, name);
+			attachmentStatus.put (name, status);
+		}
+		
+		return status;		
 	}
 }
 

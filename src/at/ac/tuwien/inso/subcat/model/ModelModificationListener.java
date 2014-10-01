@@ -70,4 +70,10 @@ public interface ModelModificationListener {
 
 	public void managedFileCopyAdded (ManagedFileCopy copy);
 
+	public void attachmentAdded (Attachment attachment);
+
+	public void attachmentStatusAdded (AttachmentStatus status);
+
+	public void attachmentHistoryAdded (AttachmentHistory history);
+
 }

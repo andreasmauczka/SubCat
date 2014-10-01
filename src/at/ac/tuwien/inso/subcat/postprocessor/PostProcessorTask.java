@@ -43,7 +43,6 @@ public abstract class PostProcessorTask {
 	public static final long BEGIN = (1 << 1);
 	public static final long COMMIT = (1 << 2); 
 	public static final long BUG = (1 << 3);
-	public static final long COMMENT = (1 << 4);
 	public static final long END = (1 << 5);
 
 	public final long flags;
@@ -53,7 +52,6 @@ public abstract class PostProcessorTask {
 					& ~BEGIN
 					& ~COMMIT
 					& ~BUG
-					& ~COMMENT
 					& ~END
 				) == 0;
 	}

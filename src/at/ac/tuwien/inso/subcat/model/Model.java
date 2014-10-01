@@ -82,7 +82,10 @@ public class Model {
 	
 	private static final String ENABLE_FOREIGN_KEYS =
 		"PRAGMA foreign_keys = ON";
-
+    private static final String ENABLE_WAL =
+    	"PRAGMA journal_mode=WAL";
+    private static final String SYNCHRONOUS_DB =
+    	"PRAGMA synchronous=NORMAL";
 	
 	//
 	// Table Creation:
@@ -757,6 +760,8 @@ public class Model {
 
 		Statement stmt = conn.createStatement();
 		stmt.executeUpdate (ENABLE_FOREIGN_KEYS);
+		stmt.executeUpdate (SYNCHRONOUS_DB);
+		stmt.executeUpdate (ENABLE_WAL);
 		stmt.close ();
 
 		return conn;

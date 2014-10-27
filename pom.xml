@@ -28,11 +28,29 @@
     </repository>
 </repositories>
   <dependencies>
-        <dependency>
-        <groupId>org.eclipse.swt</groupId>
-        <artifactId>org.eclipse.swt.win32.win32.x86_64</artifactId>
-        <version>4.4</version>
+ 
+    <dependency>
+      <groupId>${swt.groupId}</groupId>
+      <artifactId>${swt.artifactId}</artifactId>
+      <version>4.4</version>
     </dependency>
+	<dependency>
+		<groupId>edu.stanford.nlp</groupId>
+		<artifactId>stanford-corenlp</artifactId>
+		<version>3.4.1</version>
+	</dependency>
+<dependency>
+		<groupId>edu.stanford.nlp</groupId>
+		<artifactId>stanford-corenlp</artifactId>
+		<version>3.4.1</version>
+		<classifier>models</classifier>
+	</dependency>
+    <dependency>
+	<groupId>org.apache.commons</groupId>
+	<artifactId>commons-lang3</artifactId>
+	<version>3.3.2</version>
+</dependency>
+    
     <dependency>
 		<groupId>org.jfree</groupId>
 		<artifactId>jcommon</artifactId>
@@ -78,6 +96,50 @@
 </dependency>
 
     </dependencies>
+    
+    <profiles>
+    <!-- ... -->
+    <profile>
+      <id>linux64</id>
+      <activation>
+        <os>
+          <family>linux</family>
+          <arch>amd64</arch>
+        </os>
+      </activation>
+      <properties>
+        <swt.groupId>org.eclipse.swt</swt.groupId>
+        <swt.artifactId>org.eclipse.swt.gtk.linux.x86_64</swt.artifactId>
+      </properties>
+    </profile>
+    <profile>
+      <id>macos</id>
+      <activation>
+        <os>
+          <family>mac os x</family>
+          <arch>amd64</arch>
+        </os>
+      </activation>
+      <properties>
+        <swt.groupId>org.eclipse.swt</swt.groupId>
+        <swt.artifactId>org.eclipse.swt.cocoa.macosx.x86_64</swt.artifactId>
+      </properties>
+    </profile>
+    <profile>
+      <id>win64</id>
+      <activation>
+        <os>
+          <family>windows</family>
+          <arch>amd64</arch>
+        </os>
+      </activation>
+      <properties>
+        <swt.groupId>org.eclipse.swt</swt.groupId>
+        <swt.artifactId>org.eclipse.swt.win32.win32.x86_64</swt.artifactId>
+      </properties>
+    </profile>
+  </profiles>
+    
  
   <dependencyManagement>
   	<dependencies>

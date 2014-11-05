@@ -59,6 +59,10 @@ public class Settings {
 		return getParameter (bugSpecificParams, name, defaultValue);
 	}
 
+	public String bugGetParameter (String name, String defaultValue) {
+		return getParameter (bugSpecificParams, name, defaultValue);
+	}
+
 
 	//
 	// Source Repository:
@@ -76,6 +80,10 @@ public class Settings {
 	}
 
 	public int srcGetParameter (String name, int defaultValue) {
+		return getParameter (srcSpecificParams, name, defaultValue);
+	}
+
+	public String srcGetParameter (String name, String defaultValue) {
 		return getParameter (srcSpecificParams, name, defaultValue);
 	}
 
@@ -102,5 +110,15 @@ public class Settings {
 
 		assert (obj instanceof Integer);
 		return (Integer) obj;		
+	}
+
+	private String getParameter (Map<String, Object> params, String name, String defaultValue) {
+		Object obj = params.get (name);
+		if (obj == null) {
+			return defaultValue;
+		}
+
+		assert (obj instanceof String);
+		return (String) obj;		
 	}
 }

@@ -40,7 +40,8 @@ import at.ac.tuwien.inso.subcat.model.Project;
 public abstract class MetaData {
 	public enum ParamType {
 		INTEGER,
-		BOOLEAN
+		BOOLEAN,
+		STRING
 	}
 
 	public abstract MinerType getType ();
@@ -54,7 +55,19 @@ public abstract class MetaData {
 	public abstract boolean checkSpecificParams (Map<String, Object> params, Map<String, String> errors);
 
 	public abstract Map<String, ParamType> getSpecificParams ();
-	
+
+	protected boolean assertString (String name, Object obj, Map<String, String> errors) {
+		assert (name != null);
+		assert (errors != null);
+		assert (obj != null);
+
+		if (obj instanceof String == false) {
+			errors.put (name, "invalid type, expected string");
+			return false;
+		}
+
+		return true;
+	}
 
 	protected boolean assertBoolean (String name, Object obj, Map<String, String> errors) {
 		assert (name != null);
@@ -62,7 +75,7 @@ public abstract class MetaData {
 		assert (obj != null);
 
 		if (obj instanceof Boolean == false) {
-			errors.put (name, "invalid type, expected booleans");
+			errors.put (name, "invalid type, expected boolean");
 			return false;
 		}
 

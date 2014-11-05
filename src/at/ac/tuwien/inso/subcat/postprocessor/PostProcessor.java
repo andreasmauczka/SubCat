@@ -109,23 +109,27 @@ public class PostProcessor {
 				try {
 					emitBegin ();
 
-					model.foreachCommit (proj, new ObjectCallback<Commit> () {
-						@Override
-						public boolean processResult (Commit item) throws SQLException, Exception {
-							emitCommit (item);
-							return !stopped;
-						}				
-					});
+					if (commitTasks.size () > 0) {
+						model.foreachCommit (proj, new ObjectCallback<Commit> () {
+							@Override
+							public boolean processResult (Commit item) throws SQLException, Exception {
+								emitCommit (item);
+								return !stopped;
+							}				
+						});
+					}
 
-					model.foreachBug (proj, new ObjectCallback<Bug> () {
-						@Override
-						public boolean processResult (Bug bug) throws SQLException, Exception {
-							List<BugHistory> history = model.getBugHistory (proj, bug);
-							List<Comment> comments = model.getComments (proj, bug);
-							emitBug (bug, history, comments);
-							return !stopped;
-						}				
-					});
+					if (bugTasks.size () > 0) {
+						model.foreachBug (proj, new ObjectCallback<Bug> () {
+							@Override
+							public boolean processResult (Bug bug) throws SQLException, Exception {
+								List<BugHistory> history = model.getBugHistory (proj, bug);
+								List<Comment> comments = model.getComments (proj, bug);
+								emitBug (bug, history, comments);
+								return !stopped;
+							}				
+						});
+					}
 
 					emitEnd ();
 				} catch (PostProcessorException e) {

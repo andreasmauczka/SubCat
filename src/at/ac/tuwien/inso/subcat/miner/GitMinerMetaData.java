@@ -79,6 +79,8 @@ public class GitMinerMetaData extends MetaData {
 
 			if (name.equalsIgnoreCase ("process-diffs")) {
 				assertBoolean (name, val, errors);
+			} else if (name.equalsIgnoreCase ("start-ref")) {
+				assertString (name, val, errors);
 			} else {
 				errors.put (name, "unknown parameter");
 			}
@@ -91,6 +93,7 @@ public class GitMinerMetaData extends MetaData {
 	public Map<String, ParamType> getSpecificParams () {
 		Map<String, ParamType> params = new HashMap<String, ParamType> ();
 		params.put ("process-diffs", ParamType.BOOLEAN);
+		params.put ("start-ref", ParamType.STRING);
 		return params;
 	}
 

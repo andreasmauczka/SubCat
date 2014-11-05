@@ -72,6 +72,7 @@ public class GitMiner extends Miner {
 	private boolean stopped;
 
 	private boolean processDiffs;
+	private String startRef;
 
 
 	private static class DiffOutputStream extends OutputStream {
@@ -214,6 +215,7 @@ public class GitMiner extends Miner {
 
 			model.addFlag (project, Model.FLAG_SRC_INFO);
 			processDiffs = settings.srcGetParameter ("process-diffs", true);
+			startRef = settings.srcGetParameter ("start-ref", DEFAULT_HEAD);
 			if (processDiffs == true) {
 				model.addFlag (project, Model.FLAG_SRC_FILE_STATS);
 				model.addFlag (project, Model.FLAG_SRC_LINE_STATS);
@@ -243,9 +245,9 @@ public class GitMiner extends Miner {
 		}
 		*/
 
-		Ref head = repository.getRef (DEFAULT_HEAD);
+		Ref head = repository.getRef (startRef);
 		if (head == null) {
-			throw new MinerException ("Unknown reference: '" + DEFAULT_HEAD + "'");
+			throw new MinerException ("Unknown reference: '" + startRef + "'");
 		}
 
 		RevWalk walk = new RevWalk (repository);

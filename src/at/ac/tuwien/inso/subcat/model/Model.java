@@ -113,6 +113,7 @@ public class Model {
 		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
 		+ ")";
 	
+	// TODO: rename to User
 	private static final String USER_TABLE =
 		"CREATE TABLE IF NOT EXISTS Users ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -663,6 +664,8 @@ public class Model {
 	private static final String UPDATE_DEFAULT_STATUS =
 		"UPDATE Projects SET defaultStatusId = ? WHERE id = ?";
 
+	private static final String UPDATE_FILE_NAME =
+		"UPDATE Files SET name = ? WHERE id = ?";
 
 
 	
@@ -1562,13 +1565,13 @@ public class Model {
 	}
 
 
-	public FileRename addFileRename (ManagedFile file, Commit commit, String oldName) throws SQLException {
+	public FileRename addFileRename (ManagedFile file, Commit commit, String oldName, String newName) throws SQLException {
 		FileRename rename = new FileRename (file, commit, oldName);
-		add (rename);
+		add (rename, newName);
 		return rename;
 	}
 
-	public void add (FileRename rename) throws SQLException {
+	public void add (FileRename rename, String newName) throws SQLException {
 		assert (rename != null);
 		assert (rename.getCommit ().getId () != null);
 		assert (rename.getFile ().getId () != null);
@@ -1577,7 +1580,13 @@ public class Model {
 		Connection conn = popConnection ();
 
 		try {
-			PreparedStatement stmt = conn.prepareStatement (FILE_RENAME_INSERTION);
+			PreparedStatement stmt = conn.prepareStatement (UPDATE_FILE_NAME);
+			stmt.setString (1, newName);
+			stmt.setInt (2, rename.getFile ().getId ());
+			stmt.close ();
+			
+			
+			conn.prepareStatement (FILE_RENAME_INSERTION);
 	
 			stmt.setInt (1, rename.getFile ().getId ());
 			stmt.setInt (2, rename.getCommit ().getId ());

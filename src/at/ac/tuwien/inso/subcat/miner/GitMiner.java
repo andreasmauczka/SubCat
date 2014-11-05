@@ -342,7 +342,7 @@ public class GitMiner extends Miner {
 			case RENAME:
 				ManagedFile renamedFile = fileCache.get (stats.oldPath);
 				assert (renamedFile != null);
-				model.addFileRename (renamedFile, commit, stats.oldPath);
+				model.addFileRename (renamedFile, commit, stats.oldPath, path);
 				fileCache.put (path, renamedFile);
 				fileCache.remove (stats.oldPath);
 				break;

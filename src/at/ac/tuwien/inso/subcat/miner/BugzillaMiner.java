@@ -328,6 +328,7 @@ public class BugzillaMiner extends Miner {
 			model.addFlag (project, Model.FLAG_BUG_INFO);
 			if (processComments == true) {
 				model.addFlag (project, Model.FLAG_BUG_COMMENTS);
+				model.addFlag (project, Model.FLAG_BUG_ATTACHMENTS);
 			}
 			if (processHistory == true) {
 				model.addFlag (project, Model.FLAG_BUG_HISTORY);

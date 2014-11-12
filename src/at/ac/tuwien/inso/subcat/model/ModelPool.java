@@ -14,12 +14,26 @@ public class ModelPool {
 	//
 	
 	private static final String ENABLE_FOREIGN_KEYS =
-		"PRAGMA foreign_keys = ON";
-    private static final String ENABLE_WAL =
-    	"PRAGMA journal_mode=WAL";
+			"PRAGMA foreign_keys = ON";      
+	    
+	
+	 //Safety parameters for SQLITE turned off in favor of performance
+    /* private static final String ENABLE_WAL =
+	"PRAGMA journal_mode=WAL";
     private static final String SYNCHRONOUS_DB =
-    	"PRAGMA synchronous=NORMAL";
-
+	"PRAGMA synchronous=NORMAL";*/
+		    
+    //Speed-up parameters for SQLITE
+	private static final String SYNCHRONOUS_DB =
+	    	"PRAGMA synchronous=OFF";
+    private static final String ENABLE_JM_MEMORY =
+        	"PRAGMA journal_mode=MEMORY";  
+    private static final String TEMP_STORE =
+        	"PRAGMA temp_store=OFF";
+    private static final String COUNT_CHANGES =
+        	"PRAGMA count_changes=OFF";
+    
+   
     
     //
     //
@@ -147,7 +161,9 @@ public class ModelPool {
 		Statement stmt = conn.createStatement();
 		stmt.executeUpdate (ENABLE_FOREIGN_KEYS);
 		stmt.executeUpdate (SYNCHRONOUS_DB);
-		stmt.executeUpdate (ENABLE_WAL);
+		stmt.executeUpdate (ENABLE_JM_MEMORY);
+		stmt.executeUpdate (TEMP_STORE);
+		stmt.executeUpdate (COUNT_CHANGES);
 		stmt.close ();
 
 		return conn;

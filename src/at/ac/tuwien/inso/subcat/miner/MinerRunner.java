@@ -53,9 +53,9 @@ public class MinerRunner {
 	private static void init () {
 		if (registeredMiner == null) {
 			registeredMiner = new LinkedList<MetaData> ();
-			registeredMiner.add (new BugzillaMinerMetaData ());
-			registeredMiner.add (new GitMinerMetaData ());
-			//registeredMiner.add (new SvnMinerMetaData ());
+			//registeredMiner.add (new BugzillaMinerMetaData ());
+			//registeredMiner.add (new GitMinerMetaData ());
+			registeredMiner.add (new SvnMinerMetaData ());
 		}
 	}
 	
@@ -166,7 +166,7 @@ public class MinerRunner {
 	public static void main (String[] args) {
 		Settings settings = new Settings ();
 
-		/* Bugzilla Test: */
+		/* Bugzilla Test: * /
 		settings.bugRepository = "https://bugzilla.gnome.org";
 		settings.bugProductName = "valadoc";
 		settings.bugTrackerName = "Bugzilla";
@@ -175,10 +175,10 @@ public class MinerRunner {
 		/* GIT Test: * /
 		settings.srcLocalPath = System.getProperty("user.dir");
 		settings.srcSpecificParams.put ("process-diffs", true);
-		/* Svn Test: * /
-		settings.srcLocalPath = "/home/mog/student-project-netcracker-read-only";
+		/* Svn Test: */
+		settings.srcLocalPath = "jedit.log2";
 		settings.srcRemote = "http://student-project-netcracker.googlecode.com/svn/trunk/";
-		*/
+		//*/
 		try {
 			MinerRunner runner = new MinerRunner (settings);
 			runner.addListener (new MinerListener () {

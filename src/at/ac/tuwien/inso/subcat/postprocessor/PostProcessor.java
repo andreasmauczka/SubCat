@@ -40,6 +40,7 @@ import at.ac.tuwien.inso.subcat.model.BugHistory;
 import at.ac.tuwien.inso.subcat.model.Comment;
 import at.ac.tuwien.inso.subcat.model.Commit;
 import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.ObjectCallback;
 import at.ac.tuwien.inso.subcat.model.Project;
 
@@ -49,7 +50,7 @@ public class PostProcessor {
 	private List<PostProcessorTask> bugTasks;
 	private List<PostProcessorTask> endTasks;
 
-	private Model model;
+	private ModelPool pool;
 	private Settings settings;
 	private Project proj;
 
@@ -57,19 +58,19 @@ public class PostProcessor {
 	private boolean stopped = false;
 	
 
-	public PostProcessor (Project proj, Model model, Settings settings) {
+	public PostProcessor (Project proj, ModelPool pool, Settings settings) {
 		beginTasks = new LinkedList<PostProcessorTask> ();
 		commitTasks = new LinkedList<PostProcessorTask> ();
 		bugTasks = new LinkedList<PostProcessorTask> ();
 		endTasks = new LinkedList<PostProcessorTask> ();
 
-		this.model = model;
+		this.pool = pool;
 		this.settings = settings;
 		this.proj = proj;
 	}
 
-	public Model getModel () {
-		return model;
+	public ModelPool getModelPool () {
+		return pool;
 	}
 
 	public Settings getSettings () {
@@ -105,8 +106,10 @@ public class PostProcessor {
 
 		Runnable runnable = new Runnable () {
 			@Override
-			public void run () {				
+			public void run () {
+				Model model = null;
 				try {
+					model = pool.getModel ();
 					emitBegin ();
 
 					if (commitTasks.size () > 0) {
@@ -123,8 +126,9 @@ public class PostProcessor {
 						model.foreachBug (proj, new ObjectCallback<Bug> () {
 							@Override
 							public boolean processResult (Bug bug) throws SQLException, Exception {
-								List<BugHistory> history = model.getBugHistory (proj, bug);
-								List<Comment> comments = model.getComments (proj, bug);
+								Model model2 = pool.getModel ();
+								List<BugHistory> history = model2.getBugHistory (proj, bug);
+								List<Comment> comments = model2.getComments (proj, bug);
 								emitBug (bug, history, comments);
 								return !stopped;
 							}				
@@ -138,6 +142,10 @@ public class PostProcessor {
 					exception = new PostProcessorException ("SQL-Error: " + e.getMessage (), e);
 				} catch (Exception e) {
 					exception = new PostProcessorException ("Unexpected Error: " + e.getMessage (), e);
+				} finally {
+					if (model != null) {
+						model.close ();
+					}
 				}
 			}
 		};
@@ -199,9 +207,14 @@ public class PostProcessor {
 	public static void main (String[] args) {
 		try {
 			Settings settings = new Settings ();
-			Model model = new Model ("my-test.db");
+
+			ModelPool pool = new ModelPool ("my-test.db");
+
+			Model model = pool.getModel ();
 			Project proj = model.getProjects ().get (0);
-			PostProcessor processor = new PostProcessor (proj, model, settings);
+			model.close ();
+
+			PostProcessor processor = new PostProcessor (proj, pool, settings);
 			processor.process ();
 		} catch (Exception e) {
 			e.printStackTrace();

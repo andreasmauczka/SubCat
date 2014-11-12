@@ -59,6 +59,7 @@ import at.ac.tuwien.inso.subcat.model.Commit;
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.ManagedFile;
 import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.model.User;
 
@@ -68,6 +69,7 @@ public class GitMiner extends Miner {
 	
 	private Settings settings;
 	private Project project;
+	private ModelPool pool;
 	private Model model;
 	private boolean stopped;
 
@@ -155,14 +157,14 @@ public class GitMiner extends Miner {
 		}
 	}
 
-	public GitMiner (Settings settings, Project project, Model model) {
+	public GitMiner (Settings settings, Project project, ModelPool pool) {
 		assert (settings != null);
 		assert (project != null);
-		assert (model != null);
+		assert (pool != null);
 		
 		this.settings = settings;
 		this.project = project;
-		this.model = model;
+		this.pool = pool;
 	}
 
 
@@ -211,6 +213,7 @@ public class GitMiner extends Miner {
 		stopped = false;
 
 		try {
+			model = pool.getModel ();
 			emitStart ();
 
 			model.addFlag (project, Model.FLAG_SRC_INFO);
@@ -227,6 +230,10 @@ public class GitMiner extends Miner {
 			throw new MinerException ("IO-Error: " + e.getMessage (), e);
 		} catch (SQLException e) {
 			throw new MinerException ("SQL-Error: " + e.getMessage (), e);
+		} finally {
+			if (model != null) {
+				model.close ();
+			}
 		}
 	}
 

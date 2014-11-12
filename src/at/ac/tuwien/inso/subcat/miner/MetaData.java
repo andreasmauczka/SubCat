@@ -33,7 +33,7 @@ package at.ac.tuwien.inso.subcat.miner;
 import java.util.Map;
 
 import at.ac.tuwien.inso.subcat.miner.Miner.MinerType;
-import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
 
 
@@ -50,7 +50,7 @@ public abstract class MetaData {
 	
 	public abstract boolean is (Settings settings);
 	
-	public abstract Miner create (Settings settings, Project project, Model model);
+	public abstract Miner create (Settings settings, Project project, ModelPool pool);
 
 	public abstract boolean checkSpecificParams (Map<String, Object> params, Map<String, String> errors);
 

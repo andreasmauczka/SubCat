@@ -48,6 +48,7 @@ import at.ac.tuwien.inso.subcat.model.Category;
 import at.ac.tuwien.inso.subcat.model.Component;
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Priority;
 import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.model.Severity;
@@ -98,8 +99,12 @@ public class Reporter {
 
 	public static void main (String[] args) {
 		// Dummy Model:
+		ModelPool pool = null;
+		Model model = null;
 		try {
-			Model model = new Model (":memory:");
+			pool = new ModelPool (":memory:");
+			model = pool.getModel ();
+			
 			Settings settings = new Settings ();
 			Project project = model.addProject (new Date (), "", "", "");
 			Component component1 = model.addComponent(project, "Component 1");
@@ -197,6 +202,10 @@ public class Reporter {
 			e.printStackTrace();
 		} catch (ReporterException e) {
 			e.printStackTrace();
+		}
+		
+		if (model != null) {
+			model.close ();
 		}
 	}
 }

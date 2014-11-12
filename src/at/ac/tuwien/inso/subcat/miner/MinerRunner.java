@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
 
 
@@ -63,21 +64,28 @@ public class MinerRunner {
 
 		init ();
 
-		Model model;
+		ModelPool pool;
 		Project project;
 
 		try {
-			model = new Model ("my-test.db");
+			pool = new ModelPool ("my-test.db");
 		} catch (ClassNotFoundException e) {
 			throw new MinerException ("Unknown JDBC-Driver: " + e.getMessage (), e);
 		} catch (SQLException e) {
 			throw new MinerException ("SQL-Error: " + e.getMessage (), e);
 		}
 
+		Model model = null;
 		try {
+			model = pool.getModel ();
 			project = model.addProject (new Date (), settings.bugTrackerName, settings.bugProductName, null);
 		} catch (SQLException e) {
 			throw new MinerException ("SQL-Error: " + e.getMessage (), e);
+		} finally {
+			if (model != null) {
+				model.close ();
+				model = null;
+			}
 		}
 
 
@@ -89,7 +97,7 @@ public class MinerRunner {
 			}
 
 			if (meta.is (settings)) {
-				Miner miner = meta.create (settings, project, model);
+				Miner miner = meta.create (settings, project, pool);
 				miner.addListener (listeners);
 				this.miners.add (new RunnableMiner (this, miner));
 				foundMinerTypes.add (meta.getType ());

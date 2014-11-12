@@ -35,7 +35,7 @@ import java.util.Map;
 
 import at.ac.tuwien.inso.subcat.miner.MetaData;
 import at.ac.tuwien.inso.subcat.miner.Miner.MinerType;
-import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
 
 
@@ -64,8 +64,8 @@ public class GitMinerMetaData extends MetaData {
 	}
 
 	@Override
-	public Miner create (Settings settings, Project project, Model model) {
-		return new GitMiner (settings, project, model);
+	public Miner create (Settings settings, Project project, ModelPool pool) {
+		return new GitMiner (settings, project, pool);
 	}
 
 	@Override

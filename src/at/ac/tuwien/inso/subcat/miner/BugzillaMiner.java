@@ -54,6 +54,7 @@ import at.ac.tuwien.inso.subcat.model.Comment;
 import at.ac.tuwien.inso.subcat.model.Component;
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Priority;
 import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.model.Severity;
@@ -80,6 +81,7 @@ public class BugzillaMiner extends Miner {
 
 	private BugzillaContext context;
 	private Settings settings;
+	private ModelPool pool;
 	private Model model;
 
 	private Map<String, AttachmentStatus> attachmentStatus = new HashMap<String, AttachmentStatus> ();
@@ -299,14 +301,14 @@ public class BugzillaMiner extends Miner {
 	}
 	
 
-	public BugzillaMiner (Settings settings, Project project, Model model) {
+	public BugzillaMiner (Settings settings, Project project, ModelPool pool) {
 		assert (settings != null);
 		assert (project != null);
-		assert (model != null);
+		assert (pool != null);
 		
 		this.settings = settings;
 		this.project = project;
-		this.model = model;
+		this.pool = pool;
 	}
 
 	@Override
@@ -325,6 +327,7 @@ public class BugzillaMiner extends Miner {
 		emitStart ();
 
 		try {
+			model = pool.getModel ();
 			model.addFlag (project, Model.FLAG_BUG_INFO);
 			if (processComments == true) {
 				model.addFlag (project, Model.FLAG_BUG_COMMENTS);
@@ -350,6 +353,10 @@ public class BugzillaMiner extends Miner {
 				worker.join ();
 			} catch (InterruptedException e) {
 			}
+		}
+
+		if (model != null) {
+			model.close ();
 		}
 
 		if (storedException != null) {

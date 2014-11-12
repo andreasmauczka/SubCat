@@ -59,6 +59,7 @@ import at.ac.tuwien.inso.subcat.model.Category;
 import at.ac.tuwien.inso.subcat.model.Component;
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Priority;
 import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.model.Severity;
@@ -214,9 +215,13 @@ public class ViewFactory {
 	//
 
 	public static void main (String[] args) {
+		ModelPool pool = null;
+		Model model = null;
 		try {
 			// Dummy Model:
-			Model model = new Model ("foo.db");
+			pool = new ModelPool ("foo.db");
+			model = pool.getModel ();
+
 			Project project = model.addProject (new Date (), "", "", "");
 			model.addFlag (project, "FOO");
 			Component component1 = model.addComponent(project, "Component 1");
@@ -412,6 +417,10 @@ public class ViewFactory {
 			display.dispose();
 		} catch (Exception e) {
 			e.printStackTrace();
+		}
+		
+		if (model != null) {
+			model.close ();
 		}
 	}
 }

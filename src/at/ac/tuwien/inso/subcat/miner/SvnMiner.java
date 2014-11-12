@@ -49,6 +49,7 @@ import at.ac.tuwien.inso.subcat.model.Commit;
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.ManagedFile;
 import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.model.User;
 
@@ -69,19 +70,20 @@ public class SvnMiner extends Miner {
 
 	private Settings settings;
 	private Project project;
+	private ModelPool pool;
 	private Model model;
 	private XmlReader reader;
 	private Lemmatizer lemmatizer;
 	private boolean stopped;
 	
-	public SvnMiner (Settings settings, Project project, Model model) {
+	public SvnMiner (Settings settings, Project project, ModelPool pool) {
 		assert (settings != null);
 		assert (project != null);
-		assert (model != null);
+		assert (pool != null);
 		
 		this.settings = settings;
 		this.project = project;
-		this.model = model;
+		this.pool = pool;
 		
 		//initialize lemmatizer once - this seems to be memory intensive
 		lemmatizer = new Lemmatizer();
@@ -175,7 +177,7 @@ public class SvnMiner extends Miner {
 			case RENAME:
 				ManagedFile renamedFile = fileCache.get (stats.oldPath);
 				assert (renamedFile != null);
-				model.addFileRename (renamedFile, commit, stats.oldPath);
+				model.addFileRename (renamedFile, commit, stats.oldPath, path);
 				fileCache.put (path, renamedFile);
 				fileCache.remove (stats.oldPath);
 				break;
@@ -332,6 +334,7 @@ public class SvnMiner extends Miner {
 	public void run () throws MinerException {
 		// TODO Auto-generated method stub
 		try {
+			model = pool.getModel ();
 			emitStart ();
 
 			model.addFlag (project, Model.FLAG_SRC_INFO);
@@ -347,6 +350,10 @@ public class SvnMiner extends Miner {
 			throw new MinerException ("Date Parsing-Error: " + e.getMessage (), e);
 		} catch (XmlReaderException e) {
 			throw new MinerException ("XML Reader-Error: " + e.getMessage (), e);
+		} finally {
+			if (this.model != null) {
+				model.close ();
+			}
 		}
 		
 	}

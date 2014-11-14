@@ -41,12 +41,10 @@ public class Bug {
 	private Date creation;
 	private Priority priority;
 	private Severity severity;
-	private Category category;
 	private String identifier;
 
 	public Bug (Integer id, String identifier, Identity identity, Component component,
-			String title, Date creation, Priority priority, Severity severity,
-			Category category) {
+			String title, Date creation, Priority priority, Severity severity) {
 		assert (component != null);
 		assert (title != null);
 		assert (creation != null);
@@ -60,7 +58,6 @@ public class Bug {
 		this.title = title;
 		this.creation = creation;
 		this.priority = priority;
-		this.category = category;
 		this.severity = severity;
 	}
 
@@ -124,16 +121,6 @@ public class Bug {
 		this.priority = priority;
 	}
 
-	public Category getCategory () {
-		return category;
-	}
-
-	public void setCategory (Category category) {
-		assert (category != null);
-
-		this.category = category;
-	}
-
 	public boolean equals (Bug obj) {
 		if (id == null || obj.id == null) {
 			return obj == this;
@@ -163,7 +150,6 @@ public class Bug {
 	public String toString () {
 		return "Bug [id=" + id + ", identity=" + identity + ", component="
 				+ component + ", title=" + title + ", creation=" + creation
-				+ ", priority=" + priority + ", severity=" + severity
-				+ ", category=" + category + "]";
+				+ ", priority=" + priority + ", severity=" + severity + "]";
 	}
 }

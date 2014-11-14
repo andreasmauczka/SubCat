@@ -30,6 +30,7 @@
 
 package at.ac.tuwien.inso.subcat.postprocessor;
 
+
 public class PostProcessorException extends Exception {
 	private static final long serialVersionUID = 7268999390186517405L;
 
@@ -39,6 +40,10 @@ public class PostProcessorException extends Exception {
 
 	public PostProcessorException (String msg) {
 		super (msg);
+	}
+
+	public PostProcessorException (Exception e) {
+		super (e);
 	}
 }
 

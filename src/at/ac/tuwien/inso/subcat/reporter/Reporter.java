@@ -44,7 +44,6 @@ import at.ac.tuwien.inso.subcat.config.ExporterConfig;
 import at.ac.tuwien.inso.subcat.config.Parser;
 import at.ac.tuwien.inso.subcat.config.ParserException;
 import at.ac.tuwien.inso.subcat.miner.Settings;
-import at.ac.tuwien.inso.subcat.model.Category;
 import at.ac.tuwien.inso.subcat.model.Component;
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.Model;
@@ -126,10 +125,11 @@ public class Reporter {
 			Identity identity3a = model.addIdentity ("user3@mail.endl", "user3a", user3);
 			model.addIdentity ("user3@mail.endl", "user3b", user3);
 	
-			
+			/*
 			Category cat1 = model.addCategory(project, "Corrective");
 			Category cat2 = model.addCategory(project, "Adaptive");
 			Category cat3 = model.addCategory(project, "Perfective");
+			*/
 	
 			Severity sev1 = model.addSeverity(project, "blocker");
 			model.addSeverity(project, "critical");
@@ -146,30 +146,30 @@ public class Reporter {
 			model.addPriority (project, "Low");
 	
 			
-			model.addCommit(project, identity1a, identity1a, new Date (), "commit 1", 1, 5, 5, cat1);
-			model.addCommit(project, identity1a, identity1a, new Date (), "commit 3", 1, 5, 5, cat1);
-			model.addCommit(project, identity1a, identity1a, new Date (), "commit 3", 1, 5, 5, cat1);
+			model.addCommit(project, identity1a, identity1a, new Date (), "commit 1", 1, 5, 5);
+			model.addCommit(project, identity1a, identity1a, new Date (), "commit 3", 1, 5, 5);
+			model.addCommit(project, identity1a, identity1a, new Date (), "commit 3", 1, 5, 5);
 	
-			model.addCommit(project, identity2a, identity2a, new Date (), "commit 4", 1, 5, 5, cat2);
-			model.addCommit(project, identity2a, identity2a, new Date (), "commit 5", 1, 5, 5, cat2);
-			model.addCommit(project, identity2a, identity2a, new Date (), "commit 6", 1, 5, 5, cat2);
+			model.addCommit(project, identity2a, identity2a, new Date (), "commit 4", 1, 5, 5);
+			model.addCommit(project, identity2a, identity2a, new Date (), "commit 5", 1, 5, 5);
+			model.addCommit(project, identity2a, identity2a, new Date (), "commit 6", 1, 5, 5);
 	
-			model.addCommit(project, identity3a, identity1a, new Date (), "commit 7", 1, 5, 5, cat3);
-			model.addCommit(project, identity3a, identity1a, new Date (), "commit 8", 1, 5, 5, cat3);
-			model.addCommit(project, identity3a, identity1a, new Date (), "commit 9", 1, 5, 5, cat3);
+			model.addCommit(project, identity3a, identity1a, new Date (), "commit 7", 1, 5, 5);
+			model.addCommit(project, identity3a, identity1a, new Date (), "commit 8", 1, 5, 5);
+			model.addCommit(project, identity3a, identity1a, new Date (), "commit 9", 1, 5, 5);
 	
 			
 	
-			model.addBug("1", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug("2", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug("3", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug("4", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug("5", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug("6", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug("7", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug("8", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug("9", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
-			model.addBug("10", identity1b, component1, "bug 1", new Date (), priority1, sev1, cat1);
+			model.addBug("1", identity1b, component1, "bug 1", new Date (), priority1, sev1);
+			model.addBug("2", identity1b, component1, "bug 1", new Date (), priority1, sev1);
+			model.addBug("3", identity1b, component1, "bug 1", new Date (), priority1, sev1);
+			model.addBug("4", identity1b, component1, "bug 1", new Date (), priority1, sev1);
+			model.addBug("5", identity1b, component1, "bug 1", new Date (), priority1, sev1);
+			model.addBug("6", identity1b, component1, "bug 1", new Date (), priority1, sev1);
+			model.addBug("7", identity1b, component1, "bug 1", new Date (), priority1, sev1);
+			model.addBug("8", identity1b, component1, "bug 1", new Date (), priority1, sev1);
+			model.addBug("9", identity1b, component1, "bug 1", new Date (), priority1, sev1);
+			model.addBug("10", identity1b, component1, "bug 1", new Date (), priority1, sev1);
 
 		
 			// Config:

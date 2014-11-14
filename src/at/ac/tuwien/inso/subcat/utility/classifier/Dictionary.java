@@ -37,15 +37,17 @@ import java.util.List;
 public class Dictionary {
 	private List<Class> absoluteClasses;
 	private List<Class> relativeClasses;
+	private String title;
 
-
-	public Dictionary (List<Class> absoluteClasses,
+	public Dictionary (String title,
+			List<Class> absoluteClasses,
 			List<Class> relativeClasses) {
 		assert (absoluteClasses != null);
 		assert (relativeClasses != null);
 		
 		this.absoluteClasses = absoluteClasses;
 		this.relativeClasses = relativeClasses;
+		this.title = title;
 
 		Collections.sort (absoluteClasses, new ClassComparator ());
 		Collections.sort (relativeClasses, new ClassComparator ());
@@ -57,5 +59,9 @@ public class Dictionary {
 
 	public List<Class> getRelativeClasses () {
 		return relativeClasses;
+	}
+
+	public String getTitle () {
+		return title;
 	}
 }

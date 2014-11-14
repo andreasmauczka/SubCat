@@ -304,6 +304,24 @@ public class ModelPool {
 		for (ModelModificationListener listener : listeners) {
 			listener.projectAdded (project);
 		}
+	}
+
+	synchronized void emitBugCategoryAdded (Bug bug, Category category) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugCategoryAdded (bug, category);
+		}
+	}
+
+	synchronized void emitCommitCategoryAdded (Commit commit, Category category) {
+		for (ModelModificationListener listener : listeners) {
+			listener.commitCategoryAdded (commit, category);
+		}
+	}
+
+	public void emitDictionaryAdded (Dictionary dict) {
+		for (ModelModificationListener listener : listeners) {
+			listener.commitDictionaryAdded (dict);
+		}
 	}	
 }
 

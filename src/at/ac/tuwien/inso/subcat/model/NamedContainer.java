@@ -35,5 +35,4 @@ public interface NamedContainer {
 	
 	public Integer getId ();
 	public String getName ();
-	public Project getProject ();
 }

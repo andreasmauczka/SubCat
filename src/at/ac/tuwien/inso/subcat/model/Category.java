@@ -33,16 +33,16 @@ package at.ac.tuwien.inso.subcat.model;
 
 public class Category implements NamedContainer, Comparable<Category> {
 	private Integer id;
-	private Project project;
 	private String name;
+	private Dictionary dictionary;
 
-	public Category (Integer id, Project project, String name) {
-		assert (project != null);
+	public Category (Integer id, String name, Dictionary dictionary) {
 		assert (name != null);
+		assert (dictionary != null);
 
 		this.id = id;
-		this.project = project;
 		this.name = name;
+		this.dictionary = dictionary;
 	}
 
 	@Override
@@ -52,17 +52,6 @@ public class Category implements NamedContainer, Comparable<Category> {
 
 	public void setId (Integer id) {
 		this.id = id;
-	}
-
-	@Override
-	public Project getProject () {
-		assert (project != null);
-
-		return project;
-	}
-
-	public void setProject (Project project) {
-		this.project = project;
 	}
 
 	@Override
@@ -78,7 +67,7 @@ public class Category implements NamedContainer, Comparable<Category> {
 
 	@Override
 	public String toString () {
-		return "Category [id=" + id + ", project=" + project + ", name=" + name
+		return "Category [id=" + id + ", dictionary=" + dictionary + ", name=" + name
 				+ "]";
 	}
 
@@ -106,5 +95,9 @@ public class Category implements NamedContainer, Comparable<Category> {
 		}
 
 		return name.compareTo (cat.name);
+	}
+
+	public Dictionary getDictionary () {
+		return dictionary;
 	}
 }

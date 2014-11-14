@@ -26,7 +26,6 @@ public class AttachmentStatus implements NamedContainer, Comparable<AttachmentSt
 		this.id = id;
 	}
 
-	@Override
 	public Project getProject () {
 		return project;
 	}

@@ -39,7 +39,7 @@ public class Class {
 	private HashMap<String, Integer> words;
 	private String name;
 
-	private Class (String name, HashMap<String, Integer> words, int weight, boolean absolute) {
+	public Class (String name, HashMap<String, Integer> words, int weight, boolean absolute) {
 		assert (weight >= 0);
 		assert (words != null);
 

@@ -306,7 +306,7 @@ public class GitMiner extends Miner {
 		int totalLinesRemoved = outputStream.getTotalLinesRemoved ();
 		int fileCount = fileStats.size ();
 
-		Commit commit = model.addCommit (project, author, committer, date, message, fileCount, totalLinesAdded, totalLinesRemoved, null);
+		Commit commit = model.addCommit (project, author, committer, date, message, fileCount, totalLinesAdded, totalLinesRemoved);
 
 		for (Map.Entry<String, FileStats> item : fileStats.entrySet ()) {
 			if (stopped == true) {

@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.FileInputStream;
 
+import javax.xml.stream.Location;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamReader;
@@ -118,13 +119,22 @@ public class XmlReader {
 
 	public void expectStart (String element, boolean doSkipSpace) throws XmlReaderException {
 		if (!acceptStart (element, doSkipSpace)) {
-			throw new XmlReaderException ("Expected: <" + element + ">, got " + getCurrentToken ());
+			Location location = xmlReader.getLocation ();
+			throw new XmlReaderException (location.getLineNumber () + "." + location.getColumnNumber () + ": Expected: <" + element + ">, got " + getCurrentToken ());
 		}
 	}
 
-	public boolean isStart (String element) {
+	public boolean isStart (String element) throws XmlReaderException {
+		return isStart (element, false);
+	}
+
+	public boolean isStart (String element, boolean doSkipSpace) throws XmlReaderException {
 		assert (element != null);
 
+		if (doSkipSpace) {
+			this.skipSpace ();
+		}
+			
 		int eventType = xmlReader.getEventType ();
 		if (eventType != XMLEvent.START_ELEMENT) {
 			return false;
@@ -160,7 +170,8 @@ public class XmlReader {
 
 	public void expectEnd (String element, boolean doSkipSpace) throws XmlReaderException {
 		if (!acceptEnd (element, doSkipSpace)) {
-			throw new XmlReaderException ("Expected: </" + element + ">, got " + getCurrentToken ());
+			Location location = xmlReader.getLocation ();
+			throw new XmlReaderException (location.getLineNumber () + "." + location.getColumnNumber () + ": Expected: </" + element + ">, got " + getCurrentToken ());
 		}
 	}
 
@@ -183,7 +194,7 @@ public class XmlReader {
 
 		String val = xmlReader.getAttributeValue (null, name);
 		if (val == null) {
-			throw new XmlReaderException ("Unknown attribute `" + name + "in `" + getCurrentToken () + "'");
+			throw new XmlReaderException ("Unknown attribute `" + name + "' in `" + getCurrentToken () + "'");
 		}
 
 		return val;

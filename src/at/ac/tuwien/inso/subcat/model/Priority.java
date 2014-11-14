@@ -54,7 +54,6 @@ public class Priority implements NamedContainer, Comparable<Priority> {
 		this.id = id;
 	}
 
-	@Override
 	public Project getProject () {
 		return project;
 	}

@@ -43,11 +43,10 @@ public class Commit {
 	private int linesAdded;
 	private int linesRemoved;
 	private int changedFiles;
-	private Category category;
 
 	public Commit (Integer id, Project project, Identity author,
 			Identity committer, Date date, String title, int changedFiles,
-			int linesAdded, int linesRemoved, Category category) {
+			int linesAdded, int linesRemoved) {
 		assert (project != null);
 		assert (author != null);
 		assert (committer != null);
@@ -65,7 +64,6 @@ public class Commit {
 		this.title = title;
 		this.linesAdded = linesAdded;
 		this.linesRemoved = linesRemoved;
-		this.category = category;
 	}
 
 	public Integer getId () {
@@ -150,20 +148,12 @@ public class Commit {
 		this.linesRemoved = linesRemoved;
 	}
 
-	public Category getCategory () {
-		return category;
-	}
-
-	public void setCategory (Category category) {
-		this.category = category;
-	}
-
 	@Override
 	public String toString () {
 		return "Commit [id=" + id + ", project=" + project + ", author=" + author
 				+ ", committer=" + committer + ", date=" + date + ", title="
 				+ title + ", linesAdded=" + linesAdded + ", linesRemoved="
-				+ linesRemoved + ", category=" + category + "]";
+				+ linesRemoved + "]";
 	}
 
 	public boolean equals (Commit obj) {

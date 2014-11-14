@@ -54,7 +54,6 @@ public class Severity implements NamedContainer, Comparable<Severity> {
 		this.id = id;
 	}
 
-	@Override
 	public Project getProject () {
 		return project;
 	}

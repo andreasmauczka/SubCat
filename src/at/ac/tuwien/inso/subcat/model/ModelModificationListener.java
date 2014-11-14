@@ -76,4 +76,10 @@ public interface ModelModificationListener {
 
 	public void attachmentHistoryAdded (AttachmentHistory history);
 
+	public void bugCategoryAdded (Bug bug, Category category);
+
+	public void commitCategoryAdded (Commit commit, Category category);
+
+	public void commitDictionaryAdded (Dictionary dict);
+
 }

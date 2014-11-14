@@ -163,17 +163,23 @@ public class Model {
 		+ "creation		TEXT								NOT NULL,"
 		+ "priority		INT									NOT NULL,"
 		+ "severity		INT									NOT NULL,"
-		+ "category		INT									        ,"
 		+ "comments		INT									NOT NULL DEFAULT 0,"
 		+ "curStat		INT									NOT NULL,"
 		+ "FOREIGN KEY(priority) REFERENCES Priorities (id),"
 		+ "FOREIGN KEY(severity) REFERENCES Severity (id),"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
-		+ "FOREIGN KEY(category) REFERENCES Categories (id),"
 		+ "FOREIGN KEY(component) REFERENCES Components (id),"
 		+ "FOREIGN KEY(curStat) REFERENCES Status (id)"
 		+ ")";
 
+	private static final String BUG_CATEGORIES_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugCategories ("
+		+ "bug			INT									NOT NULL,"
+		+ "category		INT									NOT NULL,"
+		+ "FOREIGN KEY(category) REFERENCES Categories (id),"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id)"
+		+ ")";
+	
 	private static final String ATTACHMENT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Attachments ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -237,10 +243,18 @@ public class Model {
 	private static final String CATEGORY_TABLE =
 		"CREATE TABLE IF NOT EXISTS Categories ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+		+ "name			TEXT								NOT NULL,"
+		+ "dictionary	INT									NOT NULL,"		
+		+ "FOREIGN KEY(dictionary) REFERENCES Dictionary (id)"
+		+ ")";
+
+	private static final String DICTIONARY_TABLE =
+		"CREATE TABLE IF NOT EXISTS Dictionary ("
+		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
 		+ "project		INT									NOT NULL,"
 		+ "name			TEXT								NOT NULL,"
 		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
-		+ "UNIQUE (project, name)"
+		+ "UNIQUE (id, name)"
 		+ ")";
 
 	private static final String COMMIT_TABLE =
@@ -254,13 +268,20 @@ public class Model {
 		+ "changedFiles INT									NOT NULL,"
 		+ "linesAdded	INT									NOT NULL,"
 		+ "linesRemoved	INT									NOT NULL,"
-		+ "category		INT									        ,"
 		+ "FOREIGN KEY(committer) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(author) REFERENCES Identities (id),"
-		+ "FOREIGN KEY(category) REFERENCES Categories (id),"
 		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
 		+ ")";
 
+	private static final String COMMIT_CATEGORIES_TABLE =
+		"CREATE TABLE IF NOT EXISTS CommitCategories ("
+		+ "commitId		INT									NOT NULL,"
+		+ "category		INT									NOT NULL,"
+		+ "FOREIGN KEY(category) REFERENCES Categories (id),"
+		+ "FOREIGN KEY(commitId) REFERENCES Commits (id),"
+		+ "PRIMARY KEY (commitId, category)"
+		+ ")";
+	
 	private static final String FILE_TABLE =
 		"CREATE TABLE IF NOT EXISTS Files ("
 		+ "id				INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -360,7 +381,6 @@ public class Model {
 		+ " Commits.title			AS cTitle,"
 		+ " Commits.linesAdded		AS cLinesAdded,"
 		+ " Commits.linesRemoved	AS cLinesAdded,"
-		+ " Commits.category		AS cCategory,"
 		+ " AuthorIdentity.id		AS aiId,"
 		+ " AuthorIdentity.name		AS aiName,"
 		+ " AuthorIdentity.mail		AS aiName,"
@@ -399,7 +419,6 @@ public class Model {
 		+ " Bugs.creation,"
 		+ " Bugs.priority,"
 		+ " Bugs.severity,"
-		+ " Bugs.category,"
 		+ " Bugs.comments,"
 		+ " Bugs.curStat "
 		+ "FROM"
@@ -420,7 +439,7 @@ public class Model {
 		+ "FROM"
 		+ " Categories "
 		+ "WHERE"
-		+ " project = ?";
+		+ " dictionary = ?";
 
 	private static final String SELECT_ALL_SEVERITIES =
 		"SELECT"
@@ -524,6 +543,22 @@ public class Model {
 	// Insertions:
 	//
 
+	
+	private static final String BUG_CATEGORY_INSERTION =
+		"INSERT INTO BugCategories "
+		+ "(bug, category) "
+		+ "VALUES (?, ?)";
+
+	private static final String COMMIT_CATEGORY_INSERTION =
+		"INSERT INTO CommitCategories "
+		+ "(commitId, category) "
+		+ "VALUES (?, ?)";
+
+	private static final String DICTIONARY_INSERT =
+		"INSERT INTO Dictionary "
+		+ "(name, project) "
+		+ "VALUES (?, ?)";
+	
 	private static final String PROJECT_INSERTION =
 		"INSERT INTO Projects"
 		+ "(date, domain, product, revision, defaultStatusId)"
@@ -561,13 +596,13 @@ public class Model {
 
 	private static final String CATEGORY_INSERTION =
 		"INSERT INTO Categories"
-		+ "(project, name)"
+		+ "(name, dictionary)"
 		+ "VALUES (?,?)";
 
 	private static final String BUG_INSERTION =
 		"INSERT INTO Bugs "
-		+ "(identifier, identity, component, title, creation, priority, severity, category, curStat)"
-		+ "SELECT ?, ?, ?, ?, ?, ?, ?, ?, defaultStatusId "
+		+ "(identifier, identity, component, title, creation, priority, severity, curStat)"
+		+ "SELECT ?, ?, ?, ?, ?, ?, ?, defaultStatusId "
 		+ "FROM Projects WHERE id=?";
 
 	private static final String ATTACHMENT_INSERTION =
@@ -602,8 +637,8 @@ public class Model {
 
 	private static final String COMMIT_INSERTION =
 		"INSERT INTO Commits"
-		+ "(project, author, committer, date, title, linesAdded, linesRemoved, changedFiles, category)"
-		+ "VALUES (?,?,?,?,?,?,?,?,?)";
+		+ "(project, author, committer, date, title, linesAdded, linesRemoved, changedFiles)"
+		+ "VALUES (?,?,?,?,?,?,?,?)";
 
 	private static final String BUGFIX_COMMIT_INSERTION =
 		"INSERT INTO BugfixCommit"
@@ -898,8 +933,8 @@ public class Model {
 	}
 
 
-	public Category addCategory (Project project, String name) throws SQLException {
-		Category category = new Category (null, project, name);
+	public Category addCategory (String name, Dictionary dictionary) throws SQLException {
+		Category category = new Category (null, name, dictionary);
 		add (category);
 		return category;
 	}
@@ -907,15 +942,13 @@ public class Model {
 	public void add (Category category) throws SQLException {
 		assert (conn != null);
 		assert (category != null);
-		Project project = category.getProject ();
-		assert (project.getId () != null);
 		assert (category.getId () == null);
 
 		PreparedStatement stmt = conn.prepareStatement (CATEGORY_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, category.getName ());
+		stmt.setString(1, category.getName ());
+		stmt.setInt (2, category.getDictionary ().getId ());
 		stmt.executeUpdate();
 
 		category.setId (getLastInsertedId (stmt));
@@ -925,6 +958,41 @@ public class Model {
 		pool.emitCategoryAdded (category);
 	}
 
+	public void addBugCategory (Bug bug, Category category) throws SQLException {
+		assert (bug != null);
+		assert (category != null);
+		assert (bug.getId () != null);
+		assert (category.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_CATEGORY_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, bug.getId ());
+		stmt.setInt (2, category.getId ());
+		stmt.executeUpdate();
+
+		stmt.close ();
+
+		pool.emitBugCategoryAdded (bug, category);
+	}
+
+	public void addCommitCategory (Commit commit, Category category) throws SQLException {
+		assert (commit != null);
+		assert (category != null);
+		assert (commit.getId () != null);
+		assert (category.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (COMMIT_CATEGORY_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, commit.getId ());
+		stmt.setInt (2, category.getId ());
+		stmt.executeUpdate();
+
+		stmt.close ();
+
+		pool.emitCommitCategoryAdded (commit, category);
+	}
 
 	public Component addComponent (Project project, String name) throws SQLException {
 		Component component = new Component (null, project, name);
@@ -1013,8 +1081,8 @@ public class Model {
 	}
 	
 	public Bug addBug (String identifier, Identity identity, Component component,
-			String title, Date creation, Priority priority, Severity severity, Category category) throws SQLException {
-		Bug bug = new Bug (null, identifier, identity, component, title, creation, priority, severity, category);
+			String title, Date creation, Priority priority, Severity severity) throws SQLException {
+		Bug bug = new Bug (null, identifier, identity, component, title, creation, priority, severity);
 		add (bug);
 
 		return bug;
@@ -1031,7 +1099,6 @@ public class Model {
 		assert (bug.getComponent ().getId () != null);
 		assert (bug.getPriority ().getId () != null);
 		assert (bug.getSeverity().getId () != null);
-		assert (bug.getCategory () == null || bug.getCategory ().getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (BUG_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
@@ -1047,12 +1114,7 @@ public class Model {
 		stmt.setString (5, dateFormat.format (bug.getCreation ()));
 		stmt.setInt (6, bug.getPriority ().getId ());
 		stmt.setInt (7, bug.getSeverity ().getId ());
-		if (bug.getCategory () != null) {
-			stmt.setInt (8, bug.getCategory ().getId ());
-		} else {
-			stmt.setNull (8, Types.INTEGER);
-		}
-		stmt.setInt (9, bug.getComponent ().getProject ().getId ());
+		stmt.setInt (8, bug.getComponent ().getProject ().getId ());
 		stmt.executeUpdate();
 
 		bug.setId (getLastInsertedId (stmt));
@@ -1062,7 +1124,32 @@ public class Model {
 		pool.emitBugAdded (bug);
 	}
 
+	public Dictionary addDictionary (String name, Project project) throws SQLException {
+		Dictionary dict = new Dictionary (null, name, project);
+		add (dict);
+		return dict;
+	}
 
+	public void add (Dictionary dict) throws SQLException {
+		assert (dict != null);
+		assert (dict.getId () == null);
+		assert (dict.getProject () != null);
+		assert (dict.getProject ().getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DICTIONARY_INSERT,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setString (1, dict.getName ());
+		stmt.setInt (2, dict.getProject ().getId ());
+		stmt.executeUpdate();
+
+		dict.setId (getLastInsertedId (stmt));
+
+		stmt.close ();
+
+		pool.emitDictionaryAdded (dict);
+	}
+	
 	public BugHistory addBugHistory (Bug bug, Status status, Identity identity, Date date) throws SQLException {
 		BugHistory history = new BugHistory(null, bug, status, identity, date);
 		add (history);
@@ -1177,12 +1264,12 @@ public class Model {
 		
 	public Commit addCommit (Project project, Identity author,
 			Identity committer, Date date, String title, int changedFiles,
-			int changedLines, int linesRemoved, Category category)
+			int changedLines, int linesRemoved)
 		throws SQLException
 	{
 		Commit commit = new Commit (null, project, author,
 				committer, date, title, changedFiles,
-				changedLines, linesRemoved, category);
+				changedLines, linesRemoved);
 		add (commit);
 		return commit;
 	}
@@ -1206,11 +1293,6 @@ public class Model {
 		stmt.setInt (6, commit.getLinesAdded ());
 		stmt.setInt (7, commit.getLinesRemoved ());
 		stmt.setInt (8, commit.getChangedFiles ());
-		if (commit.getCategory () != null) {
-			stmt.setInt (9, commit.getCategory ().getId ());
-		} else {
-			stmt.setNull (9, Types.INTEGER);
-		}
 		stmt.executeUpdate();
 
 		commit.setId (getLastInsertedId (stmt));
@@ -1809,8 +1891,6 @@ public class Model {
 		assert (proj.getId () != null);
 		assert (callback != null);
 
-		Map<Integer, Category> categories = getCategories (proj);
-
 		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_COMMITS);
 		stmt.setInt (1, proj.getId ());
 	
@@ -1823,14 +1903,13 @@ public class Model {
 			String title = res.getString (3);
 			Integer linesAdded = res.getInt (4);
 			Integer linesRemoved = res.getInt (5);
-			Category category = categories.get (res.getInt (6));
-			User authorUser = userFromResult (res, proj, 10, 11);
-			Identity author = identityFromResult (res, authorUser, 7, 8, 9);
-			User committerUser = userFromResult (res, proj, 15, 16);
-			Identity committer = identityFromResult (res, committerUser, 12, 13, 14);
-			Integer changedFiles = res.getInt (15);
+			User authorUser = userFromResult (res, proj, 9, 10);
+			Identity author = identityFromResult (res, authorUser, 6, 7, 8);
+			User committerUser = userFromResult (res, proj, 14, 15);
+			Identity committer = identityFromResult (res, committerUser, 11, 12, 13);
+			Integer changedFiles = res.getInt (14);
 	
-			Commit commit = new Commit (id, proj, author, committer, date, title, changedFiles, linesAdded, linesRemoved, category);
+			Commit commit = new Commit (id, proj, author, committer, date, title, changedFiles, linesAdded, linesRemoved);
 			do_next = callback.processResult (commit);
 		}
 	
@@ -1844,7 +1923,6 @@ public class Model {
 		assert (callback != null);
 
 		// Cache some values:
-		Map<Integer, Category> categories = getCategories (proj);
 		Map<Integer, Severity> severities = getSeverities (proj);
 		//Map<Integer, Status> statuses = getStatuses (proj);
 		Map<Integer, Priority> priorities = getPriorities (proj);
@@ -1871,11 +1949,10 @@ public class Model {
 			Date creation = res.getDate (10);
 			Priority priority = priorities.get (res.getInt (11));
 			Severity severity = severities.get (res.getInt (12));
-			Category category = categories.get (res.getInt (13));
+//			Category category = categories.get (res.getInt (13));
 	
 			Bug bug = new Bug (id, identifier, identity, component,
-				title, creation, priority, severity,
-				category);
+				title, creation, priority, severity);
 
 			do_next = callback.processResult (bug);
 		}
@@ -1921,20 +1998,20 @@ public class Model {
 		callback.processResult (res);
 	}
 
-	public Map<Integer, Category> getCategories (Project proj) throws SQLException {
+	public Map<Integer, Category> getCategories (Dictionary dictionary) throws SQLException {
 		assert (conn != null);
-		assert (proj != null);
-		assert (proj.getId () != null);
+		assert (dictionary != null);
+		assert (dictionary.getId () != null);
 
 		// Statement:
 		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_CATEGORIES);
-		stmt.setInt (1, proj.getId ());
+		stmt.setInt (1, dictionary.getId ());
 	
 		// Collect data:
 		HashMap<Integer, Category> categories = new HashMap<Integer, Category> ();
 		ResultSet res = stmt.executeQuery ();
 		while (res.next ()) {
-			Category category = new Category (res.getInt (1), proj, res.getString (2));
+			Category category = new Category (res.getInt (1), res.getString (2), dictionary);
 			categories.put (category.getId (), category);
 		}
 	
@@ -2141,6 +2218,9 @@ public class Model {
 		stmt.executeUpdate (ATTACHMENT_TABLE);
 		stmt.executeUpdate (ATTACHMENT_STATUS_TABLE);
 		stmt.executeUpdate (ATTACHMENT_HISTORY_TABLE);
+		stmt.executeUpdate (BUG_CATEGORIES_TABLE);
+		stmt.executeUpdate (COMMIT_CATEGORIES_TABLE);
+		stmt.executeUpdate (DICTIONARY_TABLE);
 		stmt.close ();
 	}
 }

@@ -175,7 +175,7 @@ public class BugzillaMiner extends Miner {
 				List<BugzillaAttachment> attachments = new LinkedList<BugzillaAttachment> ();
 
 				// Add to model:
-				Bug bug = model.addBug (identifier, creator, component, title, creation, priority, severity, null);
+				Bug bug = model.addBug (identifier, creator, component, title, creation, priority, severity);
 				if (processComments) {
 					assert (comments != null);
 					addComments (bug, comments, attachments);

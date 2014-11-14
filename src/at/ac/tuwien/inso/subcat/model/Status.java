@@ -54,7 +54,6 @@ public class Status implements NamedContainer, Comparable<Status> {
 		this.id = id;
 	}
 
-	@Override
 	public Project getProject () {
 		return project;
 	}

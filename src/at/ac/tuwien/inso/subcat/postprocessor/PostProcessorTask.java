@@ -63,15 +63,15 @@ public abstract class PostProcessorTask {
 		this.flags = flags;
 	}
 
-	public void begin (PostProcessor procesor) throws PostProcessorException {
+	public void begin (PostProcessor processor) throws PostProcessorException {
 	}
 	
-	public void commit (PostProcessor procesor, Commit commit) throws PostProcessorException {
+	public void commit (PostProcessor processor, Commit commit) throws PostProcessorException {
 	}
 	
-	public void bug (PostProcessor procesor, Bug bug, List<BugHistory> history, List<Comment> comments) throws PostProcessorException {
+	public void bug (PostProcessor processor, Bug bug, List<BugHistory> history, List<Comment> comments) throws PostProcessorException {
 	}
 	
-	public void end (PostProcessor procesor) throws PostProcessorException {
+	public void end (PostProcessor processor) throws PostProcessorException {
 	}
 }

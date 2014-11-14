@@ -154,7 +154,7 @@ public class SvnMiner extends Miner {
 		
 		System.out.println ("Commit: " + msg + " Filecount: " + filecount);
 		Commit commit = model.addCommit (project, author, committer, 
-				date, msg, filecount, 0, 0, null);
+				date, msg, filecount, 0, 0);
 		
 		Map<String,ManagedFile> commitFileCache = new HashMap();
 		

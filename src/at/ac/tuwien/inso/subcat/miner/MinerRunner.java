@@ -53,8 +53,8 @@ public class MinerRunner {
 	private static void init () {
 		if (registeredMiner == null) {
 			registeredMiner = new LinkedList<MetaData> ();
-			//registeredMiner.add (new BugzillaMinerMetaData ());
-			//registeredMiner.add (new GitMinerMetaData ());
+			registeredMiner.add (new BugzillaMinerMetaData ());
+			registeredMiner.add (new GitMinerMetaData ());
 			registeredMiner.add (new SvnMinerMetaData ());
 		}
 	}
@@ -172,10 +172,10 @@ public class MinerRunner {
 		settings.bugTrackerName = "Bugzilla";
 		settings.bugEnableUntrustedCertificates = true;
 		settings.bugThreads = 1;
-		/* GIT Test: * /
+		/* GIT Test: */
 		settings.srcLocalPath = System.getProperty("user.dir");
 		settings.srcSpecificParams.put ("process-diffs", true);
-		/* Svn Test: */
+		/* Svn Test: * /
 		settings.srcLocalPath = "jedit.log2";
 		settings.srcRemote = "http://student-project-netcracker.googlecode.com/svn/trunk/";
 		//*/
@@ -185,7 +185,7 @@ public class MinerRunner {
 				private Map<Miner, Integer> totals = new HashMap<Miner, Integer> ();
 				
 				@Override
-				public void start (Miner miners) {
+				public void start (Miner miner) {
 					System.out.println ("START");
 				}
 	

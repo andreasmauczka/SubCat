@@ -43,6 +43,8 @@ import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.ObjectCallback;
 import at.ac.tuwien.inso.subcat.model.Project;
+import at.ac.tuwien.inso.subcat.utility.classifier.Dictionary;
+import at.ac.tuwien.inso.subcat.utility.classifier.DictionaryParser;
 
 public class PostProcessor {
 	private List<PostProcessorTask> beginTasks;
@@ -207,6 +209,11 @@ public class PostProcessor {
 	public static void main (String[] args) {
 		try {
 			Settings settings = new Settings ();
+			
+			DictionaryParser dp = new DictionaryParser ();
+			Dictionary swansonDict = dp.parseFile ("dictionary.xml");
+			settings.srcDictionaries.add (swansonDict);
+			settings.bugDictionaries.add (swansonDict);
 
 			ModelPool pool = new ModelPool ("my-test.db");
 
@@ -215,6 +222,7 @@ public class PostProcessor {
 			model.close ();
 
 			PostProcessor processor = new PostProcessor (proj, pool, settings);
+			processor.register (new ClassificationTask ());
 			processor.process ();
 		} catch (Exception e) {
 			e.printStackTrace();

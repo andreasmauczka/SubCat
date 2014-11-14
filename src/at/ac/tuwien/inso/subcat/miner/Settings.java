@@ -31,7 +31,11 @@
 package at.ac.tuwien.inso.subcat.miner;
 
 import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
+
+import at.ac.tuwien.inso.subcat.utility.classifier.Dictionary;
 
 
 public class Settings {
@@ -40,6 +44,7 @@ public class Settings {
 	// Bug Repository:
 	//
 
+	public List<Dictionary> bugDictionaries = new LinkedList<Dictionary> ();
 	public String bugRepository = null;
 	public String bugProductName = null;
 	public String bugLoginUser = null;
@@ -68,6 +73,7 @@ public class Settings {
 	// Source Repository:
 	//
 	
+	public List<Dictionary> srcDictionaries = new LinkedList<Dictionary> ();
 	public String srcLocalPath = null;
 	public String srcRemote = "";
 	public String srcRemotePw = null;

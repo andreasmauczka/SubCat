@@ -134,8 +134,8 @@ public class ModelPool {
 
 	public synchronized boolean remove() throws SQLException {
 		assert (name != null);
-		close ();
 
+		close ();
 		File file = new File (name + ".db");
 		boolean res = file.delete ();
 		
@@ -151,8 +151,12 @@ public class ModelPool {
 			config.toProperties());
 
 		Statement stmt = conn.createStatement();
+		//stmt.executeUpdate ("PRAGMA journal_mode=MEMORY");
 		stmt.executeUpdate (ENABLE_FOREIGN_KEYS);
+		stmt.executeUpdate ("PRAGMA temp_store=OFF");
 		stmt.executeUpdate (SYNCHRONOUS_DB);
+		stmt.executeUpdate ("PRAGMA synchronous=OFF");
+		stmt.executeUpdate ("PRAGMA count_changes=OFF");
 		stmt.executeUpdate (ENABLE_WAL);
 		stmt.close ();
 		

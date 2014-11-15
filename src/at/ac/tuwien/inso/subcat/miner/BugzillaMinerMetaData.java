@@ -59,7 +59,7 @@ public class BugzillaMinerMetaData extends MetaData {
 			return false;
 		}
 
-		return name.equals (settings.bugTrackerName);
+		return name.equalsIgnoreCase (settings.bugTrackerName);
 	}
 
 	@Override

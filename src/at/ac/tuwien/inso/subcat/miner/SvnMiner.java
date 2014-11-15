@@ -376,39 +376,40 @@ public void removeBulk(String path, Commit commit) throws SQLException{
 		// If not a rename, the copy from path is always the existing path
 		if(!hasCopyPath)
 			pathentry.oldPath = pathentry.newPath;
+
+		if (action.length () > 0) {
+			switch (action.charAt (0)) {
+			case 'A':
+				if (!pathentry.oldPath.equals(pathentry.newPath)){
+					pathentry.type = ChangeType.RENAME;
+				}
+				else{
+					pathentry.type = ChangeType.ADD;
+				}
+					
+				break;
+			case 'M':
+				pathentry.type = ChangeType.MODIFY;
+				break;
+			case 'D':
+				pathentry.type = ChangeType.DELETE;;
+				break;
+			case 'R':
 				
-		switch (action) {
-		case "A":
-			if (!pathentry.oldPath.equals(pathentry.newPath)){
-				pathentry.type = ChangeType.RENAME;
-			}
-			else{
-				pathentry.type = ChangeType.ADD;
-			}
+				//TODO: evaluate all replace actions
+				//pathentry.type = ChangeType.REPLACE;
 				
-			break;
-		case "M":
-			pathentry.type = ChangeType.MODIFY;
-			break;
-		case "D":
-			pathentry.type = ChangeType.DELETE;;
-			break;
-		case "R":
-			
-			//TODO: evaluate all replace actions
-			//pathentry.type = ChangeType.REPLACE;
-			
-			//Assume replace with diff dir copyfrom is a bulk rename
-			if (!pathentry.oldPath.equals(pathentry.newPath)){
-				pathentry.type = ChangeType.RENAME;
+				//Assume replace with diff dir copyfrom is a bulk rename
+				if (!pathentry.oldPath.equals(pathentry.newPath)){
+					pathentry.type = ChangeType.RENAME;
+				}
+				else{
+					pathentry.type = ChangeType.ADD;
+				}
+				
+				break;
 			}
-			else{
-				pathentry.type = ChangeType.ADD;
-			}
-			
-			break;
 		}
-		
 		
 		return pathentry;
 	}
@@ -476,5 +477,11 @@ public void removeBulk(String path, Commit commit) throws SQLException{
 	public void stop() {
 		// TODO Auto-generated method stub
 		emitStop ();
+	}
+
+
+	@Override
+	public String getName () {
+		return "SVN";
 	}
 }

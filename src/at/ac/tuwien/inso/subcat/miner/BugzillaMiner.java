@@ -528,5 +528,10 @@ public class BugzillaMiner extends Miner {
 		
 		return status;		
 	}
+
+	@Override
+	public String getName () {
+		return "BugZilla";
+	}
 }
 

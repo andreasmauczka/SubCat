@@ -37,6 +37,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
+
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
@@ -59,22 +66,12 @@ public class MinerRunner {
 		}
 	}
 	
-	private MinerRunner (Settings settings) throws MinerException {
+	private MinerRunner (ModelPool pool, Settings settings) throws MinerException {
 		assert (settings != null);
 
 		init ();
 
-		ModelPool pool;
 		Project project;
-
-		try {
-			pool = new ModelPool ("my-test.db");
-		} catch (ClassNotFoundException e) {
-			throw new MinerException ("Unknown JDBC-Driver: " + e.getMessage (), e);
-		} catch (SQLException e) {
-			throw new MinerException ("SQL-Error: " + e.getMessage (), e);
-		}
-
 		Model model = null;
 		try {
 			model = pool.getModel ();
@@ -164,56 +161,169 @@ public class MinerRunner {
 	}
 
 	public static void main (String[] args) {
+		Options options = new Options ();
+		options.addOption ("h", "help", false, "Show this options");
+		options.addOption ("d", "db", true, "The database to process (required)");
+		options.addOption ("v", "verbose", false, "Show details");
+
+		options.addOption (null, "bug-repo", true, "Bug Repository URL");
+		options.addOption (null, "bug-product", true, "Bug Product Name");
+		options.addOption (null, "bug-tracker", true, "Bug Tracker name (e.g. bugzilla)");
+		options.addOption (null, "bug-account", true, "Bug account name");
+		options.addOption (null, "bug-passwd", true, "Bug account password");
+		options.addOption (null, "bug-enable-untrusted", false, "Accept untrusted certificates");
+		options.addOption (null, "bug-threads", true, "Thread count used in bug miners");
+		options.addOption (null, "bug-cooldown-time", true, "Bug cooldown time");
+
+		options.addOption (null, "src-path", true, "Local source repository path");
+		options.addOption (null, "src-remote", true, "Remote address");
+		options.addOption (null, "src-passwd", true, "Source repository account password");
+		options.addOption (null, "src-account", true, "Source repository account name");
+
+		
 		Settings settings = new Settings ();
+		ModelPool pool = null;
 
-		/* Bugzilla Test: * /
-		settings.bugRepository = "https://bugzilla.gnome.org";
-		settings.bugProductName = "valadoc";
-		settings.bugTrackerName = "Bugzilla";
-		settings.bugEnableUntrustedCertificates = true;
-		settings.bugThreads = 1;
-		/* GIT Test: */
-		settings.srcLocalPath = System.getProperty("user.dir");
-		settings.srcSpecificParams.put ("process-diffs", true);
-		/* Svn Test: * /
-		settings.srcLocalPath = "jedit.log2";
-		settings.srcRemote = "http://student-project-netcracker.googlecode.com/svn/trunk/";
-		//*/
+		CommandLineParser parser = new PosixParser ();
+		
 		try {
-			MinerRunner runner = new MinerRunner (settings);
-			runner.addListener (new MinerListener () {
-				private Map<Miner, Integer> totals = new HashMap<Miner, Integer> ();
-				
-				@Override
-				public void start (Miner miner) {
-					System.out.println ("START");
-				}
-	
-				@Override
-				public void end (Miner miner) {
-					System.out.println ("END");
-				}
-	
-				@Override
-				public void stop (Miner miner) {
-					System.out.println ("STOP");
-				}
+			CommandLine cmd = parser.parse (options, args);
 
-				@Override
-				public void tasksTotal (Miner miner, int count) {
-					totals.put (miner, count);
-				}
+			if (cmd.hasOption ("help")) {
+				HelpFormatter formatter = new HelpFormatter ();
+				formatter.printHelp ("postprocessor", options);
+				return ;
+			}
 
-				@Override
-				public void tasksProcessed (Miner miner, int processed) {
-					Integer total = totals.get (miner);
-					System.out.println ("PROCESSED: " + processed + "/" + ((total == null)? "?" : total));
+			if (cmd.hasOption ("db") == false) {
+				System.err.println ("Option --db is required");
+				return ;
+			}			
+		
+			pool = new ModelPool (cmd.getOptionValue ("db"), 2);
+
+			settings.bugRepository = cmd.getOptionValue ("bug-repo");
+			settings.bugProductName = cmd.getOptionValue ("bug-product");
+			settings.bugTrackerName = cmd.getOptionValue ("bug-tracker");
+
+			
+			if (settings.bugRepository != null && (settings.bugProductName == null || settings.bugTrackerName == null)) {
+				System.err.println ("--bug-repo should only be used in combination with --bug-product and --bug-tracker");
+				return ;
+			} else if (settings.bugProductName != null && (settings.bugRepository == null || settings.bugTrackerName == null)) {
+				System.err.println ("--bug-product should only be used in combination with --bug-repo and --bug-tracker");
+				return ;
+			} else if (settings.bugTrackerName != null && (settings.bugRepository == null || settings.bugProductName == null)) {
+				System.err.println ("--bug-tracker should only be used in combination with --bug-repo and --bug-product");
+				return ;					
+			}
+
+
+			settings.bugLoginUser = cmd.getOptionValue ("bug-account");
+			settings.bugLoginPw = cmd.getOptionValue ("bug-passwd");
+
+			if (settings.bugLoginPw == null || settings.bugLoginUser == null) {
+				if (settings.bugLoginPw != null) {
+					System.err.println ("--bug-passwd should only be used in combination with --bug-account");
+					return ;
+				} else if (settings.bugLoginUser != null) {
+					System.err.println ("--bug-account should only be used in combination with --bug-passwd");
+					return ;
 				}
-			});
+			}
+
+			if (settings.bugLoginUser != null && settings.bugRepository == null) {
+				System.err.println ("--bug-account should only be used in combination with --bug-repo");
+				return ;
+			}
+
+			if (cmd.hasOption ("bug-enable-untrusted")) {
+				settings.bugEnableUntrustedCertificates = true;
+			}
+
+			if (cmd.hasOption ("bug-threads")) {
+				try {
+					settings.bugThreads = Integer.parseInt (cmd.getOptionValue ("bug-threads"));
+				} catch (Exception e) {
+					System.err.println ("--bug-threads: Invalid parameter type");
+					return ;
+				}
+			}
+
+			if (cmd.hasOption ("bug-cooldown-time")) {
+				try {
+					settings.bugCooldownTime = Integer.parseInt (cmd.getOptionValue ("bug-cooldown-time"));
+				} catch (Exception e) {
+					System.err.println ("--bug-cooldown-time: Invalid parameter type");
+					return ;
+				}
+			}
+			
+
+			settings.srcLocalPath = cmd.getOptionValue ("src-path");
+			settings.srcRemote = cmd.getOptionValue ("src-remote");
+			settings.srcRemotePw = cmd.getOptionValue ("src-passwd");
+			settings.srcRemoteUser = cmd.getOptionValue ("src-account");
+
+
+			if (settings.srcRemotePw == null || settings.srcRemoteUser == null) {
+				if (settings.srcRemotePw != null) {
+					System.err.println ("--src-passwd should only be used in combination with --src-account");
+					return ;
+				} else if (settings.srcRemoteUser != null) {
+					System.err.println ("--src-account should only be used in combination with --src-passwd");
+					return ;
+				}
+			}
+
+			if (settings.srcRemoteUser != null && settings.bugRepository == null) {
+				System.err.println ("--src-account should only be used in combination with --src-remote");
+				return ;
+			}
+
+			
+			MinerRunner runner = new MinerRunner (pool, settings);
+			if (cmd.hasOption ("verbose")) {
+				runner.addListener (new MinerListener () {
+					private Map<Miner, Integer> totals = new HashMap<Miner, Integer> ();
+					
+					@Override
+					public void start (Miner miner) {
+					}
+		
+					@Override
+					public void end (Miner miner) {
+					}
+		
+					@Override
+					public void stop (Miner miner) {
+					}
+
+					@Override
+					public void tasksTotal (Miner miner, int count) {
+						totals.put (miner, count);
+					}
+
+					@Override
+					public void tasksProcessed (Miner miner, int processed) {
+						Integer total = totals.get (miner);
+						System.out.println (miner.getName () + ":\t" + processed + "/" + ((total == null)? "?" : total));
+					}
+				});
+			}
 			runner.run ();
+		} catch (ParseException e) {
+			System.err.println ("Parsing failed: " + e.getMessage ());
+		} catch (ClassNotFoundException e) {
+			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+		} catch (SQLException e) {
+			System.err.println ("Failed to create a database connection: " + e.getMessage ());
 		} catch (MinerException e) {
-			System.out.println ("Error: " + e.getMessage ());
-			e.printStackTrace();
+			System.err.println ("Mining Error: " + e.getMessage ());
+		} finally {
+			if (pool != null) {
+				pool.close ();
+			}
 		}
 	}
 }

@@ -63,6 +63,7 @@ public abstract class Miner {
 
 	public abstract void stop ();
 
+	public abstract String getName ();
 
 	//
 	// Listener Helper:

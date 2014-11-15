@@ -455,4 +455,9 @@ public class GitMiner extends Miner {
 		stopped = true;
 		emitStop ();
 	}
+
+	@Override
+	public String getName () {
+		return "GIT";
+	}
 }

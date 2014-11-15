@@ -30,9 +30,18 @@
 
 package at.ac.tuwien.inso.subcat.postprocessor;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.sql.SQLException;
 import java.util.LinkedList;
 import java.util.List;
+
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
 
 import at.ac.tuwien.inso.subcat.miner.Settings;
 import at.ac.tuwien.inso.subcat.model.Bug;
@@ -43,6 +52,7 @@ import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.ObjectCallback;
 import at.ac.tuwien.inso.subcat.model.Project;
+import at.ac.tuwien.inso.subcat.utility.XmlReaderException;
 import at.ac.tuwien.inso.subcat.utility.classifier.Dictionary;
 import at.ac.tuwien.inso.subcat.utility.classifier.DictionaryParser;
 
@@ -207,25 +217,124 @@ public class PostProcessor {
 	}
 
 	public static void main (String[] args) {
-		try {
-			Settings settings = new Settings ();
-			
-			DictionaryParser dp = new DictionaryParser ();
-			Dictionary swansonDict = dp.parseFile ("dictionary.xml");
-			settings.srcDictionaries.add (swansonDict);
-			settings.bugDictionaries.add (swansonDict);
+		Options options = new Options ();
+		options.addOption ("h", "help", false, "Show this options");
+		options.addOption ("d", "db", true, "The database to process (required)");
+		options.addOption ("p", "project", true, "The project ID to process");
+		options.addOption ("l", "list-projects", false, "List all registered projects");
+		options.addOption ("C", "commit-dictionary", true, "Path to a classification dictionary for commit message classification"); 
+		options.addOption ("B", "bug-dictionary", true, "Path to a classification dictionary for bug classification"); 
 
-			ModelPool pool = new ModelPool ("my-test.db");
+		Settings settings = new Settings ();
+		ModelPool pool = null;
+
+		CommandLineParser parser = new PosixParser ();
+		
+		try {
+			CommandLine cmd = parser.parse (options, args);
+
+			if (cmd.hasOption ("help")) {
+				HelpFormatter formatter = new HelpFormatter ();
+				formatter.printHelp ("postprocessor", options);
+				return ;
+			}
+
+			if (cmd.hasOption ("db") == false) {
+				System.err.println ("Option --db is required");
+				return ;
+			}
+
+			File dbf = new File (cmd.getOptionValue ("db"));
+			if (dbf.exists() == false || dbf.isFile () == false) {
+				System.err.println ("Invalid database file path");
+				return ;
+			}
+			
+			pool = new ModelPool (cmd.getOptionValue ("db"), 2);
+
+			if (cmd.hasOption ("list-projects")) {
+				Model model = pool.getModel ();
+
+				for (Project proj : model.getProjects ()) {
+					System.out.println ("  " + proj.getId () + ": " + proj.getDate ());
+				}
+
+				model.close ();
+				return ;
+			}
+
+			Integer projId = null;
+			if (cmd.hasOption ("project") == false) {
+				System.err.println ("Option --project is required");
+				return ;
+			} else {
+				try {
+					projId = Integer.parseInt(cmd.getOptionValue ("project"));
+				} catch (NumberFormatException e) {
+					System.err.println ("Invalid project ID");
+					return ;
+				}
+			}
 
 			Model model = pool.getModel ();
-			Project proj = model.getProjects ().get (0);
+			Project project = model.getProject (projId);
 			model.close ();
 
-			PostProcessor processor = new PostProcessor (proj, pool, settings);
+			if (project == null) {
+				System.err.println ("Invalid project ID");
+				return ;
+			}
+			
+			
+			if (cmd.hasOption ("bug-dictionary")) {
+					DictionaryParser dp = new DictionaryParser ();
+
+					for (String path : cmd.getOptionValues ("bug-dictionary")) {
+						try {
+							Dictionary dict = dp.parseFile (path);
+							settings.bugDictionaries.add (dict);
+						} catch (FileNotFoundException e) {
+							System.err.println ("File  not found: "  + path +  ": " + e.getMessage ());					
+							return ;
+						} catch (XmlReaderException e) {
+							System.err.println ("XML Error: " + path + ": " + e.getMessage ());					
+							return ;
+						}
+					}
+			}
+
+			if (cmd.hasOption ("commit-dictionary")) {
+				DictionaryParser dp = new DictionaryParser ();
+
+				for (String path : cmd.getOptionValues ("commit-dictionary")) {
+					try {
+						Dictionary dict = dp.parseFile (path);
+						settings.srcDictionaries.add (dict);
+					} catch (FileNotFoundException e) {
+						System.err.println ("File  not found: "  + path +  ": " + e.getMessage ());					
+						return ;
+					} catch (XmlReaderException e) {
+						System.err.println ("XML Error: " + path + ": " + e.getMessage ());					
+						return ;
+					}
+				}
+			}
+			
+			PostProcessor processor = new PostProcessor (project, pool, settings);
 			processor.register (new ClassificationTask ());
 			processor.process ();
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (ParseException e) {
+			System.err.println ("Parsing failed: " + e.getMessage ());
+		} catch (ClassNotFoundException e) {
+			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+		} catch (SQLException e) {
+			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+		} catch (PostProcessorException e) {
+			System.err.println ("Post-Processor Error: " + e.getMessage ());			
+		} finally {
+			if (pool != null) {
+				pool.close ();
+			}
 		}
 	}
 }

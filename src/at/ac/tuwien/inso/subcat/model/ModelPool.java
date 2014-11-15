@@ -87,14 +87,19 @@ public class ModelPool {
 		this.connPoolSize = poolSize;
 	}
 
-	public synchronized void close () throws SQLException {
-		for (Connection conn : connections) {
-			conn.close ();
+	public synchronized boolean close () {
+		try {
+			for (Connection conn : connections) {
+					conn.close ();
+			}
+	
+			connections = null;
+			connPoolSize = -1;
+			name = null;
+			return true;
+		} catch (SQLException e) {
+			return false;
 		}
-
-		connections = null;
-		connPoolSize = -1;
-		name = null;
 	}
 
 

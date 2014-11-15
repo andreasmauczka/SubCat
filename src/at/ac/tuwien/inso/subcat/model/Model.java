@@ -487,6 +487,18 @@ public class Model {
 		+ "FROM"
 		+ " Projects";
 
+	private static final String SELECT_PROJECT =
+		"SELECT"
+		+ " id,"
+		+ " date,"
+		+ " domain,"
+		+ " product,"
+		+ " revision "
+		+ "FROM"
+		+ " Projects "
+		+ "WHERE "
+		+ " id = ?";
+
 	private static final String SELECT_ALL_FLAGS =
 		"SELECT"
 		+ " flag "
@@ -2152,6 +2164,28 @@ public class Model {
 		return comments;
 	}
 	
+	public Project getProject (int id) throws SQLException {
+		assert (conn != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_PROJECT);
+		stmt.setInt (1, id);
+	
+		// Collect data:
+		ResultSet res = stmt.executeQuery ();
+		if (res.next ()) {
+			Date date = res.getDate (2);
+			String domain = res.getString (3);
+			String product = res.getString (4);
+			String revision = res.getString (5);
+	
+			Project proj = new Project (id, date, domain, product, revision);
+			return proj;
+		}
+
+		return null;
+	}
+	
 	public List<Project> getProjects () throws SQLException {
 		assert (conn != null);
 
@@ -2175,7 +2209,7 @@ public class Model {
 		return projects;
 	}
 
-	
+
 	//
 	// Helper:
 	//

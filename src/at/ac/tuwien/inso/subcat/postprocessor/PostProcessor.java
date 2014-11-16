@@ -33,8 +33,11 @@ package at.ac.tuwien.inso.subcat.postprocessor;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.sql.SQLException;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -92,7 +95,13 @@ public class PostProcessor {
 	public Project getProject () {
 		return proj;
 	}
-	
+
+	public void register (Collection<PostProcessorTask> collection) {
+		for (PostProcessorTask task : collection) {
+			register (task);
+		}
+	}
+
 	public void register (PostProcessorTask task) {
 		assert (task != null);
 		
@@ -217,11 +226,17 @@ public class PostProcessor {
 	}
 
 	public static void main (String[] args) {
+		Map<String, PostProcessorTask> steps = new HashMap<String, PostProcessorTask> ();
+		PostProcessorTask _step = new ClassificationTask ();
+		steps.put (_step.getName (), _step);
+		
 		Options options = new Options ();
 		options.addOption ("h", "help", false, "Show this options");
 		options.addOption ("d", "db", true, "The database to process (required)");
 		options.addOption ("p", "project", true, "The project ID to process");
 		options.addOption ("l", "list-projects", false, "List all registered projects");
+		options.addOption ("S", "list-processor-steps", false, "List all registered processor steps");
+		options.addOption ("s", "processor-step", true, "A processor step name");
 		options.addOption ("C", "commit-dictionary", true, "Path to a classification dictionary for commit message classification"); 
 		options.addOption ("B", "bug-dictionary", true, "Path to a classification dictionary for bug classification"); 
 
@@ -239,6 +254,13 @@ public class PostProcessor {
 				return ;
 			}
 
+			if (cmd.hasOption ("list-processor-steps")) {
+				for (String proj : steps.keySet ()) {
+					System.out.println ("  " + proj);
+				}
+				return ;
+			}
+			
 			if (cmd.hasOption ("db") == false) {
 				System.err.println ("Option --db is required");
 				return ;
@@ -321,7 +343,19 @@ public class PostProcessor {
 			}
 			
 			PostProcessor processor = new PostProcessor (project, pool, settings);
-			processor.register (new ClassificationTask ());
+			if (cmd.hasOption ("processor-step")) {
+				for (String stepName : cmd.getOptionValues ("processor-step")) {
+					PostProcessorTask step = steps.get (stepName);
+					if (step == null) {
+						System.err.println ("Unknown processor step: '" + stepName + "'");
+						return ;
+					}
+
+					processor.register (step);
+				}
+			} else {
+				processor.register (steps.values ());
+			}
 			processor.process ();
 		} catch (ParseException e) {
 			System.err.println ("Parsing failed: " + e.getMessage ());

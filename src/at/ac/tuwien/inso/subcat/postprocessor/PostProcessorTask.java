@@ -74,4 +74,6 @@ public abstract class PostProcessorTask {
 	
 	public void end (PostProcessor processor) throws PostProcessorException {
 	}
+
+	public abstract String getName ();
 }

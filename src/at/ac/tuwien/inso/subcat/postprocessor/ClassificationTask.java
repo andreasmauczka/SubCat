@@ -19,7 +19,7 @@ import at.ac.tuwien.inso.subcat.utility.classifier.Dictionary;
 
 
 public class ClassificationTask extends PostProcessorTask {
-	private Lemmatizer lemmatiser = new Lemmatizer ();
+	private Lemmatizer lemmatiser;
 
 	private HashMap<Dictionary, Map<Class, Category>> commitCategories;
 	private HashMap<Dictionary, Map<Class, Category>> bugCategories;
@@ -78,6 +78,10 @@ public class ClassificationTask extends PostProcessorTask {
 	}
 
 	private void prepareDictionary (PostProcessor processor, Model model, HashMap<Dictionary, Map<Class, Category>> categories, List<Dictionary> dictionaries) throws SQLException {
+		if (lemmatiser == null) {
+			lemmatiser = new Lemmatizer ();
+		}
+		
 		for (Dictionary dict : dictionaries) {
 			Map<Class, Category> dictHash = new HashMap<Class, Category> ();
 			categories.put (dict, dictHash);
@@ -93,5 +97,10 @@ public class ClassificationTask extends PostProcessorTask {
 				dictHash.put (cl, modelCat);
 			}
 		}
+	}
+
+	@Override
+	public String getName () {
+		return "classification";
 	}
 }

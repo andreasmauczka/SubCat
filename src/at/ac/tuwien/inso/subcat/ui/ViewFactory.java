@@ -221,7 +221,7 @@ public class ViewFactory {
 		options.addOption ("h", "help", false, "Show this options");
 		options.addOption ("d", "db", true, "The database to process (required)");
 		options.addOption ("p", "project", true, "The project ID to process");
-		options.addOption ("l", "list-projects", false, "List all registered projects");
+		options.addOption ("P", "list-projects", false, "List all registered projects");
 		options.addOption ("C", "config", true, "A configuration file including reports");
 		options.addOption ("c", "commit-dictionary", true, "The commit dictionary ID to use");
 		options.addOption ("b", "bug-dictionary", true, "The bug dictionary ID to use");

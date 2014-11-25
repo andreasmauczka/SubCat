@@ -106,7 +106,7 @@ public class Reporter {
 		options.addOption ("h", "help", false, "Show this options");
 		options.addOption ("d", "db", true, "The database to process (required)");
 		options.addOption ("p", "project", true, "The project ID to process");
-		options.addOption ("l", "list-projects", false, "List all registered projects");
+		options.addOption ("P", "list-projects", false, "List all registered projects");
 		options.addOption ("C", "config", true, "A configuration file including reports");
 		options.addOption ("F", "list-formats", false, "List all supported output formats");
 		options.addOption ("f", "format", true, "Output format");

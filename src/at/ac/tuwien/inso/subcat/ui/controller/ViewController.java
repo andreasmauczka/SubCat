@@ -38,12 +38,14 @@ import at.ac.tuwien.inso.subcat.model.Project;
 
 public class ViewController {
 	private Project project;
+	private HashMap<String, Object> globalVars;
 	
-	public ViewController (Project project) {
+	public ViewController (Project project, HashMap<String, Object> vars) {
 		assert (project != null);
 		assert (project.getId () != null);
 
 		this.project = project;
+		this.globalVars = vars;
 	}
 
 	public Project getProject () {
@@ -53,6 +55,7 @@ public class ViewController {
 	public Map<String, Object> getVariables () {
 		HashMap<String, Object> map = new HashMap<String, Object> ();
 		map.put ("project", project.getId ());
+		map.putAll (globalVars);
 		return map;
 	}
 }

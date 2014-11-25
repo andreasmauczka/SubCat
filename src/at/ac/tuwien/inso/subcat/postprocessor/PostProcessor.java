@@ -229,7 +229,7 @@ public class PostProcessor {
 		Map<String, PostProcessorTask> steps = new HashMap<String, PostProcessorTask> ();
 		PostProcessorTask _step = new ClassificationTask ();
 		steps.put (_step.getName (), _step);
-		
+
 		Options options = new Options ();
 		options.addOption ("h", "help", false, "Show this options");
 		options.addOption ("d", "db", true, "The database to process (required)");
@@ -237,9 +237,9 @@ public class PostProcessor {
 		options.addOption ("l", "list-projects", false, "List all registered projects");
 		options.addOption ("S", "list-processor-steps", false, "List all registered processor steps");
 		options.addOption ("s", "processor-step", true, "A processor step name");
-		options.addOption ("C", "commit-dictionary", true, "Path to a classification dictionary for commit message classification"); 
-		options.addOption ("B", "bug-dictionary", true, "Path to a classification dictionary for bug classification"); 
-
+		options.addOption ("c", "commit-dictionary", true, "Path to a classification dictionary for commit message classification"); 
+		options.addOption ("b", "bug-dictionary", true, "Path to a classification dictionary for bug classification"); 
+		
 		Settings settings = new Settings ();
 		ModelPool pool = null;
 

@@ -4,15 +4,16 @@ public class Dictionary {
 	private Integer id;
 	private String name;
 	private Project project;
-
+	private String context;
 	
-	public Dictionary (Integer id, String name, Project project) {
+	public Dictionary (Integer id, String name, String context, Project project) {
 		assert (name != null);
 		assert (project != null);
 		
 		this.id = id;
 		this.name = name;
 		this.project = project;
+		this.context = context;
 	}
 
 
@@ -33,6 +34,11 @@ public class Dictionary {
 
 	public Project getProject () {
 		return project;
+	}
+
+
+	public String getContext () {
+		return context;
 	}
 
 

@@ -31,11 +31,17 @@
 package at.ac.tuwien.inso.subcat.ui;
 
 import java.io.File;
+import java.io.IOException;
 import java.sql.SQLException;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+import org.apache.commons.cli.PosixParser;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.layout.FillLayout;
@@ -50,20 +56,15 @@ import at.ac.tuwien.inso.subcat.config.ConfigVisitor;
 import at.ac.tuwien.inso.subcat.config.Configuration;
 import at.ac.tuwien.inso.subcat.config.DistributionChartConfig;
 import at.ac.tuwien.inso.subcat.config.Parser;
+import at.ac.tuwien.inso.subcat.config.ParserException;
 import at.ac.tuwien.inso.subcat.config.PieChartGroupConfig;
 import at.ac.tuwien.inso.subcat.config.ProjectViewConfig;
 import at.ac.tuwien.inso.subcat.config.SemanticException;
 import at.ac.tuwien.inso.subcat.config.TrendChartGroupConfig;
 import at.ac.tuwien.inso.subcat.config.ViewConfig;
-import at.ac.tuwien.inso.subcat.model.Component;
-import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
-import at.ac.tuwien.inso.subcat.model.Priority;
 import at.ac.tuwien.inso.subcat.model.Project;
-import at.ac.tuwien.inso.subcat.model.Severity;
-import at.ac.tuwien.inso.subcat.model.Status;
-import at.ac.tuwien.inso.subcat.model.User;
 import at.ac.tuwien.inso.subcat.ui.controller.DistributionChartController;
 import at.ac.tuwien.inso.subcat.ui.controller.PieChartController;
 import at.ac.tuwien.inso.subcat.ui.controller.TrendViewController;
@@ -99,7 +100,7 @@ public class ViewFactory {
 
 			// TODO: ViewConfig-visitors to select the right
 			//   viewController
-			viewController = new ViewController (project);
+			viewController = new ViewController (project, vars);
 			
 			this.project = project;
 			this.folder = folder;
@@ -184,7 +185,7 @@ public class ViewFactory {
 		this.config = config;
 	}
 
-	public Composite createProjectViewComposite (Composite parent, int style, Project proj, ProjectViewConfig config) throws SemanticException, SQLException {
+	public Composite createProjectViewComposite (Composite parent, int style, Project proj, int commitDictId, int bugDictId, ProjectViewConfig config) throws SemanticException, SQLException {
 		assert (config != null);
 		assert (proj != null);
 		assert (proj.getId () != null);
@@ -197,6 +198,8 @@ public class ViewFactory {
 		TabFolder folder = new TabFolder (composite, SWT.NONE);
 		HashMap<String, Object> vars = new HashMap<String, Object> ();
 		vars.put ("project", proj.getId ());
+		vars.put ("commitDict", commitDictId);
+		vars.put ("bugDict", bugDictId);
 
 		ViewBuilder builder = new ViewBuilder ();
 		builder.build (config, folder, proj, vars);
@@ -213,6 +216,201 @@ public class ViewFactory {
 	// Test Method:
 	//
 
+	public static void main (String[] args) {
+		Options options = new Options ();
+		options.addOption ("h", "help", false, "Show this options");
+		options.addOption ("d", "db", true, "The database to process (required)");
+		options.addOption ("p", "project", true, "The project ID to process");
+		options.addOption ("l", "list-projects", false, "List all registered projects");
+		options.addOption ("C", "config", true, "A configuration file including reports");
+		options.addOption ("c", "commit-dictionary", true, "The commit dictionary ID to use");
+		options.addOption ("b", "bug-dictionary", true, "The bug dictionary ID to use");
+		options.addOption ("D", "list-dictionaries", false, "List all dictionaries");
+		
+		ModelPool pool = null;
+		Model model = null;
+
+		CommandLineParser parser = new PosixParser ();
+		
+		try {
+			CommandLine cmd = parser.parse (options, args);
+
+			if (cmd.hasOption ("help")) {
+				HelpFormatter formatter = new HelpFormatter ();
+				formatter.printHelp ("postprocessor", options);
+				return ;
+			}
+
+			if (cmd.hasOption ("db") == false) {
+				System.err.println ("Option --db is required");
+				return ;
+			}
+
+			if (cmd.hasOption ("config") == false) {
+				System.err.println ("Option --config is required");
+				return ;
+			}
+
+			Configuration config = new Configuration ();
+			Parser configParser = new Parser ();
+			try {
+				configParser.parse (config, new File (cmd.getOptionValue ("config")));
+			} catch (IOException e) {
+				System.err.println ("Could not read configuration file: " + e.getMessage ());
+				return ;
+			} catch (ParserException e) {
+				System.err.println ("Could not parse configuration file: " + e.getMessage ());
+				return ;
+			}
+			
+			
+			File dbf = new File (cmd.getOptionValue ("db"));
+			if (dbf.exists() == false || dbf.isFile () == false) {
+				System.err.println ("Invalid database file path");
+				return ;
+			}
+			
+			pool = new ModelPool (cmd.getOptionValue ("db"), 2);
+			model = pool.getModel ();
+
+			if (cmd.hasOption ("list-projects")) {
+				for (Project proj : model.getProjects ()) {
+					System.out.println ("  " + proj.getId () + ": " + proj.getDate ());
+				}
+
+				return ;
+			}
+			
+			Integer projId = null;
+			if (cmd.hasOption ("project") == false) {
+				System.err.println ("Option --project is required");
+				return ;
+			} else {
+				try {
+					projId = Integer.parseInt(cmd.getOptionValue ("project"));
+				} catch (NumberFormatException e) {
+					System.err.println ("Invalid project ID");
+					return ;
+				}
+			}
+
+
+			Project project = model.getProject (projId);
+			if (project == null) {
+				System.err.println ("Invalid project ID");
+				return ;
+			}
+
+			if (cmd.hasOption ("list-dictionaries")) {
+				List<at.ac.tuwien.inso.subcat.model.Dictionary> dictionaries = model.getDictionaries (project);
+				for (at.ac.tuwien.inso.subcat.model.Dictionary dict : dictionaries) {
+					System.out.println ("  (" + dict.getId () + ") " + dict.getContext () + " " + dict.getName ());
+				}
+				return ;
+			}
+			
+			int bugDictId = -1;
+			if (cmd.hasOption ("bug-dictionary")) {
+				try {
+					bugDictId = Integer.parseInt(cmd.getOptionValue ("bug-dictionary"));
+					List<at.ac.tuwien.inso.subcat.model.Dictionary> dictionaries = model.getDictionaries (project);
+					boolean valid = false;
+
+					for (at.ac.tuwien.inso.subcat.model.Dictionary dict : dictionaries) {
+						if (dict.getId () == bugDictId) {
+							valid = true;
+							break;
+						}
+					}
+
+					if (valid == false) {
+						System.err.println ("Invalid bug dictionary ID");
+					}
+				} catch (NumberFormatException e) {
+					System.err.println ("Invalid bug dictionary ID");
+					return ;
+				}
+			} else {
+				List<at.ac.tuwien.inso.subcat.model.Dictionary> dictionaries = model.getDictionaries (project);
+				for (at.ac.tuwien.inso.subcat.model.Dictionary dict : dictionaries) {
+					if (dict.getContext ().equals ("bug")) {
+						bugDictId = dict.getId ();
+						break;
+					}
+				}
+			}
+
+			int commitDictId = -1;
+			if (cmd.hasOption ("commit-dictionary")) {
+				try {
+					commitDictId = Integer.parseInt(cmd.getOptionValue ("commit-dictionary"));
+					List<at.ac.tuwien.inso.subcat.model.Dictionary> dictionaries = model.getDictionaries (project);
+					boolean valid = false;
+
+					for (at.ac.tuwien.inso.subcat.model.Dictionary dict : dictionaries) {
+						if (dict.getId () == commitDictId) {
+							valid = true;
+							break;
+						}
+					}
+					
+					if (valid == false) {
+						System.err.println ("Invalid commit dictionary ID");
+					}
+				} catch (NumberFormatException e) {
+					System.err.println ("Invalid commit dictionary ID");
+					return ;
+				}
+			} else {
+				List<at.ac.tuwien.inso.subcat.model.Dictionary> dictionaries = model.getDictionaries (project);
+				for (at.ac.tuwien.inso.subcat.model.Dictionary dict : dictionaries) {
+					if (dict.getContext ().equals ("src")) {
+						commitDictId = dict.getId ();
+						break;
+					}
+				}
+			}
+			
+
+			// UI:
+			Display display = new Display ();
+			Shell shell = new Shell (display);
+			shell.setLayout (new FillLayout ());
+
+			if (config.getProjectViewConfig () != null) {
+				ViewFactory factory = new ViewFactory (model, config);
+				factory.createProjectViewComposite (shell, SWT.NONE, project, commitDictId, bugDictId, config.getProjectViewConfig ());
+			}
+
+			shell.pack();
+			shell.open ();
+			while (!shell.isDisposed ()) {
+				if (!display.readAndDispatch ()) {
+					display.sleep ();
+				}
+			}
+			
+			display.dispose();
+		} catch (ParseException e) {
+			System.err.println ("Parsing failed: " + e.getMessage ());
+		} catch (ClassNotFoundException e) {
+			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+		} catch (SQLException e) {
+			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+		} catch (SemanticException e) {
+			System.err.println ("Semantic Error: " + e.getMessage ());
+		} finally {
+			if (model != null) {
+				model.close ();
+			}
+			if (pool != null) {
+				pool.close ();
+			}
+		}
+	}
+
+	
+	/*
 	public static void main (String[] args) {
 		ModelPool pool = null;
 		Model model = null;
@@ -241,12 +439,6 @@ public class ViewFactory {
 			User user3 = model.addUser (project, "user 3");
 			Identity identity3a = model.addIdentity ("user3@mail.endl", "user3a", user3);
 			model.addIdentity ("user3@mail.endl", "user3b", user3);
-
-			/*
-			Category cat1 = model.addCategory(project, "Corrective");
-			Category cat2 = model.addCategory(project, "Adaptive");
-			Category cat3 = model.addCategory(project, "Perfective");
-			*/
 
 			Severity sev1 = model.addSeverity(project, "blocker");
 			model.addSeverity(project, "critical");
@@ -423,4 +615,5 @@ public class ViewFactory {
 			model.close ();
 		}
 	}
+	*/
 }

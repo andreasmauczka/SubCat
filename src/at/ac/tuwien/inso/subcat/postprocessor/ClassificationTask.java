@@ -33,9 +33,10 @@ public class ClassificationTask extends PostProcessorTask {
 			Settings settings = processor.getSettings ();
 			Model model = processor.getModelPool ().getModel ();
 
-			if (commitCategories == null) {
+			if (commitCategories == null && settings.srcDictionaries.size () > 0) {
 				commitCategories = new HashMap<Dictionary, Map<Class, Category>> ();
-				prepareDictionary (processor, model, commitCategories, settings.srcDictionaries);
+				prepareDictionary ("src", processor, model, commitCategories, settings.srcDictionaries);
+				model.addFlag (processor.getProject (), Model.FLAG_COMMIT_CATEGORIES);
 			}
 
 			for (Dictionary dict : settings.srcDictionaries) {
@@ -58,7 +59,8 @@ public class ClassificationTask extends PostProcessorTask {
 
 			if (bugCategories == null) {
 				bugCategories = new HashMap<Dictionary, Map<Class, Category>> ();
-				prepareDictionary (processor, model, bugCategories, settings.bugDictionaries);
+				prepareDictionary ("bug", processor, model, bugCategories, settings.bugDictionaries);
+				model.addFlag (processor.getProject (), Model.FLAG_BUG_CATEGORIES);
 			}
 
 			for (Dictionary dict : settings.bugDictionaries) {
@@ -77,16 +79,16 @@ public class ClassificationTask extends PostProcessorTask {
 		}
 	}
 
-	private void prepareDictionary (PostProcessor processor, Model model, HashMap<Dictionary, Map<Class, Category>> categories, List<Dictionary> dictionaries) throws SQLException {
+	private void prepareDictionary (String context, PostProcessor processor, Model model, HashMap<Dictionary, Map<Class, Category>> categories, List<Dictionary> dictionaries) throws SQLException {
 		if (lemmatiser == null) {
 			lemmatiser = new Lemmatizer ();
 		}
-		
+
 		for (Dictionary dict : dictionaries) {
 			Map<Class, Category> dictHash = new HashMap<Class, Category> ();
 			categories.put (dict, dictHash);
 				
-			at.ac.tuwien.inso.subcat.model.Dictionary modelDict = model.addDictionary (dict.getTitle (), processor.getProject ());
+			at.ac.tuwien.inso.subcat.model.Dictionary modelDict = model.addDictionary (dict.getTitle (), context, processor.getProject ());
 			for (Class cl : dict.getAbsoluteClasses ()) {
 				at.ac.tuwien.inso.subcat.model.Category modelCat = model.addCategory (cl.getName (), modelDict);
 				dictHash.put (cl, modelCat);

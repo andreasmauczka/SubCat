@@ -65,7 +65,9 @@ public class Model {
 	public static final String FLAG_BUG_ATTACHMENTS = "BUG_ATTACHMENTS";
 	public static final String FLAG_BUG_INFO = "BUG_INFO";
 	public static final String FLAG_SRC_INFO = "SRC_INFO";
-
+	public static final String FLAG_COMMIT_CATEGORIES = "COMMIT_CATEGORIES";
+	public static final String FLAG_BUG_CATEGORIES = "BUG_CATEGORIES";
+	
 	private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 	
@@ -248,11 +250,13 @@ public class Model {
 		+ "FOREIGN KEY(dictionary) REFERENCES Dictionary (id)"
 		+ ")";
 
+	// TODO: Rename t Dictionaries
 	private static final String DICTIONARY_TABLE =
 		"CREATE TABLE IF NOT EXISTS Dictionary ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
 		+ "project		INT									NOT NULL,"
 		+ "name			TEXT								NOT NULL,"
+		+ "context		TEXT								NOT NULL,"
 		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
 		+ "UNIQUE (id, name)"
 		+ ")";
@@ -550,6 +554,15 @@ public class Model {
 		+ "ORDER BY"
 		+ " BugHistories.id";
 
+	private static final String SELECT_DICTIONARIES =
+		"SELECT "
+		+ " id, "
+		+ " name, "
+		+ " context "
+		+ "FROM "
+		+ " Dictionary "
+		+ "WHERE "
+		+ " project = ?";
 
 	//
 	// Insertions:
@@ -568,8 +581,8 @@ public class Model {
 
 	private static final String DICTIONARY_INSERT =
 		"INSERT INTO Dictionary "
-		+ "(name, project) "
-		+ "VALUES (?, ?)";
+		+ "(name, project, context) "
+		+ "VALUES (?, ?, ?)";
 	
 	private static final String PROJECT_INSERTION =
 		"INSERT INTO Projects"
@@ -1136,8 +1149,8 @@ public class Model {
 		pool.emitBugAdded (bug);
 	}
 
-	public Dictionary addDictionary (String name, Project project) throws SQLException {
-		Dictionary dict = new Dictionary (null, name, project);
+	public Dictionary addDictionary (String name, String context, Project project) throws SQLException {
+		Dictionary dict = new Dictionary (null, name, context, project);
 		add (dict);
 		return dict;
 	}
@@ -1153,6 +1166,7 @@ public class Model {
 
 		stmt.setString (1, dict.getName ());
 		stmt.setInt (2, dict.getProject ().getId ());
+		stmt.setString (3, dict.getContext ());
 		stmt.executeUpdate();
 
 		dict.setId (getLastInsertedId (stmt));
@@ -1544,9 +1558,6 @@ public class Model {
 		assert (conn != null);
 		assert (query != null);
 		assert (vars != null);
-		
-		// System.out.println ("queryCofnig: " + queryConfig);
-		// System.out.println ("vars: " + vars);
 		
 		LinkedList<Query.VariableSegment> paramOrder = new LinkedList<Query.VariableSegment> ();
 
@@ -2209,6 +2220,29 @@ public class Model {
 		return projects;
 	}
 
+	public List<Dictionary> getDictionaries (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_DICTIONARIES);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		LinkedList<Dictionary> dictionaries = new LinkedList<Dictionary> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Integer id = res.getInt (1);
+			String name = res.getString (2);
+			String context = res.getString (3);
+	
+			Dictionary dict = new Dictionary (id, name, context, proj);
+			dictionaries.add (dict);
+		}
+	
+		return dictionaries;
+	}
 
 	//
 	// Helper:

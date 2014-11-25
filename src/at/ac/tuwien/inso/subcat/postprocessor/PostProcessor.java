@@ -234,7 +234,7 @@ public class PostProcessor {
 		options.addOption ("h", "help", false, "Show this options");
 		options.addOption ("d", "db", true, "The database to process (required)");
 		options.addOption ("p", "project", true, "The project ID to process");
-		options.addOption ("l", "list-projects", false, "List all registered projects");
+		options.addOption ("P", "list-projects", false, "List all registered projects");
 		options.addOption ("S", "list-processor-steps", false, "List all registered processor steps");
 		options.addOption ("s", "processor-step", true, "A processor step name");
 		options.addOption ("c", "commit-dictionary", true, "Path to a classification dictionary for commit message classification"); 

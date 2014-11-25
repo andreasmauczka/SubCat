@@ -38,8 +38,8 @@ public class CsvRFC4180ReporterWriter extends AbstractCsvReporterWriter {
 	
 	@Override
 	protected String escapeValue (String value) {
-		if (value.contains ("\"") || value.contains (",")) {
-			return "\"" + value + "\"";
+		if (value.contains ("\\") || value.contains ("\n") || value.contains ("\"") || value.contains (",")) {
+			return "\"" + value.replace ("\\", "\\\\").replace ("\n", "\\n").replace ("\"", "\\\"") + "\"";
 		}
 		
 		return value;

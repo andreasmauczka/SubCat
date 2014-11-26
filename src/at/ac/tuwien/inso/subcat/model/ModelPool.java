@@ -13,9 +13,7 @@ public class ModelPool {
 	//
 	// DB-Settings:
 	//
-	
-	private static final String ENABLE_FOREIGN_KEYS =
-		"PRAGMA foreign_keys = ON";
+
 	private static final String ENABLE_WAL =
 		"PRAGMA journal_mode=WAL";
 	private static final String SYNCHRONOUS_DB =
@@ -143,16 +141,11 @@ public class ModelPool {
 	}
 
 	private Connection createConnection () throws SQLException {
-		org.sqlite.SQLiteConfig config = new org.sqlite.SQLiteConfig ();
-		config.enforceForeignKeys (true);
-
 		// TODO: Escape path
-		Connection conn = DriverManager.getConnection ("jdbc:sqlite:" + name,
-			config.toProperties());
+		Connection conn = DriverManager.getConnection ("jdbc:sqlite:" + name);
 
 		Statement stmt = conn.createStatement();
 		//stmt.executeUpdate ("PRAGMA journal_mode=MEMORY");
-		stmt.executeUpdate (ENABLE_FOREIGN_KEYS);
 		stmt.executeUpdate ("PRAGMA temp_store=OFF");
 		stmt.executeUpdate (SYNCHRONOUS_DB);
 		stmt.executeUpdate ("PRAGMA synchronous=OFF");

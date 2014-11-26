@@ -55,6 +55,7 @@ import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.ObjectCallback;
 import at.ac.tuwien.inso.subcat.model.Project;
+import at.ac.tuwien.inso.subcat.postprocessor.AccountInterlinkingTask.HashFunc;
 import at.ac.tuwien.inso.subcat.utility.XmlReaderException;
 import at.ac.tuwien.inso.subcat.utility.classifier.Dictionary;
 import at.ac.tuwien.inso.subcat.utility.classifier.DictionaryParser;
@@ -229,6 +230,8 @@ public class PostProcessor {
 		Map<String, PostProcessorTask> steps = new HashMap<String, PostProcessorTask> ();
 		PostProcessorTask _step = new ClassificationTask ();
 		steps.put (_step.getName (), _step);
+		AccountInterlinkingTask interlinkingTask = new AccountInterlinkingTask ();
+		steps.put (interlinkingTask.getName (), interlinkingTask);
 
 		Options options = new Options ();
 		options.addOption ("h", "help", false, "Show this options");
@@ -239,7 +242,9 @@ public class PostProcessor {
 		options.addOption ("s", "processor-step", true, "A processor step name");
 		options.addOption ("c", "commit-dictionary", true, "Path to a classification dictionary for commit message classification"); 
 		options.addOption ("b", "bug-dictionary", true, "Path to a classification dictionary for bug classification"); 
-		
+		options.addOption ("m", "smart-matching", true, "Smart user matching configuration. Syntax: <method>:<distance>");
+		options.addOption ("M", "list-matching-methods", false, "List smart matching methods");
+
 		Settings settings = new Settings ();
 		ModelPool pool = null;
 
@@ -257,6 +262,13 @@ public class PostProcessor {
 			if (cmd.hasOption ("list-processor-steps")) {
 				for (String proj : steps.keySet ()) {
 					System.out.println ("  " + proj);
+				}
+				return ;
+			}
+
+			if (cmd.hasOption ("list-matching-methods")) {
+				for (String method : AccountInterlinkingTask.getHashFuncNames ()) {
+					System.out.println ("  " + method);
 				}
 				return ;
 			}
@@ -341,7 +353,37 @@ public class PostProcessor {
 					}
 				}
 			}
-			
+
+			if (cmd.hasOption ("smart-matching")) {
+				String str = cmd.getOptionValue ("smart-matching");
+				String[] parts = str.split (":");
+				if (parts.length != 2) {
+					System.err.println ("Unexpected smart-matching format");
+					return ;
+				}
+
+				HashFunc func = AccountInterlinkingTask.getHashFunc (parts[0]);
+				if (func == null) {
+					System.err.println ("Unknown smart matching hash function");
+					return ;
+				}
+
+				int dist = -1;
+				try {
+					dist = Integer.parseInt (parts[1]);
+				} catch (NumberFormatException e) {
+					dist = -1;
+				}
+
+				if (dist < 0) {
+					System.err.println ("Invalid smart matching edist distance");
+					return ;
+				}
+
+				interlinkingTask.setDistance (dist);
+				interlinkingTask.setHashFunc (func);
+			}
+
 			PostProcessor processor = new PostProcessor (project, pool, settings);
 			if (cmd.hasOption ("processor-step")) {
 				for (String stepName : cmd.getOptionValues ("processor-step")) {

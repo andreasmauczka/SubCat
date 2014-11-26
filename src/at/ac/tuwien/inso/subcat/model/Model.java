@@ -39,6 +39,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -67,14 +68,18 @@ public class Model {
 	public static final String FLAG_SRC_INFO = "SRC_INFO";
 	public static final String FLAG_COMMIT_CATEGORIES = "COMMIT_CATEGORIES";
 	public static final String FLAG_BUG_CATEGORIES = "BUG_CATEGORIES";
-	
+
+	public static final String CONTEXT_SRC = "src";
+	public static final String CONTEXT_BUG = "bug";
+
 	private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
 	
 	//
 	// Table Creation:
 	//
-
+	
+	
 	// Note: Dates are not supported by Sqlite
 
 	private static final String PROJECT_TABLE =
@@ -108,6 +113,7 @@ public class Model {
 	private static final String IDENTITY_TABLE =
 		"CREATE TABLE IF NOT EXISTS Identities ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "context		VARCHAR(3)							NOT NULL,"
 		+ "mail			TEXT								        ,"
 		+ "name			TEXT								NOT NULL,"
 		+ "user			INT									NOT NULL,"
@@ -256,7 +262,7 @@ public class Model {
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
 		+ "project		INT									NOT NULL,"
 		+ "name			TEXT								NOT NULL,"
-		+ "context		TEXT								NOT NULL,"
+		+ "context		VARCHAR(3)							NOT NULL,"
 		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
 		+ "UNIQUE (id, name)"
 		+ ")";
@@ -380,22 +386,24 @@ public class Model {
 
 	private static final String SELECT_ALL_COMMITS =
 		"SELECT"
-		+ " Commits.id				AS cId,"
-		+ " Commits.date			AS cDate,"
-		+ " Commits.title			AS cTitle,"
-		+ " Commits.linesAdded		AS cLinesAdded,"
-		+ " Commits.linesRemoved	AS cLinesAdded,"
-		+ " AuthorIdentity.id		AS aiId,"
-		+ " AuthorIdentity.name		AS aiName,"
-		+ " AuthorIdentity.mail		AS aiName,"
-		+ " AuthorUser.id			AS auId,"
-		+ " AuthorUser.name			AS auName,"
-		+ " CommitterIdentity.id	AS aiId,"
-		+ " CommitterIdentity.name	AS aiName,"
-		+ " CommitterIdentity.mail	AS aiName,"
-		+ " CommitterUser.id		AS auId,"
-		+ " CommitterUser.name		AS auName,"
-		+ " Commits.changedFiles "
+		+ " Commits.id					AS cId,"
+		+ " Commits.date				AS cDate,"
+		+ " Commits.title				AS cTitle,"
+		+ " Commits.linesAdded			AS cLinesAdded,"
+		+ " Commits.linesRemoved		AS cLinesRemoved,"
+		+ " AuthorIdentity.id			AS aiId,"
+		+ " AuthorIdentity.name			AS aiName,"
+		+ " AuthorIdentity.mail			AS aiMail,"
+		+ " AuthorUser.id				AS auId,"
+		+ " AuthorUser.name				AS auName,"
+		+ " CommitterIdentity.id		AS ciId,"
+		+ " CommitterIdentity.name		AS ciName,"
+		+ " CommitterIdentity.mail		AS ciMail,"
+		+ " CommitterUser.id			AS cuId,"
+		+ " CommitterUser.name			AS cuName,"
+		+ " Commits.changedFiles, "
+		+ " AuthorIdentity.context		AS aiId,"
+		+ " CommitterIdentity.context	AS ciId "
 		+ "FROM"
 		+ " Commits "
 		+ "LEFT JOIN Identities AuthorIdentity"
@@ -424,7 +432,8 @@ public class Model {
 		+ " Bugs.priority,"
 		+ " Bugs.severity,"
 		+ " Bugs.comments,"
-		+ " Bugs.curStat "
+		+ " Bugs.curStat, "
+		+ " Identity.context		AS aiContext "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -517,10 +526,11 @@ public class Model {
 		+ " Comments.creation,"
 		+ " Identity.id				AS aiId,"
 		+ " Identity.name			AS aiName,"
-		+ " Identity.mail			AS aiName,"
+		+ " Identity.mail			AS aiMail,"
 		+ " Users.id				AS auId,"
 		+ " Users.name				AS auName,"
-		+ " Comments.content "
+		+ " Comments.content, "
+		+ " Identity.context		AS aiContext "
 		+ "FROM"
 		+ " Comments "
 		+ "LEFT JOIN Identities Identity"
@@ -537,10 +547,11 @@ public class Model {
 		+ " Status.name,"
 		+ " Identity.id				AS aiId,"
 		+ " Identity.name			AS aiName,"
-		+ " Identity.mail			AS aiName,"
+		+ " Identity.mail			AS aiMail,"
 		+ " Users.id				AS auId,"
 		+ " Users.name				AS auName,"
-		+ " BugHistories.date "
+		+ " BugHistories.date, "
+		+ " Identity.context		AS iContext "
 		+ "FROM"
 		+ " BugHistories "
 		+ "LEFT JOIN Identities Identity"
@@ -564,6 +575,37 @@ public class Model {
 		+ "WHERE "
 		+ " project = ?";
 
+	private static final String SELECT_ALL_USERS_CONTEXT =
+			"SELECT "
+			+ " u.id, "
+			+ " u.name, "
+			+ " i.id, "
+			+ " i.context, "
+			+ " i.mail, "
+			+ " i.name, "
+			+ " i.user "
+			+ "FROM "
+			+ " Users u, Identities i "
+			+ "WHERE "
+			+ " u.id = i.user "
+			+ " AND u.project = ? "
+			+ " AND i.context = ? ";
+
+	private static final String SELECT_ALL_USERS =
+			"SELECT "
+			+ " u.id, "
+			+ " u.name, "
+			+ " i.id, "
+			+ " i.context, "
+			+ " i.mail, "
+			+ " i.name, "
+			+ " i.user "
+			+ "FROM "
+			+ " Users u, Identities i "
+			+ "WHERE "
+			+ " u.id = i.user "
+			+ " AND u.project = ? ";
+	
 	//
 	// Insertions:
 	//
@@ -601,8 +643,8 @@ public class Model {
 
 	private static final String IDENTITY_INSERTION =
 		"INSERT INTO Identities"
-		+ "(mail, name, user)"
-		+ "VALUES (?,?,?)";
+		+ "(mail, name, user, context)"
+		+ "VALUES (?,?,?,?)";
 
 	private static final String INTERACTION_INSERTION =
 		"INSERT INTO Interactions"
@@ -706,9 +748,15 @@ public class Model {
 	private static final String UPDATE_FILE_NAME =
 		"UPDATE Files SET name = ? WHERE id = ?";
 
+	
+	private static final String DELETE_USERS =
+		"DELETE FROM Users WHERE project = ?";
+	
 
 	private ModelPool pool;
 	private Connection conn;
+
+
 	
 	//
 	// Creation & Destruction:
@@ -731,6 +779,20 @@ public class Model {
 			this.conn = null;
 			return false;
 		}
+	}
+
+	public synchronized void begin () throws SQLException {
+		conn.setAutoCommit (false);
+	}
+
+	public synchronized void commit () throws SQLException {
+		conn.commit ();
+		conn.setAutoCommit (true);
+	}
+
+	public synchronized void rollback () throws SQLException {
+		conn.rollback ();
+		conn.setAutoCommit (true);
 	}
 
 
@@ -841,9 +903,36 @@ public class Model {
 		pool.emitUserAdded (user);
 	}
 	
+	public void removeUsers (Project project) throws SQLException {
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_USERS,
+			Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, project.getId ());
+		stmt.executeUpdate();
+		stmt.close ();		
+	}
 	
-	public Identity addIdentity (String mail, String name, User user) throws SQLException {
-		Identity identity = new Identity (null, mail, name, user);
+	public void setIdentityUser (Identity id, User user) throws SQLException {
+		assert (user != null);
+		assert (id != null);
+		assert (user.getId () != null);
+		assert (id.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (
+			"UPDATE Identities SET user = ? WHERE id = ?",
+			Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, user.getId ());
+		stmt.setInt (2, id.getId ());
+		stmt.executeUpdate();
+		stmt.close ();		
+	}
+	
+	public Identity addIdentity (String context, String mail, String name, User user) throws SQLException {
+		Identity identity = new Identity (null, context, mail, name, user);
 		add (identity);
 		return identity;
 	}
@@ -860,6 +949,7 @@ public class Model {
 		stmt.setString (1, identity.getMail ());
 		stmt.setString (2, identity.getName ());
 		stmt.setInt (3, identity.getUser ().getId ());
+		stmt.setString (4, identity.getContext ());
 		stmt.executeUpdate();
 
 		identity.setId (getLastInsertedId (stmt));
@@ -1500,13 +1590,9 @@ public class Model {
 		assert (queryConfig != null);
 		assert (vars != null);
 		
-		// System.out.println ("queryCofnig: " + queryConfig);
-		// System.out.println ("vars: " + vars);
-		
 		LinkedList<Query.VariableSegment> paramOrder = new LinkedList<Query.VariableSegment> ();
 		String query = queryConfig.getQuery (vars.keySet (), paramOrder);
 
-		// System.out.println(query.replaceAll("\\s+", " "));
 
 		// Create the query:
 		PreparedStatement stmt = conn.prepareStatement (query);
@@ -1514,8 +1600,6 @@ public class Model {
 
 		for (Query.VariableSegment param : paramOrder) {
 			Object val = vars.get (param.getName ());
-
-			// System.out.println(" ?" + i + " = '" + val + "'");
 
 			if (val instanceof Integer) {
 				stmt.setInt (i, (Integer) val);
@@ -1927,11 +2011,10 @@ public class Model {
 			Integer linesAdded = res.getInt (4);
 			Integer linesRemoved = res.getInt (5);
 			User authorUser = userFromResult (res, proj, 9, 10);
-			Identity author = identityFromResult (res, authorUser, 6, 7, 8);
+			Identity author = identityFromResult (res, authorUser, 6, 17, 7, 8);
 			User committerUser = userFromResult (res, proj, 14, 15);
-			Identity committer = identityFromResult (res, committerUser, 11, 12, 13);
+			Identity committer = identityFromResult (res, committerUser, 11, 18, 12, 13);
 			Integer changedFiles = res.getInt (14);
-	
 			Commit commit = new Commit (id, proj, author, committer, date, title, changedFiles, linesAdded, linesRemoved);
 			do_next = callback.processResult (commit);
 		}
@@ -1965,7 +2048,7 @@ public class Model {
 			String identifier = res.getString (2);
 			if (res.getInt (3) != 0) {
 				user = userFromResult (res, proj, 6, 7);
-				identity = identityFromResult (res, user, 3, 4, 5);
+				identity = identityFromResult (res, user, 3, 15, 4, 5);
 			}
 			Component component = components.get (res.getInt (8));
 			String title = res.getString (9);
@@ -1989,11 +2072,12 @@ public class Model {
 		return new User (id, proj, name);
 	}
 
-	private Identity identityFromResult (ResultSet res, User user, int idCol, int nameCol, int mailCol) throws SQLException {
+	private Identity identityFromResult (ResultSet res, User user, int idCol, int contextCol, int nameCol, int mailCol) throws SQLException {
 		Integer id = res.getInt (idCol);
 		String mail = res.getString (mailCol);
-		String name = res.getString (nameCol);		
-		return new Identity (id, mail, name, user);
+		String name = res.getString (nameCol);
+		String context = res.getString (contextCol);
+		return new Identity (id, context, mail, name, user);
 	}
 	
 	public void rawForeach (Query query, Map<String, Object> vars, ResultCallback callback) throws SQLException, Exception {
@@ -2137,7 +2221,7 @@ public class Model {
 			Integer id = res.getInt (1);
 			Status status = new Status (res.getInt (2), proj, res.getString (3));
 			User user = userFromResult (res, proj, 7, 8);
-			Identity identity = identityFromResult (res, user, 4, 5, 6);
+			Identity identity = identityFromResult (res, user, 4, 10, 5, 6);
 			Date creation = res.getDate (9);
 
 			BugHistory entry = new BugHistory (id, bug, status, identity, creation);
@@ -2165,7 +2249,7 @@ public class Model {
 			Integer id = res.getInt (1);
 			Date creation = res.getDate (2);
 			User user = userFromResult (res, proj, 6, 7);
-			Identity identity = identityFromResult (res, user, 3, 4, 5);
+			Identity identity = identityFromResult (res, user, 3, 9, 4, 5);
 			String content = res.getString (8);
 
 			Comment comment = new Comment (id, bug, creation, identity, content);
@@ -2173,6 +2257,50 @@ public class Model {
 		}
 	
 		return comments;
+	}
+
+	public Collection<Identity> getIdentities (Project proj, String context) throws SQLException {
+		assert (conn != null);
+		assert (context != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+		
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_USERS_CONTEXT);
+		stmt.setInt (1, proj.getId ());
+		stmt.setString (2, context);
+	
+		// Collect data:
+		LinkedList<Identity> identities = new LinkedList<Identity> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			User user = userFromResult (res, proj, 1, 2);
+			Identity identity = identityFromResult (res, user, 3, 4, 6, 5);
+			identities.add (identity);
+		}
+	
+		return identities;
+	}
+
+	public Collection<Identity> getIdentities (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+		
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_USERS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		LinkedList<Identity> identities = new LinkedList<Identity> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			User user = userFromResult (res, proj, 1, 2);
+			Identity identity = identityFromResult (res, user, 3, 4, 6, 5);
+			identities.add (identity);
+		}
+	
+		return identities;
 	}
 	
 	public Project getProject (int id) throws SQLException {

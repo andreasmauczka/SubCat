@@ -33,18 +33,21 @@ package at.ac.tuwien.inso.subcat.model;
 
 public class Identity {
 	private Integer id;
+	private String context;
 	private String mail;
 	private String name;
 	private User user;
 
-	public Identity (Integer id, String mail, String name, User user) {
+	public Identity (Integer id, String context, String mail, String name, User user) {
 		assert (name != null);
 		assert (user != null);
+		assert (context != null);
 
 		this.id = id;
 		this.mail = mail;
 		this.name = name;
 		this.user = user;
+		this.context = context;
 	}
 
 	public Integer getId () {
@@ -106,5 +109,9 @@ public class Identity {
 		}
 		
 		return super.equals (obj);
+	}
+
+	public String getContext () {
+		return context;
 	}
 }

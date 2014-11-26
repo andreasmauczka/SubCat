@@ -498,7 +498,7 @@ public class BugzillaMiner extends Miner {
 			BugzillaUser bugUser = bugUserList[0];
 
 			User user = model.addUser (project, name);
-			identity = model.addIdentity (bugUser.getEmail (), bugUser.getName (), user);
+			identity = model.addIdentity (Model.CONTEXT_BUG, bugUser.getEmail (), bugUser.getName (), user);
 			identities.put (name, identity);
 		}
 

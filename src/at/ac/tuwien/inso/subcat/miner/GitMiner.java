@@ -187,7 +187,7 @@ public class GitMiner extends Miner {
 		Identity identity = identities.get (mapKey);
 		if (identity == null) {
 			User user = model.addUser (project, name);
-			identity = model.addIdentity (mail, name, user);
+			identity = model.addIdentity (Model.CONTEXT_SRC, mail, name, user);
 			identities.put (mapKey, identity);
 		}
 

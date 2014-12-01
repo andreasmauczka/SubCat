@@ -82,4 +82,6 @@ public interface ModelModificationListener {
 
 	public void commitDictionaryAdded (Dictionary dict);
 
+	public void commitAttachmentReplacementAdded (Attachment oldAtt,
+			Attachment newAtt);
 }

@@ -196,6 +196,15 @@ public class Model {
 		+ "FOREIGN KEY(comment) REFERENCES Comments (id)"
 		+ ")";
 	
+	private static final String ATTACHMENT_REPLACEMENT_TABLE =
+		"CREATE TABLE IF NOT EXISTS AttachmentReplacements ("
+		+ "old			INTEGER								NOT NULL,"
+		+ "new			INTEGER								NOT NULL,"
+		+ "PRIMARY KEY (old, new),"
+		+ "FOREIGN KEY(old) REFERENCES Attachments (id),"
+		+ "FOREIGN KEY(new) REFERENCES Attachments (id)"
+		+ ")";
+
 	private static final String ATTACHMENT_STATUS_TABLE =
 		"CREATE TABLE IF NOT EXISTS AttachmentStatus ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -677,6 +686,12 @@ public class Model {
 		+ "(identifier, comment)"
 		+ "VALUES (?, ?)";
 
+	private static final String ATTACHMENT_REPLACEMENT_INSERTION =
+		"INSERT INTO AttachmentReplacements"
+		+ "(old, new)"
+		+ "VALUES (?, ?)";
+
+	
 	private static final String ATTACHMENT_STATUS_INSERTION
 		= "INSERT INTO AttachmentStatus"
 		+ "(project, name)"
@@ -1163,6 +1178,22 @@ public class Model {
 		pool.emitAttachmentAdded (attachment);
 	}
 
+	public void addAttachmentReplacement (Attachment oldAtt, Attachment newAtt) throws SQLException {
+		assert (oldAtt != null);
+		assert (newAtt != null);
+		assert (oldAtt.getId () != null);
+		assert (newAtt.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_REPLACEMENT_INSERTION);
+		stmt.setInt (1, oldAtt.getId ());
+		stmt.setInt (2, newAtt.getId ());
+		stmt.executeUpdate();
+
+		stmt.close ();
+
+		pool.emitAttachmentReplacementAdded (oldAtt, newAtt);
+	}
+	
 	public AttachmentHistory addAttachmentHistory (Identity identity, AttachmentStatus status, Attachment attachment, Date date) throws SQLException {
 		AttachmentHistory histo = new AttachmentHistory (null, identity, status, attachment, date);
 		add (histo);
@@ -2417,6 +2448,7 @@ public class Model {
 		stmt.executeUpdate (BUG_CATEGORIES_TABLE);
 		stmt.executeUpdate (COMMIT_CATEGORIES_TABLE);
 		stmt.executeUpdate (DICTIONARY_TABLE);
+		stmt.executeUpdate (ATTACHMENT_REPLACEMENT_TABLE);
 		stmt.close ();
 	}
 }

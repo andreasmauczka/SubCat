@@ -305,9 +305,17 @@ public class ModelPool {
 		}
 	}
 
-	public void emitDictionaryAdded (Dictionary dict) {
+	public synchronized void emitDictionaryAdded (Dictionary dict) {
 		for (ModelModificationListener listener : listeners) {
 			listener.commitDictionaryAdded (dict);
+		}
+	}
+
+	public synchronized void emitAttachmentReplacementAdded (Attachment oldAtt,
+			Attachment newAtt) {
+
+		for (ModelModificationListener listener : listeners) {
+			listener.commitAttachmentReplacementAdded (oldAtt, newAtt);
 		}
 	}	
 }

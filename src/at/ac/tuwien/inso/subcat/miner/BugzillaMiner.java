@@ -38,6 +38,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaBug;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaChange;
@@ -102,6 +104,7 @@ public class BugzillaMiner extends Miner {
 		public String id;
 		public Comment comment;
 		public LinkedList<BugzillaAttachmentHistoryEntry> history = new LinkedList<BugzillaAttachmentHistoryEntry> ();
+		public String oldId;
 	}
 	
 	private class BugzillaAttachmentHistoryEntry {
@@ -186,18 +189,32 @@ public class BugzillaMiner extends Miner {
 					addHistory (bug, histories, attachments);
 				}
 
+				
+				HashMap<String, Attachment> storedAttachments = new HashMap<String, Attachment> ();
 				for (BugzillaAttachment att : attachments) {
 					Attachment attachment = model.addAttachment (att.id, att.comment);
 					for (BugzillaAttachmentHistoryEntry histo : att.history) {
 						AttachmentStatus attStatus = resolveAttachmentStatus (histo.status);
 						model.addAttachmentHistory (histo.identity, attStatus, attachment, histo.date);
 					}
+
+					if (att.oldId != null) {
+						Attachment origAttachment = storedAttachments.get (att.oldId);
+						if (origAttachment != null) {
+							model.addAttachmentReplacement (origAttachment, attachment);
+						}
+					}
+					
+					storedAttachments.put (att.id, attachment);
 				}
 			}
 		}
 
-		private void extractBugId (Comment cmnt, List<BugzillaAttachment> attachments) {
+		private void extractPatchId (Comment cmnt, List<BugzillaAttachment> attachments) {
 			String text = cmnt.getContent ();
+
+			// TODO: Regex
+			
 			final String attachmentPrefix = "Created an attachment (id=";
 			if (!text.startsWith (attachmentPrefix)) {
 				return ;
@@ -217,7 +234,22 @@ public class BugzillaMiner extends Miner {
 				attachments.add (attachment);
 			}
 		}
-		
+
+		private String regexAttachmentUpdate = "^\\(From update of attachment [0-9]*\\)\nAttachment ([0-9]*) pushed as ([0-9]*).*";
+		private Pattern pAttachmentUpdate = Pattern.compile (regexAttachmentUpdate);
+
+		private void extractPachUpdateId (Comment cmnt, List<BugzillaAttachment> attachments) {
+			String text = cmnt.getContent ();
+			Matcher m = pAttachmentUpdate.matcher (text);
+			if (m.matches ()) {
+				BugzillaAttachment attachment = new BugzillaAttachment ();
+				attachment.id = m.group (2);
+				attachment.oldId = m.group (1);
+				attachment.comment = cmnt;
+				attachments.add (attachment);
+			}
+		}
+
 		private void addComments (Bug bug, BugzillaComment[] comments, List<BugzillaAttachment> attachments) throws SQLException, BugzillaException {
 			assert (bug != null);
 			assert (comments != null);
@@ -233,7 +265,8 @@ public class BugzillaMiner extends Miner {
 				String cmntContent = comment.getText ();
 
 				Comment cmnt = model.addComment (bug, cmntCreation, cmntCreator, cmntContent);
-				extractBugId (cmnt, attachments);
+				extractPatchId (cmnt, attachments);
+				extractPachUpdateId (cmnt, attachments);
 			}
 		}
 		

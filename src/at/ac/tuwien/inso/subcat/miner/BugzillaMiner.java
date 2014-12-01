@@ -160,8 +160,8 @@ public class BugzillaMiner extends Miner {
 			for (BugzillaBug bzBug : bzBugs) {
 				BugzillaComment[] comments = _comments.get (bzBug.getId ());
 				Identity creator = null;
-				if (comments != null) {
-					resolveIdentity (comments[0].getCreator ());
+				if (comments != null && comments.length > 0) {
+					creator = resolveIdentity (comments[0].getCreator ());
 				}
 
 				Component component = resolveComponent (bzBug.getComponent ());
@@ -170,7 +170,7 @@ public class BugzillaMiner extends Miner {
 				String identifier = new Integer (bzBug.getId ()).toString ();
 				Date creation = bzBug.getCreationTime ();
 				String title = bzBug.getSummary ();
-				
+
 
 				List<BugzillaAttachment> attachments = new LinkedList<BugzillaAttachment> ();
 

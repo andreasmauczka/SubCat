@@ -30,8 +30,18 @@
 
 package at.ac.tuwien.inso.subcat.model;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 
 public class Identity {
+	private Pattern patternMailValidator = Pattern.compile ("^([_A-Za-z0-9-]+(\\.[_A-Za-z0-9-]+)*)@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$");
+	private Pattern patternNameFragValidator = Pattern.compile("^[^a-z]*([a-z]*)[^a-z]*$");
+	private Pattern patternNameSplitter = Pattern.compile ("[ |\t|\\.|\\-|_|,|:]+");
+
 	private Integer id;
 	private String context;
 	private String mail;
@@ -72,6 +82,58 @@ public class Identity {
 		return name;
 	}
 
+	public Set<String> getNameFragments () {
+		return getNameFragments (true);
+	}
+
+	public Set<String> getNameFragments (boolean includeMail) {
+		HashSet<String> set = new HashSet<String> ();
+		if (name != null) {
+			String[] fragments = patternNameSplitter.split (name.toLowerCase ());
+			for (String fragment : fragments) {
+				Matcher mm = patternMailValidator.matcher (fragment);
+				if (mm.matches ()) {
+					if (includeMail) {
+						String[] localFragments = patternNameSplitter.split (mm.group (1));
+						addAllNameFragments (set, localFragments);
+					}
+				} else {
+					addAllNameFragment (set, fragment);
+				}
+			}
+		}
+
+		if (includeMail && mail != null) {
+			String local = mail.substring (0, mail.indexOf ('@')).toLowerCase ();
+			String[] fragments = patternNameSplitter.split (local);
+			addAllNameFragments (set, fragments);
+		}
+		
+		return set;
+	}
+
+	private void addAllNameFragments (Collection<String> coll, String[] arr) {
+		assert (coll != null);
+
+		if (arr == null) {
+			return ;
+		}
+		
+		for (String str : arr) {
+			addAllNameFragment (coll, str);
+		}
+	}
+
+	private void addAllNameFragment (Collection<String> coll, String str) {
+		assert (coll != null);
+
+	   	Matcher m = patternNameFragValidator.matcher (str);
+	   	if (m.find ()) {
+	   		coll.add (m.group (1));
+	   	}
+	}
+	
+	
 	public void setName (String name) {
 		assert (name != null);
 
@@ -107,7 +169,7 @@ public class Identity {
 		if (obj instanceof Identity) {
 			return equals ((Identity) obj);
 		}
-		
+
 		return super.equals (obj);
 	}
 

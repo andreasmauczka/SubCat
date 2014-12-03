@@ -65,6 +65,8 @@ import at.ac.tuwien.inso.subcat.model.User;
 
 
 public class BugzillaMiner extends Miner {
+	private Pattern patternMailValidator = Pattern.compile ("^[_A-Za-z0-9-]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$");
+
 	private int pageSize = 50;
 	private int passSize = 5;
 
@@ -530,8 +532,30 @@ public class BugzillaMiner extends Miner {
 			assert (bugUserList.length == 1);
 			BugzillaUser bugUser = bugUserList[0];
 
-			User user = model.addUser (project, name);
-			identity = model.addIdentity (Model.CONTEXT_BUG, bugUser.getEmail (), bugUser.getName (), user);
+			
+			String _mail = bugUser.getEmail ();
+			if (_mail == null && bugUser.getName () != null) {
+				Matcher mm = patternMailValidator.matcher (bugUser.getName ());
+				if (mm.matches ()) {
+					_mail = bugUser.getName ();
+				}
+			}
+			
+			StringBuilder builder = new StringBuilder ();
+			if (bugUser.getName () != null) {
+				builder.append (bugUser.getName ());
+			}
+			if (bugUser.getRealName () != null) {
+				if (builder.length () > 0) {
+					builder.append (' ');
+				}
+
+				builder.append (bugUser.getRealName ());
+			}
+
+
+			User user = model.addUser (project, builder.toString ());
+			identity = model.addIdentity (Model.CONTEXT_BUG, _mail, builder.toString (), user);
 			identities.put (name, identity);
 		}
 

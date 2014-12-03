@@ -7,8 +7,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.commons.codec.language.DoubleMetaphone;
 import org.apache.commons.codec.language.Metaphone;
@@ -27,10 +25,6 @@ import at.ac.tuwien.inso.subcat.utility.BkTree.LevensteinFunc;
 
 
 public class AccountInterlinkingTask extends PostProcessorTask {
-	private Pattern patternNameFragValidator = Pattern.compile("^[^a-z]*([a-z]*)[^a-z]*$");
-	private Pattern patternMailValidator = Pattern.compile ("^[_A-Za-z0-9-]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$");
-	private Pattern patternNameSplitter = Pattern.compile ("[ |\t|\\.|\\-|_|,|:]+");
-
 	private static HashMap<String, HashFunc> registeredHashFuncs;
 
 	private static void initHashFuncs () {
@@ -236,10 +230,6 @@ public class AccountInterlinkingTask extends PostProcessorTask {
 			LinkedList<IdentityContainer> lst = usr.identities;
 			for (IdentityContainer id : lst) {
 				String mail = id.identity.getMail ();
-				if (mail == null && isMail (id.identity.getName ())) {
-					mail = id.identity.getName ();
-				}
-
 				if (mail == null) {
 					continue;
 				}
@@ -270,7 +260,7 @@ public class AccountInterlinkingTask extends PostProcessorTask {
 		// Index:
 		final BkTree<IdentityContainer> tree = new BkTree<IdentityContainer> (new LevensteinFunc ());
 		for (Identity identity : model.getIdentities (project, Model.CONTEXT_SRC)) {
-			Set<String> fragments = getNameFragments (identity);
+			Set<String> fragments = identity.getNameFragments ();
 
 			if (fragments.size () > 1) {
 				IdentityContainer identityContainer = new IdentityContainer (identity);
@@ -283,7 +273,7 @@ public class AccountInterlinkingTask extends PostProcessorTask {
 
 		// Bug:
 		for (Identity identity : model.getIdentities (project, Model.CONTEXT_BUG)) {
-			Set<String> fragments = getNameFragments (identity);
+			Set<String> fragments = identity.getNameFragments ();
 
 			Collection<IdentityContainer> links = findIdentities (tree, fragments.toArray (new String[fragments.size ()]));
 			groupIdentities (users, links, identity);
@@ -325,12 +315,12 @@ public class AccountInterlinkingTask extends PostProcessorTask {
 
 				for (int i = 0; i < node.values.size (); i++) {
 					IdentityContainer id1 = node.values.get (i);
-					Set<String> fragments1 = getNameFragments (id1);
+					Set<String> fragments1 = id1.identity.getNameFragments ();
 					fragments1.remove (node.key);
 
 					for (int y = i + 1; y < node.values.size (); y++) {
 						IdentityContainer id2 = node.values.get (y);
-						Set<String> fragments2 = getNameFragments (id2);
+						Set<String> fragments2 = id2.identity.getNameFragments ();
 						fragments2.remove (node.key);
 
 						if (cmp (fragments1, fragments2)) {
@@ -370,49 +360,6 @@ public class AccountInterlinkingTask extends PostProcessorTask {
 				link.container = user;
 			}
 		}
-	}
-
-	private boolean isMail (String str) {
-		Matcher m = patternMailValidator.matcher (str);
-		return m.matches ();
-	}
-
-	private void addAllFragments (Collection<String> coll, String[] arr) {
-		assert (coll != null);
-
-		if (arr == null) {
-			return ;
-		}
-		
-		for (String str : arr) {
-	    	Matcher m = patternNameFragValidator.matcher(str);
-	    	if (m.find ()) {
-	    		coll.add (str);
-	    	}
-		}
-	}
-
-	private Set<String> getNameFragments (IdentityContainer identity) {
-		return getNameFragments (identity.identity);
-	}
-
-	private Set<String> getNameFragments (Identity identity) {
-		Set<String> fragments = new HashSet<String> ();
-		addAllFragments (fragments, getNameFragments (identity.getMail ()));
-		addAllFragments (fragments, getNameFragments (identity.getName ()));
-		return fragments;
-	}
-	
-	private String[] getNameFragments (String name) {
-		if (name == null) {
-			return null;
-		}
-		
-		if (isMail (name)) {
-			name = name.substring (0, name.indexOf ('@'));
-		}
-
-		return patternNameSplitter.split (name.toLowerCase ());
 	}
 
     private Collection<IdentityContainer> findIdentities (BkTree<IdentityContainer> tree, String[] names) {

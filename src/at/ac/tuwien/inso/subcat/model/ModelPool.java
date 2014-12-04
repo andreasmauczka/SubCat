@@ -7,6 +7,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.LinkedList;
 
+import at.ac.tuwien.inso.subcat.utility.sentiment.Sentiment;
+
 
 public class ModelPool {
 
@@ -315,7 +317,15 @@ public class ModelPool {
 			Attachment newAtt) {
 
 		for (ModelModificationListener listener : listeners) {
-			listener.commitAttachmentReplacementAdded (oldAtt, newAtt);
+			listener.attachmentReplacementAdded (oldAtt, newAtt);
+		}
+	}
+
+	public synchronized void emitSentimentAdded (Comment comment,
+			Sentiment<Identity> sentiment) {
+
+		for (ModelModificationListener listener : listeners) {
+			listener.sentimentAdded (comment, sentiment);
 		}
 	}	
 }

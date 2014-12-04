@@ -30,19 +30,17 @@
 
 package at.ac.tuwien.inso.subcat.utility.sentiment;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 
 
 public class Sentiment<T> extends SentimentAggregate<T> {
+	private List<SentimentBlock<T>> blocks;
 	private T data;
 	
-	public Sentiment (Collection<SentimentBlock<T>> lst) {
+	public Sentiment (List<SentimentBlock<T>> lst) {
 		assert (lst != null);
 		assert (lst.size () > 0);
 
-		List<SentenceSentiment> sentences = new ArrayList<SentenceSentiment> ();
 
 		int[] classes = new int[5];
 
@@ -58,12 +56,14 @@ public class Sentiment<T> extends SentimentAggregate<T> {
 		double somewhatNegativeWSum = 0;
 		double negativeWSum = 0;
 
+		int sentences = 0;
 		int words = 0;
 
 
 		for (SentimentBlock<T> sent : lst) {
 			int sentCount = sent.getSentenceCount ();
 			int sentWord = sent.words;
+			sentences += sentCount;
 			words += sent.words;
 
 			classes[0] += sent.classes[0];
@@ -82,14 +82,14 @@ public class Sentiment<T> extends SentimentAggregate<T> {
 			somewhatPositiveWSum += sent.somewhatPositiveWMean * sentWord;
 			neutralWSum += sent.neutralWMean * sentWord;
 			somewhatNegativeWSum += sent.somewhatNegativeWMean * sentWord;
-			negativeWSum += sent.negativeWMean * sentWord;
+			negativeWSum += sent.negativeWMean * sentWord;			
 		}
 
-		this.positiveMean = positiveSum / sentences.size ();
-		this.somewhatPositiveMean = somewhatPositiveSum / sentences.size ();
-		this.neutralMean = neutralSum / sentences.size ();
-		this.somewhatNegativeMean = somewhatNegativeSum / sentences.size ();
-		this.negativeMean = negativeSum / sentences.size ();
+		this.positiveMean = positiveSum / sentences;
+		this.somewhatPositiveMean = somewhatPositiveSum / sentences;
+		this.neutralMean = neutralSum / sentences;
+		this.somewhatNegativeMean = somewhatNegativeSum / sentences;
+		this.negativeMean = negativeSum / sentences;
 
 		this.positiveWMean = positiveWSum / words;
 		this.somewhatPositiveWMean = somewhatPositiveWSum / words;
@@ -97,6 +97,7 @@ public class Sentiment<T> extends SentimentAggregate<T> {
 		this.somewhatNegativeWMean = somewhatNegativeWSum / words;
 		this.negativeWMean = negativeWSum / words;
 
+		this.blocks = lst;
 		this.classes = classes;
 		this.words = words;
 	}
@@ -108,5 +109,9 @@ public class Sentiment<T> extends SentimentAggregate<T> {
 
 	public void setData (T data) {
 		this.data = data;
+	}
+
+	public List<SentimentBlock<T>> getBlocks () {
+		return blocks;
 	}
 }

@@ -231,8 +231,8 @@ public class PostProcessor {
 		Map<String, PostProcessorTask> steps = new HashMap<String, PostProcessorTask> ();
 		PostProcessorTask _step = new ClassificationTask ();
 		steps.put (_step.getName (), _step);
-		//CommentAnalyserTask commentAnalysisStep = new CommentAnalyserTask ();
-		//steps.put (commentAnalysisStep.getName (), commentAnalysisStep);
+		CommentAnalyserTask commentAnalysisStep = new CommentAnalyserTask ();
+		steps.put (commentAnalysisStep.getName (), commentAnalysisStep);
 		AccountInterlinkingTask interlinkingTask = new AccountInterlinkingTask ();
 		steps.put (interlinkingTask.getName (), interlinkingTask);
 
@@ -386,8 +386,8 @@ public class PostProcessor {
 				interlinkingTask.setDistance (dist);
 				interlinkingTask.setHashFunc (func);
 
-				//commentAnalysisStep.setDistance (dist);
-				//commentAnalysisStep.setHashFunc (func);
+				commentAnalysisStep.setDistance (dist);
+				commentAnalysisStep.setHashFunc (func);
 			}
 
 			PostProcessor processor = new PostProcessor (project, pool, settings);

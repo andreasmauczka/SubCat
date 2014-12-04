@@ -30,6 +30,8 @@
 
 package at.ac.tuwien.inso.subcat.model;
 
+import at.ac.tuwien.inso.subcat.utility.sentiment.Sentiment;
+
 public interface ModelModificationListener {
 
 	public void projectAdded (Project project);
@@ -82,6 +84,8 @@ public interface ModelModificationListener {
 
 	public void commitDictionaryAdded (Dictionary dict);
 
-	public void commitAttachmentReplacementAdded (Attachment oldAtt,
+	public void attachmentReplacementAdded (Attachment oldAtt,
 			Attachment newAtt);
+
+	public void sentimentAdded (Comment comment, Sentiment<Identity> sentiment);
 }

@@ -56,6 +56,9 @@ import at.ac.tuwien.inso.subcat.config.Query;
 import at.ac.tuwien.inso.subcat.config.SemanticException;
 import at.ac.tuwien.inso.subcat.config.TrendChartConfig;
 import at.ac.tuwien.inso.subcat.config.TrendChartPlotConfig;
+import at.ac.tuwien.inso.subcat.utility.sentiment.SentenceSentiment;
+import at.ac.tuwien.inso.subcat.utility.sentiment.Sentiment;
+import at.ac.tuwien.inso.subcat.utility.sentiment.SentimentBlock;
 
 
 public class Model {
@@ -369,6 +372,81 @@ public class Model {
 		+ "PRIMARY KEY(bug, commitId)"
 		+ ")";
 
+	private static final String SENTENCE_SENTIMENT_TABLE =
+		"CREATE TABLE IF NOT EXISTS SentenceSentiment ("
+		+ "groupId				INTEGER		NOT NULL,"
+		+ "pos					INTEGER		NOT NULL,"
+		+ "negative				DOUBLE		NOT NULL,"
+		+ "somewhatNegative		DOUBLE		NOT NULL,"
+		+ "neutral				DOUBLE		NOT NULL,"
+		+ "somewhatPositive		DOUBLE		NOT NULL,"
+		+ "positive				DOUBLE		NOT NULL,"
+		+ "wordCount			INTEGER		NOT NULL,"
+		+ "PRIMARY KEY(groupId, pos),"
+		+ "FOREIGN KEY(groupId) REFERENCES BlockSentiment (id)"
+		+ ")";
+
+	private static final String BLOCK_SENTIMENT_TABLE =
+		"CREATE TABLE IF NOT EXISTS BlockSentiment ("
+		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+
+		+ "sentimentId				INTEGER		NOT NULL,"
+		+ "pos						INTEGER		NOT NULL,"
+
+		+ "target					INTEGER,"
+		
+		+ "negative					INTEGER		NOT NULL,"
+		+ "somewhatNegative			INTEGER		NOT NULL,"
+		+ "neutral					INTEGER		NOT NULL,"
+		+ "somewhatPositive			INTEGER		NOT NULL,"
+		+ "positive					INTEGER		NOT NULL,"
+
+		+ "negativeMean				DOUBLE		NOT NULL,"
+		+ "somewhatNegativeMean		DOUBLE		NOT NULL,"
+		+ "neutralMean				DOUBLE		NOT NULL,"
+		+ "somewhatPositiveMean		DOUBLE		NOT NULL,"
+		+ "positiveMean				DOUBLE		NOT NULL,"
+
+		+ "negativeWMean			DOUBLE		NOT NULL,"
+		+ "somewhatNegativeWMean	DOUBLE		NOT NULL,"
+		+ "neutralWMean				DOUBLE		NOT NULL,"
+		+ "somewhatPositiveWMean	DOUBLE		NOT NULL,"
+		+ "positiveWMean			DOUBLE		NOT NULL,"
+		
+		+ "wordCount				INTEGER		NOT NULL,"
+		+ "sentenceCount			INTEGER		NOT NULL,"
+
+		//+ "PRIMARY KEY(sentimentId, pos),"
+		+ "FOREIGN KEY(sentimentId) REFERENCES Sentiment (id),"
+		+ "FOREIGN KEY(target) REFERENCES Identities (id)"
+		+ ")";
+
+	private static final String SENTIMENT_TABLE =
+		"CREATE TABLE IF NOT EXISTS Sentiment ("
+		+ "commentId				PRIMARY KEY	NOT NULL,"
+
+		+ "negative					INTEGER		NOT NULL,"
+		+ "somewhatNegative			INTEGER		NOT NULL,"
+		+ "neutral					INTEGER		NOT NULL,"
+		+ "somewhatPositive			INTEGER		NOT NULL,"
+		+ "positive					INTEGER		NOT NULL,"
+
+		+ "negativeMean				DOUBLE		NOT NULL,"
+		+ "somewhatNegativeMean		DOUBLE		NOT NULL,"
+		+ "neutralMean				DOUBLE		NOT NULL,"
+		+ "somewhatPositiveMean		DOUBLE		NOT NULL,"
+		+ "positiveMean				DOUBLE		NOT NULL,"
+
+		+ "negativeWMean			DOUBLE		NOT NULL,"
+		+ "somewhatNegativeWMean	DOUBLE		NOT NULL,"
+		+ "neutralWMean				DOUBLE		NOT NULL,"
+		+ "somewhatPositiveWMean	DOUBLE		NOT NULL,"
+		+ "positiveWMean			DOUBLE		NOT NULL,"
+
+		+ "wordCount				INTEGER		NOT NULL,"
+		+ "sentences				INTEGER		NOT NULL,"
+		+ "FOREIGN KEY(commentId) REFERENCES Comment (id)"
+		+ ")";
 	
 	//
 	// Triggers:
@@ -585,40 +663,60 @@ public class Model {
 		+ " project = ?";
 
 	private static final String SELECT_ALL_USERS_CONTEXT =
-			"SELECT "
-			+ " u.id, "
-			+ " u.name, "
-			+ " i.id, "
-			+ " i.context, "
-			+ " i.mail, "
-			+ " i.name, "
-			+ " i.user "
-			+ "FROM "
-			+ " Users u, Identities i "
-			+ "WHERE "
-			+ " u.id = i.user "
-			+ " AND u.project = ? "
-			+ " AND i.context = ? ";
+		"SELECT "
+		+ " u.id, "
+		+ " u.name, "
+		+ " i.id, "
+		+ " i.context, "
+		+ " i.mail, "
+		+ " i.name, "
+		+ " i.user "
+		+ "FROM "
+		+ " Users u, Identities i "
+		+ "WHERE "
+		+ " u.id = i.user "
+		+ " AND u.project = ? "
+		+ " AND i.context = ? ";
 
 	private static final String SELECT_ALL_USERS =
-			"SELECT "
-			+ " u.id, "
-			+ " u.name, "
-			+ " i.id, "
-			+ " i.context, "
-			+ " i.mail, "
-			+ " i.name, "
-			+ " i.user "
-			+ "FROM "
-			+ " Users u, Identities i "
-			+ "WHERE "
-			+ " u.id = i.user "
-			+ " AND u.project = ? ";
+		"SELECT "
+		+ " u.id, "
+		+ " u.name, "
+		+ " i.id, "
+		+ " i.context, "
+		+ " i.mail, "
+		+ " i.name, "
+		+ " i.user "
+		+ "FROM "
+		+ " Users u, Identities i "
+		+ "WHERE "
+		+ " u.id = i.user "
+		+ " AND u.project = ? ";
 	
+	private static final String SELECT_ATTACHMENT_IDENTITY =
+		"SELECT "
+		+ " u.id,"
+		+ " u.name,"
+		+ " i.id,"
+		+ " i.context,"
+		+ " i.name,"
+		+ " i.mail "
+		+ "FROM "
+		+ " Attachments a,"
+		+ " Comments c,"
+		+ " Identities i,"
+		+ " Users u "
+		+ "WHERE "
+		+ " a.comment = c.id "
+		+ " AND c.identity = i.id "
+		+ " AND i.user = u.id "
+		+ " AND u.project = ?"
+		+ " AND a.identifier = ?";
+
+
 	//
 	// Insertions:
 	//
-
 	
 	private static final String BUG_CATEGORY_INSERTION =
 		"INSERT INTO BugCategories "
@@ -756,7 +854,94 @@ public class Model {
 		"INSERT INTO FileCopy"
 		+ "(fileId, commitId, originalFileId)"
 		+ "VALUES (?,?,?)";
+
+	private static final String SENTIMENT_BLOCK_INSERTION =
+		"INSERT INTO BlockSentiment ("
+		+ "sentimentId,"
+		+ "pos,"
+
+		+ "target,"
+
+		+ "negative,"
+		+ "somewhatNegative,"
+		+ "neutral,"
+		+ "somewhatPositive,"
+		+ "positive,"
+
+		+ "negativeMean,"
+		+ "somewhatNegativeMean,"
+		+ "neutralMean,"
+		+ "somewhatPositiveMean,"
+		+ "positiveMean,"
+
+		+ "negativeWMean,"
+		+ "somewhatNegativeWMean,"
+		+ "neutralWMean,"
+		+ "somewhatPositiveWMean,"
+		+ "positiveWMean,"
+
+		+ "wordCount,"
+		+ "sentenceCount"
+		+ ") VALUES ("
+		+ "?,?,"
+		+ "?,"
+		+ "?,?,?,?,?,"
+		+ "?,?,?,?,?,"
+		+ "?,?,?,?,?,"
+		+ "?,?"
+		+ ")";
+
+	private static final String SENTIMENT_INSERTION =
+		"INSERT INTO Sentiment ("
+		+ "commentId,"
+
+		+ "negative,"
+		+ "somewhatNegative,"
+		+ "neutral,"
+		+ "somewhatPositive,"
+		+ "positive,"
+
+		+ "negativeMean,"
+		+ "somewhatNegativeMean,"
+		+ "neutralMean,"
+		+ "somewhatPositiveMean,"
+		+ "positiveMean,"
+
+		+ "negativeWMean,"
+		+ "somewhatNegativeWMean,"
+		+ "neutralWMean,"
+		+ "somewhatPositiveWMean,"
+		+ "positiveWMean,"
+
+		+ "wordCount,"
+		+ "sentences"
+		+ ") VALUES ("
+		+ "?,"
+		+ "?,?,?,?,?,"
+		+ "?,?,?,?,?,"
+		+ "?,?,?,?,?,"
+		+ "?,?"
+		+ ")";
+
+	private static final String SENTIMENT_SENTENCE_INSERTION =
+		"INSERT INTO SentenceSentiment ("
+		+ "groupId,"
+		+ "pos,"			
+
+		+ "negative,"
+		+ "somewhatNegative,"
+		+ "neutral,"
+		+ "somewhatPositive,"
+		+ "positive,"
+
+		+ "wordCount"
+		+ ") VALUES ("
+		+ "?,?,"
+		+ "?,?,?,?,?,"
+		+ "?"
+		+ ")";
 	
+
 	private static final String UPDATE_DEFAULT_STATUS =
 		"UPDATE Projects SET defaultStatusId = ? WHERE id = ?";
 
@@ -766,8 +951,27 @@ public class Model {
 	
 	private static final String DELETE_USERS =
 		"DELETE FROM Users WHERE project = ?";
-	
 
+	private static final String DELETE_SENTENCE_SENTIMENTS =
+		"DELETE FROM SentenceSentiment "
+		+ "WHERE groupId IN "
+		+ "(SELECT b.id FROM BlockSentiment b WHERE b.sentimentId IN "
+		+ "(SELECT cmnt.id FROM Comments cmnt, Bugs bg, Components cmp "
+		+ "WHERE cmnt.bug = bg.id AND bg.component = cmp.id AND cmp.project = ?))";
+
+	private static final String DELETE_BLOCK_SENTIMENTS =
+		"DELETE FROM BlockSentiment "
+		+ "WHERE sentimentId IN "
+		+ "(SELECT cmnt.id FROM Comments cmnt, Bugs bg, Components cmp "
+		+ "WHERE cmnt.bug = bg.id AND bg.component = cmp.id AND cmp.project = ?)";
+
+	private static final String DELETE_SENTIMENTS =
+		"DELETE FROM Sentiment "
+		+ "WHERE commentId IN "
+		+ "(SELECT cmnt.id FROM Comments cmnt, Bugs bg, Components cmp "
+		+ "WHERE cmnt.bug = bg.id AND bg.component = cmp.id AND cmp.project = ?)";
+
+	
 	private ModelPool pool;
 	private Connection conn;
 
@@ -1611,6 +1815,146 @@ public class Model {
 		pool.emitBugfixCommitAdded (bugfix);
 	}
 
+	private void addSentenceSentiments (int blockId, List<SentenceSentiment> sentences) throws SQLException {
+		assert (blockId >= 0);
+		assert (sentences != null);
+
+		PreparedStatement stmt = conn.prepareStatement (SENTIMENT_SENTENCE_INSERTION,
+			Statement.RETURN_GENERATED_KEYS);
+
+		
+		int pos = 0;
+		for (SentenceSentiment sent : sentences) {
+			stmt.setInt (1, blockId);
+			stmt.setInt (2, pos);
+			stmt.setDouble (3, sent.getNegative ());
+			stmt.setDouble (4, sent.getSomewhatNegative ());
+			stmt.setDouble (5, sent.getNeutral ());
+			stmt.setDouble (6, sent.getSomewhatPositive ());
+			stmt.setDouble (7, sent.getPositive ());
+			stmt.setInt (8, sent.getWordCount ());
+			stmt.execute ();
+			pos++;
+		}
+
+		stmt.close ();
+	}
+	
+	private void addSentimentBlock (int parentId, int blockPos, SentimentBlock<Identity> sentiment) throws SQLException {
+		assert (blockPos >= 0);
+		assert (parentId >= 0);
+		assert (sentiment != null);
+
+		Identity target = sentiment.getData ();
+		assert (target == null || target.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (SENTIMENT_BLOCK_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, parentId);
+		stmt.setInt (2, blockPos);
+
+
+		if (target != null) {
+			stmt.setInt (3, target.getId ());
+		} else {
+			stmt.setNull (3, Types.INTEGER);
+		}
+
+		stmt.setInt (4, sentiment.getNegativeCount ());
+		stmt.setInt (5, sentiment.getSomewhatNegativeCount ());
+		stmt.setInt (6, sentiment.getNeutralCount ());
+		stmt.setInt (7, sentiment.getSomewhatPositiveCount ());
+		stmt.setInt (8, sentiment.getPositiveCount ());
+
+		stmt.setDouble (9, sentiment.getNegativeMean ());
+		stmt.setDouble (10, sentiment.getSomewhatNegativeMean ());
+		stmt.setDouble (11, sentiment.getNeutralMean ());
+		stmt.setDouble (12, sentiment.getSomewhatPositiveMean ());
+		stmt.setDouble (13, sentiment.getPositiveMean ());
+
+		stmt.setDouble (14, sentiment.getNegativeWMean ());
+		stmt.setDouble (15, sentiment.getSomewhatNegativeWMean ());
+		stmt.setDouble (16, sentiment.getNeutralWMean ());
+		stmt.setDouble (17, sentiment.getSomewhatPositiveWMean ());
+		stmt.setDouble (18, sentiment.getPositiveWMean ());
+
+		stmt.setInt (19, sentiment.getWordCount ());
+		stmt.setInt (20, sentiment.getSentenceCount ());
+		stmt.executeUpdate();
+
+		int newId = getLastInsertedId (stmt);
+		stmt.close ();
+
+		addSentenceSentiments (newId, sentiment.getSentenceSentiments ());
+	}
+	
+	public void addSentiment (Comment comment, Sentiment<Identity> sentiment) throws SQLException {
+		assert (comment != null);
+		assert (sentiment != null);
+		assert (comment.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (SENTIMENT_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, comment.getId ());
+
+		stmt.setInt (2, sentiment.getNegativeCount ());
+		stmt.setInt (3, sentiment.getSomewhatNegativeCount ());
+		stmt.setInt (4, sentiment.getNeutralCount ());
+		stmt.setInt (5, sentiment.getSomewhatPositiveCount ());
+		stmt.setInt (6, sentiment.getPositiveCount ());
+
+		stmt.setDouble (7, sentiment.getNegativeMean ());
+		stmt.setDouble (8, sentiment.getSomewhatNegativeMean ());
+		stmt.setDouble (9, sentiment.getNeutralMean ());
+		stmt.setDouble (10, sentiment.getSomewhatPositiveMean ());
+		stmt.setDouble (11, sentiment.getPositiveMean ());
+
+		stmt.setDouble (12, sentiment.getNegativeWMean ());
+		stmt.setDouble (13, sentiment.getSomewhatNegativeWMean ());
+		stmt.setDouble (14, sentiment.getNeutralWMean ());
+		stmt.setDouble (15, sentiment.getSomewhatPositiveWMean ());
+		stmt.setDouble (16, sentiment.getPositiveWMean ());
+
+		stmt.setInt (17, sentiment.getWordCount ());
+		stmt.setInt (18, sentiment.getSentenceCount ());
+		stmt.executeUpdate();
+		int newId = getLastInsertedId (stmt);
+		stmt.close ();
+
+		int i = 0;
+		for (SentimentBlock<Identity> block : sentiment.getBlocks ()) {
+			addSentimentBlock (newId, i, block);
+			i++;
+		}
+		
+		pool.emitSentimentAdded (comment, sentiment);
+	}
+
+	public void removeSentiment (Project project) throws SQLException {
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_SENTENCE_SENTIMENTS);
+		stmt.setInt (1, project.getId ());
+		stmt.executeUpdate();
+		stmt.close ();		
+
+
+		stmt = conn.prepareStatement (DELETE_BLOCK_SENTIMENTS);
+		stmt.setInt (1, project.getId ());
+		stmt.executeUpdate();
+		stmt.close ();		
+
+
+		stmt = conn.prepareStatement (DELETE_SENTIMENTS);
+		stmt.setInt (1, project.getId ());
+		stmt.executeUpdate();
+		stmt.close ();		
+
+	}
+
 
 	//
 	// Get Data:
@@ -2313,6 +2657,29 @@ public class Model {
 		return identities;
 	}
 
+	public Identity getIdentityForAttachmentIdentifier (Project proj, String patchId) throws SQLException {
+		assert (patchId != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ATTACHMENT_IDENTITY);
+		stmt.setInt (1, proj.getId ());
+		stmt.setString (2, patchId);
+
+		
+		// Collect data:
+		ResultSet res = stmt.executeQuery ();
+		if (res.next ()) {
+			User user = userFromResult (res, proj, 1, 2);
+			Identity identity = identityFromResult (res, user, 3, 4, 5, 6);
+			return identity;
+		}
+	
+		return null;
+	}
+	
 	public Collection<Identity> getIdentities (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -2449,6 +2816,9 @@ public class Model {
 		stmt.executeUpdate (COMMIT_CATEGORIES_TABLE);
 		stmt.executeUpdate (DICTIONARY_TABLE);
 		stmt.executeUpdate (ATTACHMENT_REPLACEMENT_TABLE);
+		stmt.executeUpdate (SENTENCE_SENTIMENT_TABLE);
+		stmt.executeUpdate (BLOCK_SENTIMENT_TABLE);
+		stmt.executeUpdate (SENTIMENT_TABLE);
 		stmt.close ();
 	}
 }

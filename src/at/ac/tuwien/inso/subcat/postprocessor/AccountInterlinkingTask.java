@@ -8,12 +8,6 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
 
-import org.apache.commons.codec.language.DoubleMetaphone;
-import org.apache.commons.codec.language.Metaphone;
-import org.apache.commons.codec.language.Caverphone;
-import org.apache.commons.codec.language.RefinedSoundex;
-import org.apache.commons.codec.language.Soundex;
-
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Project;
@@ -22,95 +16,10 @@ import at.ac.tuwien.inso.subcat.utility.BkTree;
 import at.ac.tuwien.inso.subcat.utility.BkTree.BkNode;
 import at.ac.tuwien.inso.subcat.utility.BkTree.Foreach;
 import at.ac.tuwien.inso.subcat.utility.BkTree.LevensteinFunc;
+import at.ac.tuwien.inso.subcat.utility.phonetic.HashFunc;
 
 
 public class AccountInterlinkingTask extends PostProcessorTask {
-	private static HashMap<String, HashFunc> registeredHashFuncs;
-
-	private static void initHashFuncs () {
-		if (registeredHashFuncs != null) {
-			return ;
-		}
-
-		registeredHashFuncs = new HashMap<String, HashFunc> ();
-		registeredHashFuncs.put ("direct", new DirectHashFunc ());
-		registeredHashFuncs.put ("double-metaphone", new DoubleMetaphoneHashFunc ());
-		registeredHashFuncs.put ("metaphone", new MetaphoneHashFunc ());
-		registeredHashFuncs.put ("caverphone", new CaverphoneHashFunc ());
-		registeredHashFuncs.put ("soundex", new SoundexHashFunc ());
-		registeredHashFuncs.put ("refined-soundex", new RefinedSoundexHashFunc ());
-	}
-
-	public static HashFunc getHashFunc (String name) {
-		initHashFuncs ();
-		return registeredHashFuncs.get (name);
-	}
-	
-	public static Set<String> getHashFuncNames () {
-		initHashFuncs ();
-		return registeredHashFuncs.keySet ();
-	}
-
-	
-	public static abstract class HashFunc {
-		
-		public abstract String[] hash (String str);
-	}
-
-	public static class DirectHashFunc extends HashFunc {
-		
-		@Override
-		public String[] hash (String str) {
-			return new String[] {str};
-		}
-	}
-
-	public static class DoubleMetaphoneHashFunc extends HashFunc {
-		private DoubleMetaphone calc = new DoubleMetaphone ();
-
-		@Override
-		public String[] hash (String str) {
-			return new String[] { calc.doubleMetaphone (str) };
-		}
-	}
-
-	public static class MetaphoneHashFunc extends HashFunc {
-		private Metaphone calc = new Metaphone ();
-
-		@Override
-		public String[] hash (String str) {
-			return new String[] { calc.metaphone (str) };
-		}
-	}
-
-	public static class CaverphoneHashFunc extends HashFunc {
-		private Caverphone calc = new Caverphone ();
-
-		@Override
-		public String[] hash (String str) {
-			return new String[] { calc.caverphone (str) };
-		}
-	}
-
-	public static class SoundexHashFunc extends HashFunc {
-		private Soundex calc = new Soundex ();
-
-		@Override
-		public String[] hash (String str) {
-			return new String[] { calc.soundex (str) };
-		}
-	}
-
-	public static class RefinedSoundexHashFunc extends HashFunc {
-		private RefinedSoundex calc = new RefinedSoundex ();
-
-		@Override
-		public String[] hash (String str) {
-			return new String[] { calc.soundex (str) };
-		}
-	}
-
-
 
 	private static class UserContainer {
 		public LinkedList<IdentityContainer> identities;

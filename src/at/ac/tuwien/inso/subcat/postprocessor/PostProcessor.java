@@ -55,10 +55,11 @@ import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.ObjectCallback;
 import at.ac.tuwien.inso.subcat.model.Project;
-import at.ac.tuwien.inso.subcat.postprocessor.AccountInterlinkingTask.HashFunc;
 import at.ac.tuwien.inso.subcat.utility.XmlReaderException;
 import at.ac.tuwien.inso.subcat.utility.classifier.Dictionary;
 import at.ac.tuwien.inso.subcat.utility.classifier.DictionaryParser;
+import at.ac.tuwien.inso.subcat.utility.phonetic.HashFunc;
+
 
 public class PostProcessor {
 	private List<PostProcessorTask> beginTasks;
@@ -230,6 +231,8 @@ public class PostProcessor {
 		Map<String, PostProcessorTask> steps = new HashMap<String, PostProcessorTask> ();
 		PostProcessorTask _step = new ClassificationTask ();
 		steps.put (_step.getName (), _step);
+		//CommentAnalyserTask commentAnalysisStep = new CommentAnalyserTask ();
+		//steps.put (commentAnalysisStep.getName (), commentAnalysisStep);
 		AccountInterlinkingTask interlinkingTask = new AccountInterlinkingTask ();
 		steps.put (interlinkingTask.getName (), interlinkingTask);
 
@@ -267,7 +270,7 @@ public class PostProcessor {
 			}
 
 			if (cmd.hasOption ("list-matching-methods")) {
-				for (String method : AccountInterlinkingTask.getHashFuncNames ()) {
+				for (String method : HashFunc.getHashFuncNames ()) {
 					System.out.println ("  " + method);
 				}
 				return ;
@@ -362,7 +365,7 @@ public class PostProcessor {
 					return ;
 				}
 
-				HashFunc func = AccountInterlinkingTask.getHashFunc (parts[0]);
+				HashFunc func = HashFunc.getHashFunc (parts[0]);
 				if (func == null) {
 					System.err.println ("Unknown smart matching hash function");
 					return ;
@@ -382,6 +385,9 @@ public class PostProcessor {
 
 				interlinkingTask.setDistance (dist);
 				interlinkingTask.setHashFunc (func);
+
+				//commentAnalysisStep.setDistance (dist);
+				//commentAnalysisStep.setHashFunc (func);
 			}
 
 			PostProcessor processor = new PostProcessor (project, pool, settings);

@@ -1,4 +1,4 @@
-/* ContentNodeVisitor.java
+/* ArtefactNode.java
  *
  * Copyright (C) 2014 Florian Brosch
  *
@@ -31,17 +31,21 @@
 package at.ac.tuwien.inso.subcat.utility.commentparser;
 
 
-public abstract class ContentNodeVisitor<T> {
+public class ArtefactNode<T> extends ContentNode<T> {
+	private String content;
 	
-	public void visitComment (CommentNode<T> comment) {
+
+	public ArtefactNode (String content) {
+		assert (content != null);
+		this.content = content;
 	}
 
-	public void visitQuote (QuoteNode<T> quote) {
+	@Override
+	public void accept (ContentNodeVisitor<T> visitor) {
+		visitor.visitArtefactNode (this);
 	}
 
-	public void visitParagraph (ParagraphNode<T> para) {
-	}
-
-	public void visitArtefactNode (ArtefactNode<T> artefact) {
+	public String getContent () {
+		return content;
 	}
 }

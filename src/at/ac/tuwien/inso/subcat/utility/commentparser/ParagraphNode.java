@@ -33,13 +33,16 @@ package at.ac.tuwien.inso.subcat.utility.commentparser;
 
 public class ParagraphNode<T> extends ContentNode<T> {
 	private int paragraphSeparatorSize;
+	private String originalContent;
 	private String content;
 
-	public ParagraphNode (String content, int paragraphSeparatorSize) {
+	public ParagraphNode (String content, String originalContent, int paragraphSeparatorSize) {
 		assert (content != null);
+		assert (originalContent != null);
 		assert (paragraphSeparatorSize >= 0);
 
 		this.content = content;
+		this.originalContent = originalContent;
 		this.paragraphSeparatorSize = paragraphSeparatorSize;
 	}
 
@@ -52,6 +55,10 @@ public class ParagraphNode<T> extends ContentNode<T> {
 
 	public String getContent () {
 		return content;
+	}
+
+	public String getOriginalContent () {
+		return originalContent;
 	}
 	
 	public int getParagraphSeparatorSize () {

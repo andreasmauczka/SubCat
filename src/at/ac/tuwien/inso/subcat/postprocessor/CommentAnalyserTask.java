@@ -163,7 +163,7 @@ public class CommentAnalyserTask extends PostProcessorTask {
 			}
 
 
-			SentimentBlock<Identity> sB = analyser.get (para.getContent ());
+			SentimentBlock<Identity> sB = analyser.get (para.getOriginalContent ());
 			sentimentBlocks.add (sB);
 		}
 
@@ -235,11 +235,7 @@ public class CommentAnalyserTask extends PostProcessorTask {
 		BkTree<Identity> authors = new BkTree<Identity> (new BkTree.LevensteinFunc ());
 		HashMap<Integer, Identity> authorsById = new HashMap<Integer, Identity> ();
 		
-		//System.out.println ("============ " + processor + "/show_bug.cgi?id=" + bug.getIdentifier ());		
-		//int i = 0;
-
 		for (Comment comment : comments) {
-			// System.out.println ("   ---- " + (++i) + " (comment id: " + comment.getId () + ")");
 			Identity author = comment.getIdentity ();
 			Set<String> nameFragments = author.getNameFragments (matchWithMails);
 
@@ -253,6 +249,7 @@ public class CommentAnalyserTask extends PostProcessorTask {
 			authorsById.put (author.getId (), author);
 			CommentAnalyser analyser = new CommentAnalyser ();
 			Sentiment<Identity> sentiment = analyser.analyse (commentNode, comment, processor.getProject (), comments, analysedComments, authorsById, authors);
+
 			try {
 				model.begin ();
 				model.addSentiment (comment, sentiment);

@@ -60,7 +60,18 @@ public class Parser<T> {
 	private final static String regexQuoteSplitter = "\n\\s*(\n\\s*)+";
 	private final static Pattern pQuoteSplitter = Pattern.compile (regexQuoteSplitter);
 
+	private final static String regexGLibMessages = "((\\s*^\\*\\*\\s+\\(.+:[0-9]+\\):\\s+[A-Za-z0-9-]+\\s+\\*\\*:\\s+[a-zA-Z_0-9]+:.*$\n?)+)";
+	private final static Pattern pGLibMessages = Pattern.compile (regexGLibMessages, Pattern.MULTILINE);
 
+	private final static String cliRegex = "^((\\[[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+ (~|[a-zA-Z0-9_-]+)\\])|[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+:(~|[a-zA-Z0-0_-]+))(\\$|#).*";
+	private final static Pattern pCli= Pattern.compile (cliRegex);
+
+	private final static  String lstRegex = "^[ |\t]*(\\*|-|\\(([0-9]+|[a-z]+|[A-Z]+)\\)|([0-9]+|[a-z]+|[A-Z]+)(\\)|\\.)).*$";
+	private final static Pattern pLst= Pattern.compile (lstRegex);
+
+
+	private final static int PARA_MAX_NEWLINES = 10;
+	
 
 	public CommentNode<T> parse (String content) {
 		int patchId = -1;
@@ -110,6 +121,27 @@ public class Parser<T> {
 		if (lastEnd != comment.length ()) {
 			String frag = comment.substring (lastEnd, comment.length ());
 			if (frag.trim ().length () > 0) {
+				parseGLibMessages (ast, frag);
+			}
+		}
+	}
+
+	private void parseGLibMessages (List<ContentNode<T>> ast, String commentFragment) {
+		Matcher gm = pGLibMessages.matcher (commentFragment);
+
+		int lastEnd = 0;
+		while (gm.find ()) {
+			if (lastEnd != gm.start ()) {
+				parseParagraphs (ast, commentFragment.substring (lastEnd, gm.start ()));
+			}
+
+			ast.add (new ArtefactNode<T> (gm.group (1)));
+			lastEnd = gm.end ();
+		}
+
+		if (lastEnd != commentFragment.length ()) {
+			String frag = commentFragment.substring (lastEnd, commentFragment.length ());
+			if (frag.trim ().length () > 0) {
 				parseParagraphs (ast, frag);
 			}
 		}
@@ -137,19 +169,80 @@ public class Parser<T> {
 	}
 
 	private void parseParagraph (List<ContentNode<T>> ast, String para, int paragraphSeparatorSize) {
-		Matcher normM = pNorm.matcher (para);
-		para = normM.replaceAll (" ");
+		if (paragraphIsArtefact (para)) {
+			ast.add (new ArtefactNode<T> (para));
+			return ;
+		}
 
-		if (para.length () != 0) {
-			ast.add (new ParagraphNode<T> (para, paragraphSeparatorSize));
+		Matcher normM = pNorm.matcher (para);
+		String paraOut = normM.replaceAll (" ");
+
+		if (paraOut.length () != 0) {
+			ast.add (new ParagraphNode<T> (paraOut, para, paragraphSeparatorSize));
 		}
 	}
 
-	private void parseGLibMessages (List<ContentNode<T>> ast, String para) {
+	private boolean paragraphIsArtefact (String paragraph) {
+		int listElements = 0;
+		int spacedLinesTabs = 0;
+		int spacedLines = 0;
+		int make = 0;
+		int breakEnd = 0;
+		int bash = 0;
+
+		String[] lines = paragraph.split ("\n");
+
+		if (lines.length > PARA_MAX_NEWLINES) {
+			return true;
+		}
 		
+		for (String line : lines) {
+			if (line.length () > 0) {
+				switch (line.charAt (0)) {
+				case '\t':
+					spacedLinesTabs++;
+					break;
+
+				case ' ':
+					spacedLines++;
+					break;
+
+				case 'm':
+					if (line.startsWith ("make[")) {
+						make++;
+					}
+					break;
+
+				case '$':
+					if (line.length () > 1 && line.charAt (1) == ' ') {
+						bash++;
+					}
+					break;
+				}
+
+				
+				if (pLst.matcher (line).matches ()) {
+					listElements++;
+				} else if (pCli.matcher (line).matches ()) {
+					bash++;
+				}
+			}
+
+			if (line.endsWith ("\\")) {
+				breakEnd++;
+			}
+		}
+
+		if (breakEnd > 0 || bash > 0 || make > 0) {			
+			return true;
+		} else if (spacedLines > 0 || spacedLinesTabs > 0) {
+			return (listElements == 0);
+		}
+
+		return false;
 	}
-	
-/*
+
+	/*
 	public static void main (String[] args) {
 		Parser<String> parser = new Parser<String> ();
 		CommentNode<String> ast = parser.parse (""
@@ -174,7 +267,6 @@ public class Parser<T> {
 		+ "here.\");\n"
 		+ "\n"
 		+ "The second message should not be a warning. Please use Report.note () instead.\n"
-
 
 		/*
 		+ "Actually, this is incorrect - those were two different arbitrary orders.\n"
@@ -205,10 +297,13 @@ public class Parser<T> {
 
 			public void visitParagraph (ParagraphNode<String> para) {
 				System.out.println ("PARA " + para.getParagraphSeparatorSize ());
-				System.out.println (" >" + para.getContent ());
+				System.out.println (" (>)" + para.getContent ());
+			}
+			
+			public void visitArtefactNode (ArtefactNode<String> artefact) {
+				System.out.println ("ARTEFACT (" + artefact.getContent ().length () + ")");
 			}
 		});
 	}
-*/
-
+	*/
 }

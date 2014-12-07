@@ -83,13 +83,14 @@ public class SentimentAnalyser<T> {
 		List<CoreMap> sentences = annotation.get (CoreAnnotations.SentencesAnnotation.class);
 		for (CoreMap sentence : sentences) {
 			Tree tree = sentence.get (SentimentCoreAnnotations.AnnotatedTree.class);
+			int sentenceWordCount = tree.getLeaves ().size ();
+
 			// TODO: calculate it instead
 			int predictedClass = RNNCoreAnnotations.getPredictedClass (tree);
 			SimpleMatrix matrix = RNNCoreAnnotations.getPredictions (tree);
 
 			classes[predictedClass]++;
 			
-			int sentenceWordCount = tree.getLeaves ().size ();
 			
 			SentenceSentiment sentiment = new SentenceSentiment (
 				matrix.get (0, 0),

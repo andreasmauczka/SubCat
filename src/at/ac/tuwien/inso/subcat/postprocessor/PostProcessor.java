@@ -235,6 +235,8 @@ public class PostProcessor {
 		steps.put (commentAnalysisStep.getName (), commentAnalysisStep);
 		AccountInterlinkingTask interlinkingTask = new AccountInterlinkingTask ();
 		steps.put (interlinkingTask.getName (), interlinkingTask);
+		_step = new CommitBugInterlinkingTask ();
+		steps.put (_step.getName (), _step);
 
 		Options options = new Options ();
 		options.addOption ("h", "help", false, "Show this options");

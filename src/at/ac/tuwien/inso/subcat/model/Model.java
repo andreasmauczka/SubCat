@@ -155,6 +155,7 @@ public class Model {
 		+ "UNIQUE (project, name)"
 		+ ")";
 
+	// TODO: rename to Severities
 	private static final String SEVERITY_TABLE =
 		"CREATE TABLE IF NOT EXISTS Severity ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -361,7 +362,6 @@ public class Model {
 		+ ")";
 
 	// TODO: Files.touched handler
-	// TODO: creation functions fertig stellen
 	
 	private static final String BUGFIX_COMMIT_TABLE =
 		"CREATE TABLE IF NOT EXISTS BugfixCommit ("
@@ -510,7 +510,7 @@ public class Model {
 		+ " Bugs.identifier,"
 		+ " Identity.id				AS aiId,"
 		+ " Identity.name			AS aiName,"
-		+ " Identity.mail			AS aiName,"
+		+ " Identity.mail			AS aiMail,"
 		+ " Users.id				AS auId,"
 		+ " Users.name				AS auName,"
 		+ " Bugs.component,"
@@ -532,6 +532,41 @@ public class Model {
 		+ "WHERE"
 		+ " Components.project = ?";
 
+
+	private static final String SELECT_BUG = 
+		"SELECT"
+		+ " Bugs.id,"
+		+ " Bugs.identifier,"
+		+ " Identity.id				AS aiId,"
+		+ " Identity.name			AS aiName,"
+		+ " Identity.mail			AS aiMail,"
+		+ " Users.id				AS auId,"
+		+ " Users.name				AS auName,"
+		+ " Bugs.component,"
+		+ " Bugs.title,"
+		+ " Bugs.creation,"
+		+ " Bugs.priority,"
+		+ " Bugs.severity,"
+		+ " Identity.context		AS aiContext,"
+		+ " Components.name,"
+		+ " Priorities.name			AS pName,"
+		+ " Severity.name			AS sName "
+		+ "FROM"
+		+ " Bugs "
+		+ "LEFT JOIN Identities Identity"
+		+ " ON Bugs.identity = Identity.id "
+		+ "LEFT JOIN Users "
+		+ " ON Users.id = Identity.user "
+		+ "JOIN Components"
+		+ " ON Components.id = Bugs.component "
+		+ "JOIN Priorities"
+		+ " ON Priorities.id = Bugs.priority "
+		+ "JOIN Severity"
+		+ " ON Severity.id = Bugs.severity "
+		+ "WHERE"
+		+ " Components.project = ?"
+		+ " AND Bugs.identifier = ?";
+	
 	private static final String SELECT_ALL_CATEGORIES =
 		"SELECT"
 		+ " id,"
@@ -1748,11 +1783,12 @@ public class Model {
 		PreparedStatement stmt = conn.prepareStatement (UPDATE_FILE_NAME);
 		stmt.setString (1, newName);
 		stmt.setInt (2, rename.getFile ().getId ());
+		stmt.executeUpdate();
+
 		stmt.close ();
 
 
-		 stmt = conn.prepareStatement (FILE_RENAME_INSERTION);
-
+		stmt = conn.prepareStatement (FILE_RENAME_INSERTION);
 		stmt.setInt (1, rename.getFile ().getId ());
 		stmt.setInt (2, rename.getCommit ().getId ());
 		stmt.setString (3, rename.getOldName ());
@@ -2430,7 +2466,6 @@ public class Model {
 			Date creation = res.getDate (10);
 			Priority priority = priorities.get (res.getInt (11));
 			Severity severity = severities.get (res.getInt (12));
-//			Category category = categories.get (res.getInt (13));
 	
 			Bug bug = new Bug (id, identifier, identity, component,
 				title, creation, priority, severity);
@@ -2441,6 +2476,50 @@ public class Model {
 		res.close ();
 	}
 
+	public Bug getBug (Project proj, String identifier) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+		assert (identifier != null);
+
+		PreparedStatement stmt = conn.prepareStatement (SELECT_BUG);
+		stmt.setInt (1, proj.getId ());
+		stmt.setString (2, identifier);
+		
+
+		// Execution:
+		ResultSet res = stmt.executeQuery ();
+		if (res.next ()) {
+			int id = res.getInt (1);
+			String title = res.getString (8);
+			Date creation = res.getDate (9);
+
+			User user = null;
+			Identity identity = null;
+			if (res.getInt (2) != 0) {
+				user = userFromResult (res, proj, 5, 6);
+				identity = identityFromResult (res, user, 2, 12, 3, 4);
+			}
+
+			int compId = res.getInt (7);
+			String compName = res.getString (13);
+			Component component = new Component (compId, proj, compName);
+
+			int prioId = res.getInt (10);
+			String prioName = res.getString (14);
+			Priority priority = new Priority (prioId, proj, prioName);
+
+			int sevId = res.getInt (11);
+			String sevName = res.getString (15);
+			Severity severity = new Severity (sevId, proj, sevName);
+			
+			return new Bug (id, identifier, identity, component,
+				title, creation, priority, severity);
+		}
+
+		return null;
+	}
+	
 	private User userFromResult (ResultSet res, Project proj, int idCol, int nameCol) throws SQLException {
 		Integer id = res.getInt (idCol);
 		String name = res.getString (nameCol);

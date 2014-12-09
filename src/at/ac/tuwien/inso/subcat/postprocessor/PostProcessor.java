@@ -241,6 +241,7 @@ public class PostProcessor {
 		Options options = new Options ();
 		options.addOption ("h", "help", false, "Show this options");
 		options.addOption ("d", "db", true, "The database to process (required)");
+		options.addOption ("v", "verbose", false, "Show details");
 		options.addOption ("p", "project", true, "The project ID to process");
 		options.addOption ("P", "list-projects", false, "List all registered projects");
 		options.addOption ("S", "list-processor-steps", false, "List all registered processor steps");
@@ -253,10 +254,12 @@ public class PostProcessor {
 		Settings settings = new Settings ();
 		ModelPool pool = null;
 
+		boolean printTraces = false;
 		CommandLineParser parser = new PosixParser ();
 		
 		try {
 			CommandLine cmd = parser.parse (options, args);
+			printTraces = cmd.hasOption ("verbose");
 
 			if (cmd.hasOption ("help")) {
 				HelpFormatter formatter = new HelpFormatter ();
@@ -409,12 +412,24 @@ public class PostProcessor {
 			processor.process ();
 		} catch (ParseException e) {
 			System.err.println ("Parsing failed: " + e.getMessage ());
+			if (printTraces == true) {
+				e.printStackTrace ();
+			}
 		} catch (ClassNotFoundException e) {
 			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			if (printTraces == true) {
+				e.printStackTrace ();
+			}
 		} catch (SQLException e) {
 			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			if (printTraces == true) {
+				e.printStackTrace ();
+			}
 		} catch (PostProcessorException e) {
 			System.err.println ("Post-Processor Error: " + e.getMessage ());			
+			if (printTraces == true) {
+				e.printStackTrace ();
+			}
 		} finally {
 			if (pool != null) {
 				pool.close ();

@@ -181,6 +181,7 @@ public class MinerRunner {
 		options.addOption (null, "src-account", true, "Source repository account name");
 
 		
+		boolean printTraces = false;
 		Settings settings = new Settings ();
 		ModelPool pool = null;
 
@@ -284,6 +285,7 @@ public class MinerRunner {
 			
 			MinerRunner runner = new MinerRunner (pool, settings);
 			if (cmd.hasOption ("verbose")) {
+				printTraces = true;
 				runner.addListener (new MinerListener () {
 					private Map<Miner, Integer> totals = new HashMap<Miner, Integer> ();
 					
@@ -314,12 +316,24 @@ public class MinerRunner {
 			runner.run ();
 		} catch (ParseException e) {
 			System.err.println ("Parsing failed: " + e.getMessage ());
+			if (printTraces == true) {
+				e.printStackTrace ();
+			}
 		} catch (ClassNotFoundException e) {
 			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			if (printTraces == true) {
+				e.printStackTrace ();
+			}
 		} catch (SQLException e) {
 			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			if (printTraces == true) {
+				e.printStackTrace ();
+			}
 		} catch (MinerException e) {
 			System.err.println ("Mining Error: " + e.getMessage ());
+			if (printTraces == true) {
+				e.printStackTrace ();
+			}
 		} finally {
 			if (pool != null) {
 				pool.close ();

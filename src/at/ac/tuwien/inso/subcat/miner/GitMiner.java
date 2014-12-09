@@ -316,9 +316,22 @@ public class GitMiner extends Miner {
 			FileStats stats = item.getValue ();
 			String path = item.getKey ();
 			
-			// TODO: binary files
-			
 			switch (stats.type) {
+			case COPY:
+				// There is no active copy in git,
+				// use ADD instead.
+
+				/*
+				ManagedFile originalFile = fileCache.get (stats.oldPath);
+				assert (originalFile != null);
+
+				ManagedFile copiedFile = model.addManagedFile (project, path);
+				model.addFileChange (commit, copiedFile, stats.linesAdded, stats.linesRemoved, stats.emptyLinesAdded, stats.emptyLinesRemoved, stats.chunks);
+				model.addIsCopy (copiedFile, commit, originalFile);
+				fileCache.put (path, copiedFile);
+				break;
+				 */
+
 			case ADD:
 				ManagedFile addedFile = model.addManagedFile (project, path);
 				model.addFileChange (commit, addedFile, stats.linesAdded, stats.linesRemoved, stats.emptyLinesAdded, stats.emptyLinesRemoved, stats.chunks);
@@ -336,16 +349,6 @@ public class GitMiner extends Miner {
 				ManagedFile modifiedFile = fileCache.get (path);
 				assert (modifiedFile != null);
 				model.addFileChange (commit, modifiedFile, stats.linesAdded, stats.linesRemoved, stats.emptyLinesAdded, stats.emptyLinesRemoved, stats.chunks);
-				break;
-
-			case COPY:
-				ManagedFile originalFile = fileCache.get (stats.oldPath);
-				assert (originalFile != null);
-
-				ManagedFile copiedFile = model.addManagedFile (project, path);
-				model.addFileChange (commit, copiedFile, stats.linesAdded, stats.linesRemoved, stats.emptyLinesAdded, stats.emptyLinesRemoved, stats.chunks);
-				model.addIsCopy (copiedFile, commit, originalFile);
-				fileCache.put (path, copiedFile);
 				break;
 
 			case RENAME:

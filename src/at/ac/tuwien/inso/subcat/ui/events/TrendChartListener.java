@@ -31,10 +31,10 @@
 package at.ac.tuwien.inso.subcat.ui.events;
 
 import at.ac.tuwien.inso.subcat.config.DropDownConfig;
-import at.ac.tuwien.inso.subcat.ui.widgets.TrendView.ChartIdentifier;
+import at.ac.tuwien.inso.subcat.ui.widgets.TrendChart.ChartIdentifier;
 
 
-public interface TrendViewListener extends TimeChartControlPanelListener {
+public interface TrendChartListener extends TimeChartControlPanelListener {
 
 	public void optionSelected (ChartIdentifier identifier, boolean checked);
 	

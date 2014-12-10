@@ -30,10 +30,10 @@
 
 package at.ac.tuwien.inso.subcat.ui.events;
 
-import at.ac.tuwien.inso.subcat.ui.widgets.DistributionView;
+import at.ac.tuwien.inso.subcat.ui.widgets.DistributionChart;
 
 
-public interface DistributionViewListener extends TimeChartControlPanelListener {
+public interface DistributionChartListener extends TimeChartControlPanelListener {
 
-	public void optionChanged (DistributionView.ChartIdentifier identifier);
+	public void optionChanged (DistributionChart.ChartIdentifier identifier);
 }

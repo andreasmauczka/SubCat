@@ -52,7 +52,7 @@ import org.jfree.experimental.chart.swt.ChartComposite;
 import at.ac.tuwien.inso.subcat.model.PieChartData;
 
 
-public class PieChartView extends Composite {
+public class PieChart extends Composite {
 
 	//
 	// Helper:
@@ -185,7 +185,7 @@ public class PieChartView extends Composite {
 	// Public API:
 	//
 	
-	public PieChartView (Composite parent, int style) {
+	public PieChart (Composite parent, int style) {
 		super (parent, style);
 
 		setLayout (new GridLayout (2, true));

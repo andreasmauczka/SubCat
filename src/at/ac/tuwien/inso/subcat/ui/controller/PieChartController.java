@@ -39,12 +39,12 @@ import at.ac.tuwien.inso.subcat.config.PieChartGroupConfig;
 import at.ac.tuwien.inso.subcat.config.SemanticException;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.PieChartData;
-import at.ac.tuwien.inso.subcat.ui.widgets.PieChartView;
+import at.ac.tuwien.inso.subcat.ui.widgets.PieChart;
 
 
 public class PieChartController extends ChartController {
 
-	public PieChartController(Model model, PieChartView view, PieChartGroupConfig groupConfig, List<String> flags, ViewController viewController) {
+	public PieChartController(Model model, PieChart view, PieChartGroupConfig groupConfig, List<String> flags, ViewController viewController) {
 		super(model, viewController);
 
 		assert (model != null);

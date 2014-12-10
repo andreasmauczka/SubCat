@@ -70,14 +70,14 @@ import at.ac.tuwien.inso.subcat.model.DistributionChartConfigData;
 import at.ac.tuwien.inso.subcat.model.DistributionChartData;
 import at.ac.tuwien.inso.subcat.model.DistributionChartOptionConfigData;
 import at.ac.tuwien.inso.subcat.model.DropDownData;
-import at.ac.tuwien.inso.subcat.ui.events.DistributionViewListener;
+import at.ac.tuwien.inso.subcat.ui.events.DistributionChartListener;
 
 
-public class DistributionView extends Composite {
+public class DistributionChart extends Composite {
 	private TimeChartControlPanel<SelectedChart> timeChart;
 	private ScrolledComposite scrolledComposite;
 	private Composite optionComposite;
-	private LinkedList<DistributionViewListener> listeners;
+	private LinkedList<DistributionChartListener> listeners;
 	private LinkedList<ChartIdentifier> identifiers;
 
 	private DrawingSupplier drawingSupplier;
@@ -146,10 +146,10 @@ public class DistributionView extends Composite {
 		}
 	}
 	
-	public DistributionView (Composite parent, int style) {
+	public DistributionChart (Composite parent, int style) {
 		super (parent, style);
 
-		listeners = new LinkedList<DistributionViewListener> ();
+		listeners = new LinkedList<DistributionChartListener> ();
 		identifiers = new LinkedList<ChartIdentifier> ();
 		initCharts ();
 		
@@ -188,7 +188,7 @@ public class DistributionView extends Composite {
 				ChartIdentifier identifier = (ChartIdentifier) combo.getData ("identifier");
 				assert (identifier != null);
 
-				for (DistributionViewListener listener : listeners) {
+				for (DistributionChartListener listener : listeners) {
 					listener.optionChanged (identifier);
 				}
 			}
@@ -458,14 +458,14 @@ public class DistributionView extends Composite {
 	// Listeners:
 	//
 	
-	public void addDistributionViewListener (DistributionViewListener listener) {
+	public void addDistributionViewListener (DistributionChartListener listener) {
 		assert (listener != null);
 
 		this.timeChart.addPanelListener (listener);
 		this.listeners.add (listener);
 	}
 	
-	public void removeDistributionViewListener (DistributionViewListener listener) {
+	public void removeDistributionViewListener (DistributionChartListener listener) {
 		assert (listener != null);
 
 		this.timeChart.removePanelListener (listener);

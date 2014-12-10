@@ -67,11 +67,11 @@ import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.ui.controller.DistributionChartController;
 import at.ac.tuwien.inso.subcat.ui.controller.PieChartController;
-import at.ac.tuwien.inso.subcat.ui.controller.TrendViewController;
+import at.ac.tuwien.inso.subcat.ui.controller.TrendChartController;
 import at.ac.tuwien.inso.subcat.ui.controller.ViewController;
-import at.ac.tuwien.inso.subcat.ui.widgets.DistributionView;
-import at.ac.tuwien.inso.subcat.ui.widgets.PieChartView;
-import at.ac.tuwien.inso.subcat.ui.widgets.TrendView;
+import at.ac.tuwien.inso.subcat.ui.widgets.DistributionChart;
+import at.ac.tuwien.inso.subcat.ui.widgets.PieChart;
+import at.ac.tuwien.inso.subcat.ui.widgets.TrendChart;
 
 
 public class ViewFactory {
@@ -133,7 +133,7 @@ public class ViewFactory {
 			ScrolledComposite scroll = new ScrolledComposite (folder, SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL);
 			scroll.setLayout (new FillLayout ());
 
-			PieChartView view = new PieChartView (scroll, SWT.NONE);
+			PieChart view = new PieChart (scroll, SWT.NONE);
 			new PieChartController (model, view, groupConfig, flags, viewController);
 
 			scroll.setExpandHorizontal(true);
@@ -156,8 +156,8 @@ public class ViewFactory {
 			TabItem page = new TabItem (folder, SWT.NONE);
 			page.setText (groupConfig.getName ());
 
-			TrendView view = new TrendView (folder, SWT.NONE);
-			view.addTrendViewListener (new TrendViewController (model, flags, view, groupConfig, viewController));
+			TrendChart view = new TrendChart (folder, SWT.NONE);
+			view.addTrendViewListener (new TrendChartController (model, flags, view, groupConfig, viewController));
 			page.setControl (view);
 		}
 
@@ -173,7 +173,7 @@ public class ViewFactory {
 			TabItem page = new TabItem (folder, SWT.NONE);
 			page.setText (config.getName ());
 
-			DistributionView view = new DistributionView (folder, SWT.NONE);
+			DistributionChart view = new DistributionChart (folder, SWT.NONE);
 			view.addDistributionViewListener (new DistributionChartController (model, flags, view, config, viewController));
 			page.setControl (view);
 		}

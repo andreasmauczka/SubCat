@@ -69,12 +69,12 @@ import at.ac.tuwien.inso.subcat.model.DropDownData;
 import at.ac.tuwien.inso.subcat.model.OptionListConfigData;
 import at.ac.tuwien.inso.subcat.model.TrendChartConfigData;
 import at.ac.tuwien.inso.subcat.model.TrendChartData;
-import at.ac.tuwien.inso.subcat.ui.events.TrendViewListener;
+import at.ac.tuwien.inso.subcat.ui.events.TrendChartListener;
 
 
-public class TrendView extends Composite {
-	private LinkedList<TrendViewListener> listeners
-		= new LinkedList<TrendViewListener> ();
+public class TrendChart extends Composite {
+	private LinkedList<TrendChartListener> listeners
+		= new LinkedList<TrendChartListener> ();
 	
 	private TimeChartControlPanel<SelectedChart> timeChart;
 	private CategoryPlot trendPlot;
@@ -155,7 +155,7 @@ public class TrendView extends Composite {
 	// GUI:
 	//
 
-	public TrendView (Composite parent, int style) {
+	public TrendChart (Composite parent, int style) {
 		super (parent, style);
 		initCharts ();
 
@@ -211,7 +211,7 @@ public class TrendView extends Composite {
 				}
 
 
-				for (TrendViewListener listener : listeners) {
+				for (TrendChartListener listener : listeners) {
 					listener.optionSelected (boxData, checked);
 				}
 			}
@@ -230,7 +230,7 @@ public class TrendView extends Composite {
 				assert (data != null);
 				DropDownConfig config = data.getConfig ();
 
-				for (TrendViewListener listener : listeners) {
+				for (TrendChartListener listener : listeners) {
 					listener.comboChanged (config);
 				}
 			}
@@ -491,14 +491,14 @@ public class TrendView extends Composite {
 	// Listeners:
 	//
 	
-	public void addTrendViewListener (TrendViewListener listener) {
+	public void addTrendViewListener (TrendChartListener listener) {
 		assert (listener != null);
 
 		this.timeChart.addPanelListener (listener);
 		this.listeners.add (listener);
 	}
 	
-	public void removeTrendViewListener (TrendViewListener listener) {
+	public void removeTrendViewListener (TrendChartListener listener) {
 		assert (listener != null);
 
 		this.timeChart.removePanelListener (listener);

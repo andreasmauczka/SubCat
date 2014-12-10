@@ -46,16 +46,16 @@ import at.ac.tuwien.inso.subcat.config.TrendChartPlotConfig;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.TrendChartConfigData;
 import at.ac.tuwien.inso.subcat.model.TrendChartData;
-import at.ac.tuwien.inso.subcat.ui.events.TrendViewListener;
-import at.ac.tuwien.inso.subcat.ui.widgets.TrendView;
-import at.ac.tuwien.inso.subcat.ui.widgets.TrendView.ChartIdentifier;
+import at.ac.tuwien.inso.subcat.ui.events.TrendChartListener;
+import at.ac.tuwien.inso.subcat.ui.widgets.TrendChart;
+import at.ac.tuwien.inso.subcat.ui.widgets.TrendChart.ChartIdentifier;
 
 
-public class TrendViewController extends ChartController implements TrendViewListener {
-	private TrendView view;
+public class TrendChartController extends ChartController implements TrendChartListener {
+	private TrendChart view;
 
 
-	public TrendViewController (Model model, List<String> flags, TrendView view, TrendChartGroupConfig groupConfig, ViewController viewController) {
+	public TrendChartController (Model model, List<String> flags, TrendChart view, TrendChartGroupConfig groupConfig, ViewController viewController) {
 		super (model, viewController);
 
 		assert (model != null);
@@ -114,7 +114,7 @@ public class TrendViewController extends ChartController implements TrendViewLis
 
 	@Override
 	public void chartSelectionChanged () {
-		TrendView.SelectedChart chartType = view.getSelectedChart ();
+		TrendChart.SelectedChart chartType = view.getSelectedChart ();
 		JFreeChart chart = view.createChart (chartType);
 		view.setChart (chart);
 	}

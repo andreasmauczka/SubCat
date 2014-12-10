@@ -44,14 +44,14 @@ import at.ac.tuwien.inso.subcat.model.DistributionChartConfigData;
 import at.ac.tuwien.inso.subcat.model.DistributionChartData;
 import at.ac.tuwien.inso.subcat.model.DropDownData;
 import at.ac.tuwien.inso.subcat.model.Model;
-import at.ac.tuwien.inso.subcat.ui.events.DistributionViewListener;
-import at.ac.tuwien.inso.subcat.ui.widgets.DistributionView;
+import at.ac.tuwien.inso.subcat.ui.events.DistributionChartListener;
+import at.ac.tuwien.inso.subcat.ui.widgets.DistributionChart;
 
 
-public class DistributionChartController extends ChartController implements DistributionViewListener {
-	private DistributionView view;
+public class DistributionChartController extends ChartController implements DistributionChartListener {
+	private DistributionChart view;
 	
-	public DistributionChartController (Model model, List<String> flags, DistributionView view, DistributionChartConfig config, ViewController viewController) {
+	public DistributionChartController (Model model, List<String> flags, DistributionChart view, DistributionChartConfig config, ViewController viewController) {
 		super (model, viewController);
 
 		assert (model != null);
@@ -74,7 +74,7 @@ public class DistributionChartController extends ChartController implements Dist
 			DistributionChartConfigData configData =  model.getDistributionChartData (config, vars);
 			view.addConfiguration (configData, flags);
 
-			for (DistributionView.ChartIdentifier identifier : view.getIdentifiers ()) {
+			for (DistributionChart.ChartIdentifier identifier : view.getIdentifiers ()) {
 				drawLine (identifier);
 			}
 		} catch (SemanticException e) {
@@ -89,7 +89,7 @@ public class DistributionChartController extends ChartController implements Dist
 
 	@Override
 	public void timeSelectionChanged () {
-		for (DistributionView.ChartIdentifier identifier : view.getIdentifiers ()) {
+		for (DistributionChart.ChartIdentifier identifier : view.getIdentifiers ()) {
 			try {
 				view.removeData (identifier);
 				drawLine (identifier);
@@ -110,13 +110,13 @@ public class DistributionChartController extends ChartController implements Dist
 
 	@Override
 	public void chartSelectionChanged () {
-		DistributionView.SelectedChart chartType = view.getSelectedChart ();
+		DistributionChart.SelectedChart chartType = view.getSelectedChart ();
 		JFreeChart chart = view.createChart (chartType);
 		view.setChart (chart);
 	}
 
 	@Override
-	public void optionChanged (DistributionView.ChartIdentifier identifier) {
+	public void optionChanged (DistributionChart.ChartIdentifier identifier) {
 		assert (identifier != null);
 
 		try {
@@ -131,7 +131,7 @@ public class DistributionChartController extends ChartController implements Dist
 		}
 	}
 	
-	private void drawLine (DistributionView.ChartIdentifier identifier) throws SemanticException, SQLException {
+	private void drawLine (DistributionChart.ChartIdentifier identifier) throws SemanticException, SQLException {
 		assert (identifier != null);
 
 		Map<String, Object> vars = getVariables (identifier);
@@ -142,7 +142,7 @@ public class DistributionChartController extends ChartController implements Dist
 		view.addData (identifier, data);
 	}
 
-	private Map<String, Object> getVariables (DistributionView.ChartIdentifier identifier) {
+	private Map<String, Object> getVariables (DistributionChart.ChartIdentifier identifier) {
 		assert (identifier != null);
 
 		Map<String, Object> map = viewController.getVariables ();

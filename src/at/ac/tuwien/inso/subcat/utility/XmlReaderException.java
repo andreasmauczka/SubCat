@@ -23,6 +23,8 @@
 package at.ac.tuwien.inso.subcat.utility;
 
 public class XmlReaderException extends Exception {
+	private static final long serialVersionUID = -7318397393513049104L;
+
 	public XmlReaderException (String msg) {
 		super (msg);
 	}

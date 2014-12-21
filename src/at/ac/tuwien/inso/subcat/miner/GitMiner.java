@@ -302,11 +302,13 @@ public class GitMiner extends Miner {
 		DiffOutputStream outputStream = new DiffOutputStream ();
 		processDiff (repository, walk, rev, outputStream, fileStats);
 
+		String revision = rev.getId ().getName();
 		int totalLinesAdded = outputStream.getTotalLinesAdded ();
 		int totalLinesRemoved = outputStream.getTotalLinesRemoved ();
 		int fileCount = fileStats.size ();
 
-		Commit commit = model.addCommit (project, author, committer, date, message, fileCount, totalLinesAdded, totalLinesRemoved);
+
+		Commit commit = model.addCommit (revision, project, author, committer, date, message, fileCount, totalLinesAdded, totalLinesRemoved);
 
 		for (Map.Entry<String, FileStats> item : fileStats.entrySet ()) {
 			if (stopped == true) {

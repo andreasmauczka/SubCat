@@ -135,7 +135,7 @@ public class SvnMiner extends Miner {
 	
 	private enum ChangeType {ADD, MODIFY, DELETE, RENAME, REPLACE}
 	
-	private void processCommit (String aAuthor, Date aDate, LinkedHashMap <String, FileStats> pathslist ,String aMsg) throws SQLException, IOException {
+	private void processCommit (String aAuthor, Date aDate, LinkedHashMap <String, FileStats> pathslist ,String aMsg, String revision) throws SQLException, IOException {
 		//TODO: Errorhandling to indicate that the SVN Log is not complete, e.g. Revisions for files are missing to have a complete file history
 		
 		Identity author = resolveIdentity (aAuthor);
@@ -153,7 +153,7 @@ public class SvnMiner extends Miner {
 		assert (date != null || msg != null || pathslist != null);
 		
 		System.out.println ("Commit: " + msg + " Filecount: " + filecount);
-		Commit commit = model.addCommit (project, author, committer, 
+		Commit commit = model.addCommit (revision, project, author, committer, 
 				date, msg, filecount, 0, 0);
 		
 		Map<String,ManagedFile> commitFileCache = new HashMap();
@@ -329,7 +329,7 @@ public void removeBulk(String path, Commit commit) throws SQLException{
 		String msg = parseSingle ("msg");
 		
 		//store the commit in the DBy
-		processCommit (author, date, pathslist, msg);
+		processCommit (author, date, pathslist, msg, revision);
 		
 		reader.expectEnd ("logentry", true);
 	}

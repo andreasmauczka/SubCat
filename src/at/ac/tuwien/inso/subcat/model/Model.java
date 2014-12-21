@@ -283,6 +283,7 @@ public class Model {
 	private static final String COMMIT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Commits ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+		+ "identifier	TEXT								NOT NULL,"
 		+ "project		INT									NOT NULL,"
 		+ "author		INT									NOT NULL,"
 		+ "committer	INT									NOT NULL,"	// TODO: Rename to Pusher
@@ -291,6 +292,7 @@ public class Model {
 		+ "changedFiles INT									NOT NULL,"
 		+ "linesAdded	INT									NOT NULL,"
 		+ "linesRemoved	INT									NOT NULL,"
+		+ "UNIQUE (identifier, project),"
 		+ "FOREIGN KEY(committer) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(author) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
@@ -490,7 +492,8 @@ public class Model {
 		+ " CommitterUser.name			AS cuName,"
 		+ " Commits.changedFiles, "
 		+ " AuthorIdentity.context		AS aiId,"
-		+ " CommitterIdentity.context	AS ciId "
+		+ " CommitterIdentity.context	AS ciId,"
+		+ " Commits.identifier "
 		+ "FROM"
 		+ " Commits "
 		+ "LEFT JOIN Identities AuthorIdentity"
@@ -852,8 +855,8 @@ public class Model {
 
 	private static final String COMMIT_INSERTION =
 		"INSERT INTO Commits"
-		+ "(project, author, committer, date, title, linesAdded, linesRemoved, changedFiles)"
-		+ "VALUES (?,?,?,?,?,?,?,?)";
+		+ "(project, author, committer, date, title, linesAdded, linesRemoved, changedFiles, identifier)"
+		+ "VALUES (?,?,?,?,?,?,?,?,?)";
 
 	private static final String BUGFIX_COMMIT_INSERTION =
 		"INSERT INTO BugfixCommit"
@@ -1006,7 +1009,10 @@ public class Model {
 		+ "(SELECT cmnt.id FROM Comments cmnt, Bugs bg, Components cmp "
 		+ "WHERE cmnt.bug = bg.id AND bg.component = cmp.id AND cmp.project = ?)";
 
+	private static final String DELETE_BUGFIX_COMMITS =
+		"DELETE FROM BugfixCommit WHERE commitId IN (SELECT id FROM Commits c WHERE project = ?)";
 	
+
 	private ModelPool pool;
 	private Connection conn;
 
@@ -1648,13 +1654,13 @@ public class Model {
 	}
 
 		
-	public Commit addCommit (Project project, Identity author,
+	public Commit addCommit (String identifier, Project project, Identity author,
 			Identity committer, Date date, String title, int changedFiles,
 			int changedLines, int linesRemoved)
 		throws SQLException
 	{
-		Commit commit = new Commit (null, project, author,
-				committer, date, title, changedFiles,
+		Commit commit = new Commit (null, identifier, project,
+				author, committer, date, title, changedFiles,
 				changedLines, linesRemoved);
 		add (commit);
 		return commit;
@@ -1679,6 +1685,7 @@ public class Model {
 		stmt.setInt (6, commit.getLinesAdded ());
 		stmt.setInt (7, commit.getLinesRemoved ());
 		stmt.setInt (8, commit.getChangedFiles ());
+		stmt.setString (9, commit.getIdentifier ());
 		stmt.executeUpdate();
 
 		commit.setId (getLastInsertedId (stmt));
@@ -1851,6 +1858,16 @@ public class Model {
 		pool.emitBugfixCommitAdded (bugfix);
 	}
 
+	public void removeBugfixCommits (Project project) throws SQLException {
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUGFIX_COMMITS);
+		stmt.setInt (1, project.getId ());
+		stmt.executeUpdate();
+		stmt.close ();		
+	}
+	
 	private void addSentenceSentiments (int blockId, List<SentenceSentiment> sentences) throws SQLException {
 		assert (blockId >= 0);
 		assert (sentences != null);
@@ -1956,6 +1973,7 @@ public class Model {
 		stmt.setInt (17, sentiment.getWordCount ());
 		stmt.setInt (18, sentiment.getSentenceCount ());
 		stmt.executeUpdate();
+
 		int newId = getLastInsertedId (stmt);
 		stmt.close ();
 
@@ -1987,8 +2005,7 @@ public class Model {
 		stmt = conn.prepareStatement (DELETE_SENTIMENTS);
 		stmt.setInt (1, project.getId ());
 		stmt.executeUpdate();
-		stmt.close ();		
-
+		stmt.close ();
 	}
 
 
@@ -2426,7 +2443,9 @@ public class Model {
 			User committerUser = userFromResult (res, proj, 14, 15);
 			Identity committer = identityFromResult (res, committerUser, 11, 18, 12, 13);
 			Integer changedFiles = res.getInt (14);
-			Commit commit = new Commit (id, proj, author, committer, date, title, changedFiles, linesAdded, linesRemoved);
+			String identifier = res.getString (19);
+		
+			Commit commit = new Commit (id, identifier, proj, author, committer, date, title, changedFiles, linesAdded, linesRemoved);
 			do_next = callback.processResult (commit);
 		}
 	

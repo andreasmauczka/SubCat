@@ -232,6 +232,7 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 	public void begin (PostProcessor processor) throws PostProcessorException {
 		try {
 			this.model = processor.getModelPool ().getModel ();
+			this.model.removeBugfixCommits (processor.getProject ());
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);
 		}

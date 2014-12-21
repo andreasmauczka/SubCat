@@ -277,7 +277,7 @@ public class MinerRunner {
 				}
 			}
 
-			if (settings.srcRemoteUser != null && settings.bugRepository == null) {
+			if (settings.srcRemoteUser != null && settings.srcRemote == null) {
 				System.err.println ("--src-account should only be used in combination with --src-remote");
 				return ;
 			}

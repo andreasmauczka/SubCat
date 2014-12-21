@@ -152,7 +152,6 @@ public class SvnMiner extends Miner {
 		
 		assert (date != null || msg != null || pathslist != null);
 		
-		System.out.println ("Commit: " + msg + " Filecount: " + filecount);
 		Commit commit = model.addCommit (revision, project, author, committer, 
 				date, msg, filecount, 0, 0);
 		
@@ -166,8 +165,6 @@ public class SvnMiner extends Miner {
 			FileStats stats = item.getValue ();
 			String path = item.getKey ();
 			
-			// TODO: binary files
-			//System.out.println("FILEPATH: " + path);
 			switch (stats.type) {
 			case ADD:
 				ManagedFile addedFile = model.addManagedFile (project, path);
@@ -188,6 +185,11 @@ public class SvnMiner extends Miner {
 						model.addFileDeletion (deletedFile, commit);
 						fileCache.remove (stats.oldPath);
 					}
+					else{
+						System.out.println("WARNING: could not find: " + path + " to delete in Revision" + revision + " @ SvnMiner");
+						//TODO: Add logging code
+					}
+						
 					
 					
 				}
@@ -205,6 +207,10 @@ public class SvnMiner extends Miner {
 							model.addFileChange (commit, modifiedFile, 0, 0, 0, 0, 0);
 							commitFileCache.put(path, modifiedFile);
 						}
+					}
+					else{
+						System.out.println("WARNING: could not find: " + path + " to modify in Revision" + revision + " @ SvnMiner");
+						//TODO: Add logging code
 					}
 				}
 				break;
@@ -316,7 +322,7 @@ public void removeBulk(String path, Commit commit) throws SQLException{
 	private void parseLogentry () throws XmlReaderException, ParseException, IOException, SQLException {
 		
 		String revision = reader.getAttribute ("revision");
-		System.out.println ("REVISION " + revision);
+		
 		reader.acceptStart ("logentry", true);
 		
 		//<author> might be omitted, e.g. during cvs2svn migration - we map this to anon user

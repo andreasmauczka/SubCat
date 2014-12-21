@@ -178,27 +178,34 @@ public class SvnMiner extends Miner {
 
 			case DELETE:
 				//TODO: Evaluate whether a file may be added and deleted in the same commit and add commitfilecache logic
+				//TODO: Identify reason, why SVN logs sometimes contain modifies and deletes to files that do not exist and are not renamed either
 				if (!stats.isFile){
 					removeBulk (path, commit);
 				}
 				else {
-					ManagedFile deletedFile = fileCache.get (path);
-					assert (deletedFile != null);
-					model.addFileDeletion (deletedFile, commit);
-					fileCache.remove (stats.oldPath);
+					if(fileCache.get (path) != null){
+						ManagedFile deletedFile = fileCache.get (path);
+						model.addFileDeletion (deletedFile, commit);
+						fileCache.remove (stats.oldPath);
+					}
+					
 					
 				}
 								
 				break;
 
 			case MODIFY:
-				ManagedFile modifiedFile = fileCache.get (path);
-				assert (modifiedFile != null);
-							
-				//Check if file exists in the commit already and skip the file, if it does
-				if (!commitFileCache.containsKey(path)){
-					model.addFileChange (commit, modifiedFile, 0, 0, 0, 0, 0);
-					commitFileCache.put(path, modifiedFile);
+				if (stats.isFile){
+					//TODO: Identify reason, why SVN logs sometimes contain modifies and deletes to files that do not exist and are not renamed either
+					if(fileCache.get (path) != null){
+						ManagedFile modifiedFile = fileCache.get (path);
+								
+						//Check if file exists in the commit already and skip the file, if it does
+						if (!commitFileCache.containsKey(path)){
+							model.addFileChange (commit, modifiedFile, 0, 0, 0, 0, 0);
+							commitFileCache.put(path, modifiedFile);
+						}
+					}
 				}
 				break;
 

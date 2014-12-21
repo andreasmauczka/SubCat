@@ -186,7 +186,7 @@ public class SvnMiner extends Miner {
 						fileCache.remove (stats.oldPath);
 					}
 					else{
-						System.out.println("WARNING: could not find: " + path + " to delete in Revision" + revision + " @ SvnMiner");
+						System.out.println("WARNING: could not find: " + path + " to delete in Revision " + revision + " @ SvnMiner");
 						//TODO: Add logging code
 					}
 						
@@ -209,7 +209,7 @@ public class SvnMiner extends Miner {
 						}
 					}
 					else{
-						System.out.println("WARNING: could not find: " + path + " to modify in Revision" + revision + " @ SvnMiner");
+						System.out.println("WARNING: could not find: " + path + " to modify in Revision " + revision + " @ SvnMiner");
 						//TODO: Add logging code
 					}
 				}

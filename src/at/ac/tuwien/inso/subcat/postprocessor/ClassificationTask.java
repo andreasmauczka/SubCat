@@ -45,7 +45,9 @@ public class ClassificationTask extends PostProcessorTask {
 				Class cl = classifier.classify (_document);
 				
 				Category category = commitCategories.get (dict).get (cl);
-				model.addCommitCategory (commit, category);
+				if (category != null) {
+					model.addCommitCategory (commit, category);
+				}
 			}
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);
@@ -72,7 +74,9 @@ public class ClassificationTask extends PostProcessorTask {
 				Class cl = classifier.classify (_document);
 
 				Category category = bugCategories.get (dict).get (cl);
-				model.addBugCategory (bug, category);
+				if (category != null) {
+					model.addBugCategory (bug, category);
+				}
 			}
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);

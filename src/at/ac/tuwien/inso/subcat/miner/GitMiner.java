@@ -343,9 +343,11 @@ public class GitMiner extends Miner {
 
 			case DELETE:
 				ManagedFile deletedFile = fileCache.get (path);
-				assert (deletedFile != null);
-				model.addFileDeletion (deletedFile, commit);
-				fileCache.remove (stats.oldPath);				
+				// Merge handling
+				if (deletedFile != null) {
+					model.addFileDeletion (deletedFile, commit);
+					fileCache.remove (stats.oldPath);
+				}
 				break;
 
 			case MODIFY:
@@ -358,10 +360,8 @@ public class GitMiner extends Miner {
 				ManagedFile renamedFile = fileCache.get (stats.oldPath);
 				// E.g. on merges after a rename.
 				if (renamedFile != null) {
-					assert (renamedFile != null);
 					model.addFileRename (renamedFile, commit, stats.oldPath, path);
 					fileCache.put (path, renamedFile);
-					fileCache.remove (stats.oldPath);
 				}
 				break;
 	

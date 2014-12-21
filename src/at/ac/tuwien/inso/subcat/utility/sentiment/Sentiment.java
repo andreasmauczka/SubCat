@@ -77,7 +77,7 @@ public class Sentiment<T> extends SentimentAggregate<T> {
 			neutralSum += sent.neutralMean * sentCount;
 			somewhatNegativeSum += sent.somewhatNegativeMean * sentCount;
 			negativeSum += sent.negativeMean * sentCount;
-
+			
 			positiveWSum += sent.positiveWMean * sentWord;
 			somewhatPositiveWSum += sent.somewhatPositiveWMean * sentWord;
 			neutralWSum += sent.neutralWMean * sentWord;
@@ -85,18 +85,35 @@ public class Sentiment<T> extends SentimentAggregate<T> {
 			negativeWSum += sent.negativeWMean * sentWord;			
 		}
 
-		this.positiveMean = positiveSum / sentences;
-		this.somewhatPositiveMean = somewhatPositiveSum / sentences;
-		this.neutralMean = neutralSum / sentences;
-		this.somewhatNegativeMean = somewhatNegativeSum / sentences;
-		this.negativeMean = negativeSum / sentences;
+		if (sentences > 0) {
+			this.positiveMean = positiveSum / sentences;
+			this.somewhatPositiveMean = somewhatPositiveSum / sentences;
+			this.neutralMean = neutralSum / sentences;
+			this.somewhatNegativeMean = somewhatNegativeSum / sentences;
+			this.negativeMean = negativeSum / sentences;
+		} else {
+			this.positiveMean = 0;
+			this.somewhatPositiveMean = 0;
+			this.neutralMean = 0;
+			this.somewhatNegativeMean = 0;
+			this.negativeMean = 0;
+		}
 
-		this.positiveWMean = positiveWSum / words;
-		this.somewhatPositiveWMean = somewhatPositiveWSum / words;
-		this.neutralWMean = neutralWSum / words;
-		this.somewhatNegativeWMean = somewhatNegativeWSum / words;
-		this.negativeWMean = negativeWSum / words;
-
+		
+		if (words > 0) {
+			this.positiveWMean = positiveWSum / words;
+			this.somewhatPositiveWMean = somewhatPositiveWSum / words;
+			this.neutralWMean = neutralWSum / words;
+			this.somewhatNegativeWMean = somewhatNegativeWSum / words;
+			this.negativeWMean = negativeWSum / words;
+		} else {
+			this.positiveWMean = 0;
+			this.somewhatPositiveWMean = 0;
+			this.neutralWMean = 0;
+			this.somewhatNegativeWMean = 0;
+			this.negativeWMean = 0;
+		}
+		
 		this.blocks = lst;
 		this.classes = classes;
 		this.words = words;

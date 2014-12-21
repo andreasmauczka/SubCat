@@ -118,18 +118,35 @@ public class SentimentAnalyser<T> {
 			sentiments.add (sentiment);
 		}
 
-		double positiveMean = positiveSum / sentiments.size ();
-		double somewhatPositiveMean = somewhatPositiveSum / sentiments.size ();
-		double neutralMean = neutralSum / sentiments.size ();
-		double somewhatNegativeMean = somewhatNegativeSum / sentiments.size ();
-		double negativeMean = negativeSum / sentiments.size ();
+		double positiveMean = 0;
+		double somewhatPositiveMean = 0;
+		double neutralMean = 0;
+		double somewhatNegativeMean = 0;
+		double negativeMean = 0;
 
-		double positiveWMean = positiveWSum / words;
-		double somewhatPositiveWMean = somewhatPositiveWSum / words;
-		double neutralWMean = neutralWSum / words;
-		double somewhatNegativeWMean = somewhatNegativeWSum / words;
-		double negativeWMean = negativeWSum / words;
+		double positiveWMean = 0;
+		double somewhatPositiveWMean = 0;
+		double neutralWMean = 0;
+		double somewhatNegativeWMean = 0;
+		double negativeWMean = 0;
 
+
+		if (sentiments.size () > 0) {
+			positiveMean = positiveSum / sentiments.size ();
+			somewhatPositiveMean = somewhatPositiveSum / sentiments.size ();
+			neutralMean = neutralSum / sentiments.size ();
+			somewhatNegativeMean = somewhatNegativeSum / sentiments.size ();
+			negativeMean = negativeSum / sentiments.size ();
+		}
+
+		if (words > 0) {
+			positiveWMean = positiveWSum / words;
+			somewhatPositiveWMean = somewhatPositiveWSum / words;
+			neutralWMean = neutralWSum / words;
+			somewhatNegativeWMean = somewhatNegativeWSum / words;
+			negativeWMean = negativeWSum / words;
+		}
+		
 		//System.out.println ("n:" + positiveMean  + "," +  somewhatPositiveMean  + "," + neutralMean + "," + somewhatNegativeMean + "," + negativeMean);
 		//System.out.println ("w:" + positiveWMean  + "," +  somewhatPositiveWMean  + "," + neutralWMean + "," + somewhatNegativeWMean + "," + negativeWMean);
 

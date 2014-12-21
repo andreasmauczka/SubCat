@@ -317,9 +317,10 @@ public class GitMiner extends Miner {
 			
 			FileStats stats = item.getValue ();
 			String path = item.getKey ();
-			
+
 			switch (stats.type) {
 			case COPY:
+
 				// There is no active copy in git,
 				// use ADD instead.
 
@@ -355,10 +356,13 @@ public class GitMiner extends Miner {
 
 			case RENAME:
 				ManagedFile renamedFile = fileCache.get (stats.oldPath);
-				assert (renamedFile != null);
-				model.addFileRename (renamedFile, commit, stats.oldPath, path);
-				fileCache.put (path, renamedFile);
-				fileCache.remove (stats.oldPath);
+				// E.g. on merges after a rename.
+				if (renamedFile != null) {
+					assert (renamedFile != null);
+					model.addFileRename (renamedFile, commit, stats.oldPath, path);
+					fileCache.put (path, renamedFile);
+					fileCache.remove (stats.oldPath);
+				}
 				break;
 	
 			default:

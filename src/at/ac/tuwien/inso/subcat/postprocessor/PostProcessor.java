@@ -52,6 +52,7 @@ import at.ac.tuwien.inso.subcat.model.BugHistory;
 import at.ac.tuwien.inso.subcat.model.Comment;
 import at.ac.tuwien.inso.subcat.model.Commit;
 import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.Model.Stats;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.ObjectCallback;
 import at.ac.tuwien.inso.subcat.model.Project;
@@ -62,6 +63,8 @@ import at.ac.tuwien.inso.subcat.utility.phonetic.HashFunc;
 
 
 public class PostProcessor {
+	private List<PostProcessorListener> listener = new LinkedList<PostProcessorListener> ();
+	
 	private List<PostProcessorTask> beginTasks;
 	private List<PostProcessorTask> commitTasks;
 	private List<PostProcessorTask> bugTasks;
@@ -86,6 +89,18 @@ public class PostProcessor {
 		this.proj = proj;
 	}
 
+	public void addListener (PostProcessorListener listener) {
+		assert (listener != null);
+		
+		this.listener.add(listener);
+	}
+
+	public void removeListener (PostProcessorListener listener) {
+		assert (listener != null);
+
+		this.listener.remove (listener);
+	}
+	
 	public ModelPool getModelPool () {
 		return pool;
 	}
@@ -130,6 +145,7 @@ public class PostProcessor {
 		Runnable runnable = new Runnable () {
 			@Override
 			public void run () {
+				
 				Model model = null;
 				try {
 					model = pool.getModel ();
@@ -138,7 +154,7 @@ public class PostProcessor {
 					if (commitTasks.size () > 0) {
 						model.foreachCommit (proj, new ObjectCallback<Commit> () {
 							@Override
-							public boolean processResult (Commit item) throws SQLException, Exception {
+							public boolean processResult (Commit item) throws SQLException, Exception {								
 								emitCommit (item);
 								return !stopped;
 							}				
@@ -201,6 +217,10 @@ public class PostProcessor {
 
 			task.commit (this, commit);
 		}
+
+		for (PostProcessorListener l : listener) {
+			l.commit (this);
+		}
 	}
 
 	private void emitBug (Bug bug, List<BugHistory> history, List<Comment> comments) throws PostProcessorException {
@@ -210,6 +230,10 @@ public class PostProcessor {
 			}
 
 			task.bug (this, bug, history, comments);
+		}
+
+		for (PostProcessorListener l : listener) {
+			l.bug (this);
 		}
 	}
 
@@ -322,12 +346,14 @@ public class PostProcessor {
 			Project project = model.getProject (projId);
 			model.close ();
 
+
+			
 			if (project == null) {
 				System.err.println ("Invalid project ID");
 				return ;
 			}
 			
-			
+
 			if (cmd.hasOption ("bug-dictionary")) {
 					DictionaryParser dp = new DictionaryParser ();
 
@@ -409,6 +435,30 @@ public class PostProcessor {
 			} else {
 				processor.register (steps.values ());
 			}
+
+			if (printTraces == true) {
+				model = pool.getModel ();
+				final Stats stats = model.getStats (project);
+				model.close ();
+
+				processor.addListener(new PostProcessorListener () {
+					private int commitCount = 0;
+					private int bugCount = 0;
+
+					@Override
+					public void commit(PostProcessor proc) {
+						commitCount++;
+						System.out.println("Commit " + commitCount + "/" + stats.commitCount);
+					}
+
+					@Override
+					public void bug(PostProcessor proc) {
+						bugCount++;
+						System.out.println("Bug " + bugCount + "/" + stats.bugCount);
+					}
+				});
+			}
+
 			processor.process ();
 		} catch (ParseException e) {
 			System.err.println ("Parsing failed: " + e.getMessage ());

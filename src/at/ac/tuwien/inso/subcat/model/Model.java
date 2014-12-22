@@ -751,7 +751,13 @@ public class Model {
 		+ " AND u.project = ?"
 		+ " AND a.identifier = ?";
 
+	private static final String SELECT_COUNTS =
+		"SELECT "
+		+ "(SELECT COUNT(*) FROM Commits WHERE project = ?),"
+		+ "(SELECT COUNT(*) FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
+
+	
 	//
 	// Insertions:
 	//
@@ -1011,7 +1017,18 @@ public class Model {
 
 	private static final String DELETE_BUGFIX_COMMITS =
 		"DELETE FROM BugfixCommit WHERE commitId IN (SELECT id FROM Commits c WHERE project = ?)";
+
 	
+	public static class Stats {
+		public final int commitCount;
+		public final int bugCount;
+
+		public Stats (int commitCount, int bugCount) {
+			this.commitCount = commitCount;
+			this.bugCount = bugCount;
+		}
+	}
+
 
 	private ModelPool pool;
 	private Connection conn;
@@ -1059,7 +1076,25 @@ public class Model {
 	//
 	// Data Insertion API:
 	//
+	
+	public Stats getStats (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
 
+		PreparedStatement stmt = conn.prepareStatement (SELECT_COUNTS);
+		stmt.setInt (1, proj.getId ());
+		stmt.setInt (2, proj.getId ());
+
+		ResultSet res = stmt.executeQuery ();
+		res.next ();
+
+		int commitCount = res.getInt (1);
+		int bugCount = res.getInt (2);
+		stmt.close ();
+
+		return new Stats (commitCount, bugCount);
+	}
 	
 	public void addFlag (Project proj, String flag) throws SQLException {
 		assert (conn != null);

@@ -30,7 +30,6 @@
 
 package at.ac.tuwien.inso.subcat.utility.classifier;
 
-
 import java.util.Iterator;
 import java.util.List;
 
@@ -56,11 +55,19 @@ public class Classifier {
 		}
 
 		// Absolute categories:
+		Class abs = null;
 		for (Class cl : dict.getAbsoluteClasses ()) {
 			if (classifyAbsolute (cl, document)) {
-				return cl;
+				if (abs == null || cl.getWeight () > abs.getWeight ()) {
+					abs = cl;
+				}
 			}
 		}
+
+		if (abs != null) {
+			return abs;
+		}
+
 
 		// Relative categories:
 		ClassScore tmp = null;
@@ -68,11 +75,15 @@ public class Classifier {
 		for (Class cl : dict.getRelativeClasses ()) {
 			int score = classifyRelative (cl, document);
 			
-			if (scores != null) {
+			if (scores != null && score > 0) {
 				scores.add (new ClassScore (cl, score));
 			}
 
-			if (tmp == null || score > tmp.score || (score == tmp.score && cl.getWeight () >= tmp.cl.getWeight ())) {
+			if (tmp == null) {
+				if (score > 0) {
+					tmp = new ClassScore (cl, score);
+				}
+			} else if (score > tmp.score || (score == tmp.score && cl.getWeight () >= tmp.cl.getWeight ())) {
 				tmp = new ClassScore (cl, score);
 			}
 		}
@@ -114,7 +125,7 @@ public class Classifier {
 		return false;
 	}
 
-	/*
+	/** /
 	public static void main (String[] args) {
 		List<Class> absoluteClasses = new ArrayList<Class> ();
 		List<Class> relativeClasses = new ArrayList<Class> ();
@@ -147,7 +158,7 @@ public class Classifier {
 
 
 		
-		Dictionary dict = new Dictionary (absoluteClasses, relativeClasses);
+		Dictionary dict = new Dictionary ("Name", absoluteClasses, relativeClasses);
 		Classifier classifier = new Classifier (dict);
 
 
@@ -160,7 +171,7 @@ public class Classifier {
 		document.add ("FIRST_SECOND1_1");
 		document.add ("FIRST_SECOND2_1");
 
-		test (1, classifier, document);
+		test (1, classifier, document, "Second");
 
 
 		// Expected Result:
@@ -173,7 +184,7 @@ public class Classifier {
 		document.add ("FIRST_SECOND2_1");
 		document.add ("FIRST3_1");
 
-		test (2, classifier, document);
+		test (2, classifier, document, "First");
 
 
 		// Expected Result:
@@ -186,7 +197,7 @@ public class Classifier {
 		document.add ("FIRST_SECOND2_1");
 		document.add ("FIX_SEC_1");
 
-		test (3, classifier, document);
+		test (3, classifier, document, "SecAbs");
 
 
 		// Expected Result:
@@ -200,7 +211,7 @@ public class Classifier {
 		document.add ("FIX_SEC_1");
 		document.add ("FIX_FIRST_SEC_1");
 
-		test (4, classifier, document);
+		test (4, classifier, document, "SecAbs");
 
 
 		// Expected Result:
@@ -214,7 +225,7 @@ public class Classifier {
 		document.add ("FIX_FST_1");
 		document.add ("FIX_FIRST_SEC_1");
 
-		test (5, classifier, document);
+		test (5, classifier, document, "SecAbs");
 
 
 		// Expected Result:
@@ -227,10 +238,19 @@ public class Classifier {
 		document.add ("FIRST_SECOND2_1");
 		document.add ("FIX_FST_1");
 
-		test (6, classifier, document);
+		test (6, classifier, document, "FirstAbs");
+
+
+		// Expected Result:
+		//   FirstAbs!
+		document = new ArrayList<String> ();
+		document.add ("NA");
+		document.add ("BA");
+
+		test (7, classifier, document, "(null)");
 	}
 
-	private static void test (int id, Classifier classifier, List<String> document) {
+	private static void test (int id, Classifier classifier, List<String> document, String expected) {
 		System.out.println ("------------------------");
 		System.out.println ("Experiment " + id);
 		
@@ -241,7 +261,8 @@ public class Classifier {
 			System.out.println (" * " + ((score.cl == null)? "(null)" : score.cl.getName ()) + "\t" + score.score);
 		}
 
-		System.out.println (" = " + ((cl == null)? "(null)" : cl.getName ()));		
+		System.out.println ("Got:      = " + ((cl == null)? "(null)" : cl.getName ()));
+		System.out.println ("Expected: = " + expected);
 	}
-	*/
+	/ **/
 }

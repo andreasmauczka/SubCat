@@ -36,17 +36,21 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 
+import at.ac.tuwien.inso.subcat.miner.MetaData.ParamType;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
+import at.ac.tuwien.inso.subcat.utility.Reporter;
 
 
 public class MinerRunner {
@@ -55,7 +59,8 @@ public class MinerRunner {
 	private List<MinerListener> listeners = new LinkedList<MinerListener> ();
 	private LinkedList<RunnableMiner> miners = new LinkedList<RunnableMiner> ();
 	
-	private MinerException storedException;
+	private ParameterException storedParameterException;
+	private MinerException storedMinerException;
 
 	private static void init () {
 		if (registeredMiner == null) {
@@ -113,7 +118,7 @@ public class MinerRunner {
 		}
 	}
 
-	public void run () throws MinerException {
+	public void run () throws MinerException, ParameterException {
 		for (RunnableMiner thread : miners) {
 			thread.start ();
 		}
@@ -125,21 +130,36 @@ public class MinerRunner {
 			}
 		}
 
-		if (storedException != null) {
-			throw storedException;
+		if (storedMinerException != null) {
+			throw storedMinerException;
+		}		
+
+		if (storedParameterException != null) {
+			throw storedParameterException;
 		}		
 	}
 
 	synchronized void stop (MinerException e) {
-		if (storedException == null) {
-			storedException = e;
+		if (storedMinerException == null) {
+			storedMinerException = e;
 		}
 
 		for (RunnableMiner miner : this.miners) {
 			miner.interrupt ();
 		}
 	}
-	
+
+
+	synchronized void stop (ParameterException e) {
+		if (storedParameterException == null) {
+			storedParameterException = e;
+		}
+
+		for (RunnableMiner miner : this.miners) {
+			miner.interrupt ();
+		}
+	}
+
 	public synchronized void addListener (MinerListener listener) {
 		assert (listener != null);
 
@@ -163,6 +183,7 @@ public class MinerRunner {
 	public static void main (String[] args) {
 		Options options = new Options ();
 		options.addOption ("h", "help", false, "Show this options");
+		options.addOption ("m", "miner-help", false, "Show miner specific options");
 		options.addOption ("d", "db", true, "The database to process (required)");
 		options.addOption ("v", "verbose", false, "Show details");
 
@@ -174,13 +195,19 @@ public class MinerRunner {
 		options.addOption (null, "bug-enable-untrusted", false, "Accept untrusted certificates");
 		options.addOption (null, "bug-threads", true, "Thread count used in bug miners");
 		options.addOption (null, "bug-cooldown-time", true, "Bug cooldown time");
+		options.addOption (null, "bug-miner-option", true, "Bug miner specific option. Format: <option-name>:value");
+		options.getOption ("bug-miner-option").setArgs(Option.UNLIMITED_VALUES);
 
 		options.addOption (null, "src-path", true, "Local source repository path");
 		options.addOption (null, "src-remote", true, "Remote address");
 		options.addOption (null, "src-passwd", true, "Source repository account password");
 		options.addOption (null, "src-account", true, "Source repository account name");
+		options.addOption (null, "src-miner-option", true, "Source miner specific option. Format: <option-name>:value");
+		options.getOption ("src-miner-option").setArgs(Option.UNLIMITED_VALUES);
 
-		
+		Reporter reporter = new Reporter ();
+		reporter.startTimer ();
+
 		boolean printTraces = false;
 		Settings settings = new Settings ();
 		ModelPool pool = null;
@@ -195,9 +222,23 @@ public class MinerRunner {
 				formatter.printHelp ("postprocessor", options);
 				return ;
 			}
+			
+
+			if (cmd.hasOption ("miner-help")) {
+				init ();
+				for (MetaData meta : registeredMiner) {
+					System.out.println (meta.name ());
+					for (Entry<String, ParamType> opt : meta.getSpecificParams ().entrySet()) {
+						System.out.println ("  - " + opt.getKey() + " (" + opt.getValue() + ")");
+					}
+				}
+				return ;
+			}
+
 
 			if (cmd.hasOption ("db") == false) {
-				System.err.println ("Option --db is required");
+				reporter.error ("miner", "Option --db is required");
+				reporter.printSummary ();
 				return ;
 			}			
 		
@@ -209,14 +250,17 @@ public class MinerRunner {
 
 			
 			if (settings.bugRepository != null && (settings.bugProductName == null || settings.bugTrackerName == null)) {
-				System.err.println ("--bug-repo should only be used in combination with --bug-product and --bug-tracker");
+				reporter.error ("miner", "--bug-repo should only be used in combination with --bug-product and --bug-tracker");
+				reporter.printSummary ();
 				return ;
 			} else if (settings.bugProductName != null && (settings.bugRepository == null || settings.bugTrackerName == null)) {
-				System.err.println ("--bug-product should only be used in combination with --bug-repo and --bug-tracker");
+				reporter.error ("miner", "--bug-product should only be used in combination with --bug-repo and --bug-tracker");
+				reporter.printSummary ();
 				return ;
 			} else if (settings.bugTrackerName != null && (settings.bugRepository == null || settings.bugProductName == null)) {
-				System.err.println ("--bug-tracker should only be used in combination with --bug-repo and --bug-product");
-				return ;					
+				reporter.error ("miner", "--bug-tracker should only be used in combination with --bug-repo and --bug-product");
+				reporter.printSummary ();
+				return ;
 			}
 
 
@@ -225,16 +269,19 @@ public class MinerRunner {
 
 			if (settings.bugLoginPw == null || settings.bugLoginUser == null) {
 				if (settings.bugLoginPw != null) {
-					System.err.println ("--bug-passwd should only be used in combination with --bug-account");
+					reporter.error ("miner", "--bug-passwd should only be used in combination with --bug-account");
+					reporter.printSummary ();
 					return ;
 				} else if (settings.bugLoginUser != null) {
-					System.err.println ("--bug-account should only be used in combination with --bug-passwd");
+					reporter.error ("miner", "--bug-account should only be used in combination with --bug-passwd");
+					reporter.printSummary ();
 					return ;
 				}
 			}
 
 			if (settings.bugLoginUser != null && settings.bugRepository == null) {
-				System.err.println ("--bug-account should only be used in combination with --bug-repo");
+				reporter.error ("post-processor", "--bug-account should only be used in combination with --bug-repo");
+				reporter.printSummary ();
 				return ;
 			}
 
@@ -246,7 +293,8 @@ public class MinerRunner {
 				try {
 					settings.bugThreads = Integer.parseInt (cmd.getOptionValue ("bug-threads"));
 				} catch (Exception e) {
-					System.err.println ("--bug-threads: Invalid parameter type");
+					reporter.error ("miner", "--bug-threads: Invalid parameter type");
+					reporter.printSummary ();
 					return ;
 				}
 			}
@@ -255,7 +303,8 @@ public class MinerRunner {
 				try {
 					settings.bugCooldownTime = Integer.parseInt (cmd.getOptionValue ("bug-cooldown-time"));
 				} catch (Exception e) {
-					System.err.println ("--bug-cooldown-time: Invalid parameter type");
+					reporter.error ("miner", "--bug-cooldown-time: Invalid parameter type");
+					reporter.printSummary ();
 					return ;
 				}
 			}
@@ -269,20 +318,34 @@ public class MinerRunner {
 
 			if (settings.srcRemotePw == null || settings.srcRemoteUser == null) {
 				if (settings.srcRemotePw != null) {
-					System.err.println ("--src-passwd should only be used in combination with --src-account");
+					reporter.error ("miner", "--src-passwd should only be used in combination with --src-account");
+					reporter.printSummary ();
 					return ;
 				} else if (settings.srcRemoteUser != null) {
-					System.err.println ("--src-account should only be used in combination with --src-passwd");
+					reporter.error ("miner", "--src-account should only be used in combination with --src-passwd");
+					reporter.printSummary ();
 					return ;
 				}
 			}
 
 			if (settings.srcRemoteUser != null && settings.srcRemote == null) {
-				System.err.println ("--src-account should only be used in combination with --src-remote");
+				reporter.error ("miner", "--src-account should only be used in combination with --src-remote");
+				reporter.printSummary ();
 				return ;
 			}
-
 			
+			if (cmd.hasOption ("bug-miner-option")) {
+				for (String str : cmd.getOptionValues ("bug-miner-option")) {
+					addSpecificParameter (settings.bugSpecificParams, str);
+				}
+			}
+
+			if (cmd.hasOption ("src-miner-option")) {
+				for (String str : cmd.getOptionValues ("src-miner-option")) {
+					addSpecificParameter (settings.srcSpecificParams, str);
+				}				
+			}
+
 			MinerRunner runner = new MinerRunner (pool, settings);
 			if (cmd.hasOption ("verbose")) {
 				printTraces = true;
@@ -309,28 +372,30 @@ public class MinerRunner {
 					@Override
 					public void tasksProcessed (Miner miner, int processed) {
 						Integer total = totals.get (miner);
-						System.out.println (miner.getName () + ":\t" + processed + "/" + ((total == null)? "?" : total));
+						reporter.note (miner.getName (), "status: " + processed + "/" + ((total == null)? "?" : total));
 					}
 				});
 			}
 			runner.run ();
+		} catch (ParameterException e) {
+			reporter.error (e.getMiner ().getName (), e.getMessage ());
 		} catch (ParseException e) {
-			System.err.println ("Parsing failed: " + e.getMessage ());
+			reporter.error ("miner", "Parsing failed: " + e.getMessage ());
 			if (printTraces == true) {
 				e.printStackTrace ();
 			}
 		} catch (ClassNotFoundException e) {
-			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			reporter.error ("miner", "Failed to create a database connection: " + e.getMessage ());
 			if (printTraces == true) {
 				e.printStackTrace ();
 			}
 		} catch (SQLException e) {
-			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			reporter.error ("miner", "Failed to create a database connection: " + e.getMessage ());
 			if (printTraces == true) {
 				e.printStackTrace ();
 			}
 		} catch (MinerException e) {
-			System.err.println ("Mining Error: " + e.getMessage ());
+			reporter.error ("miner", "Mining Error: " + e.getMessage ());
 			if (printTraces == true) {
 				e.printStackTrace ();
 			}
@@ -339,5 +404,16 @@ public class MinerRunner {
 				pool.close ();
 			}
 		}
+
+		reporter.printSummary (true);
+	}
+
+	private static void addSpecificParameter (Map<String, String> map, String str) throws MinerException {
+		String[] args = str.split("=", 2);
+		if (args.length != 2) {
+			throw new MinerException ("Invalid specific parameter format. Got: '" + str + "', expected '<name>=<value>'");
+		}
+
+		map.put (args[0], args[1]);
 	}
 }

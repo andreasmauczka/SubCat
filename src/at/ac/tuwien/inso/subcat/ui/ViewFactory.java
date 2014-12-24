@@ -72,6 +72,7 @@ import at.ac.tuwien.inso.subcat.ui.controller.ViewController;
 import at.ac.tuwien.inso.subcat.ui.widgets.DistributionChart;
 import at.ac.tuwien.inso.subcat.ui.widgets.PieChart;
 import at.ac.tuwien.inso.subcat.ui.widgets.TrendChart;
+import at.ac.tuwien.inso.subcat.utility.Reporter;
 
 
 public class ViewFactory {
@@ -227,6 +228,7 @@ public class ViewFactory {
 		options.addOption ("b", "bug-dictionary", true, "The bug dictionary ID to use");
 		options.addOption ("D", "list-dictionaries", false, "List all dictionaries");
 		
+		Reporter reporter = new Reporter ();
 		ModelPool pool = null;
 		Model model = null;
 
@@ -242,12 +244,14 @@ public class ViewFactory {
 			}
 
 			if (cmd.hasOption ("db") == false) {
-				System.err.println ("Option --db is required");
+				reporter.error ("explorer", "Option --db is required");
+				reporter.printSummary ();
 				return ;
 			}
 
 			if (cmd.hasOption ("config") == false) {
-				System.err.println ("Option --config is required");
+				reporter.error ("explorer", "Option --config is required");
+				reporter.printSummary ();
 				return ;
 			}
 
@@ -256,17 +260,20 @@ public class ViewFactory {
 			try {
 				configParser.parse (config, new File (cmd.getOptionValue ("config")));
 			} catch (IOException e) {
-				System.err.println ("Could not read configuration file: " + e.getMessage ());
+				reporter.error ("explorer", "Could not read configuration file: " + e.getMessage ());
+				reporter.printSummary ();
 				return ;
 			} catch (ParserException e) {
-				System.err.println ("Could not parse configuration file: " + e.getMessage ());
+				reporter.error ("explorer", "Could not parse configuration file: " + e.getMessage ());
+				reporter.printSummary ();
 				return ;
 			}
 			
 			
 			File dbf = new File (cmd.getOptionValue ("db"));
 			if (dbf.exists() == false || dbf.isFile () == false) {
-				System.err.println ("Invalid database file path");
+				reporter.error ("explorer", "Invalid database file path");
+				reporter.printSummary ();
 				return ;
 			}
 			
@@ -283,13 +290,15 @@ public class ViewFactory {
 			
 			Integer projId = null;
 			if (cmd.hasOption ("project") == false) {
-				System.err.println ("Option --project is required");
+				reporter.error ("explorer", "Option --project is required");
+				reporter.printSummary ();
 				return ;
 			} else {
 				try {
 					projId = Integer.parseInt(cmd.getOptionValue ("project"));
 				} catch (NumberFormatException e) {
-					System.err.println ("Invalid project ID");
+					reporter.error ("explorer", "Invalid project ID");
+					reporter.printSummary ();
 					return ;
 				}
 			}
@@ -297,7 +306,8 @@ public class ViewFactory {
 
 			Project project = model.getProject (projId);
 			if (project == null) {
-				System.err.println ("Invalid project ID");
+				reporter.error ("explorer", "Invalid project ID");
+				reporter.printSummary ();
 				return ;
 			}
 
@@ -324,10 +334,13 @@ public class ViewFactory {
 					}
 
 					if (valid == false) {
-						System.err.println ("Invalid bug dictionary ID");
+						reporter.error ("explorer", "Invalid bug dictionary ID");
+						reporter.printSummary ();
+						return ;
 					}
 				} catch (NumberFormatException e) {
-					System.err.println ("Invalid bug dictionary ID");
+					reporter.error ("explorer", "Invalid bug dictionary ID");
+					reporter.printSummary ();
 					return ;
 				}
 			} else {
@@ -355,10 +368,13 @@ public class ViewFactory {
 					}
 					
 					if (valid == false) {
-						System.err.println ("Invalid commit dictionary ID");
+						reporter.error ("explorer", "Invalid commit dictionary ID");
+						reporter.printSummary ();
+						return ;
 					}
 				} catch (NumberFormatException e) {
-					System.err.println ("Invalid commit dictionary ID");
+					reporter.error ("explorer", "Invalid commit dictionary ID");
+					reporter.printSummary ();
 					return ;
 				}
 			} else {
@@ -392,13 +408,13 @@ public class ViewFactory {
 			
 			display.dispose();
 		} catch (ParseException e) {
-			System.err.println ("Parsing failed: " + e.getMessage ());
+			reporter.error ("explorer", "Parsing failed: " + e.getMessage ());
 		} catch (ClassNotFoundException e) {
-			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			reporter.error ("explorer", "Failed to create a database connection: " + e.getMessage ());
 		} catch (SQLException e) {
-			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			reporter.error ("explorer", "Failed to create a database connection: " + e.getMessage ());
 		} catch (SemanticException e) {
-			System.err.println ("Semantic Error: " + e.getMessage ());
+			reporter.error ("explorer", "Semantic Error: " + e.getMessage ());
 		} finally {
 			if (model != null) {
 				model.close ();
@@ -407,6 +423,8 @@ public class ViewFactory {
 				pool.close ();
 			}
 		}
+
+		reporter.printSummary ();
 	}
 
 	

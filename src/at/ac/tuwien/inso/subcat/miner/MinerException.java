@@ -40,5 +40,9 @@ public class MinerException extends Exception {
 	public MinerException (String msg) {
 		super (msg);
 	}
+
+	public MinerException(Exception e) {
+		super (e);
+	}
 }
 

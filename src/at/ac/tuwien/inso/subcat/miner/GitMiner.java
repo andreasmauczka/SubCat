@@ -204,21 +204,22 @@ public class GitMiner extends Miner {
 		public ChangeType type;
 	}
 
+
 	//
 	// Runner:
 	//
 	
 	@Override
-	public void run () throws MinerException {
+	public void run () throws MinerException, ParameterException {
 		stopped = false;
-
+		
 		try {
 			model = pool.getModel ();
 			emitStart ();
 
 			model.addFlag (project, Model.FLAG_SRC_INFO);
-			processDiffs = settings.srcGetParameter ("process-diffs", true);
-			startRef = settings.srcGetParameter ("start-ref", DEFAULT_HEAD);
+			processDiffs = settings.srcGetParameter (this, "process-diffs", true);
+			startRef = settings.srcGetParameter (this, "start-ref", DEFAULT_HEAD);
 			if (processDiffs == true) {
 				model.addFlag (project, Model.FLAG_SRC_FILE_STATS);
 				model.addFlag (project, Model.FLAG_SRC_LINE_STATS);

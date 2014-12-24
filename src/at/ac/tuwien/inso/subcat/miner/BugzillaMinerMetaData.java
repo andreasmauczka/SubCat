@@ -94,7 +94,12 @@ public class BugzillaMinerMetaData extends MetaData {
 
 	@Override
 	public Map<String, ParamType> getSpecificParams () {
-		return new HashMap<String, ParamType> ();
+		HashMap<String, ParamType> map = new HashMap<String, ParamType> ();
+		map.put ("process-comments", ParamType.BOOLEAN);
+		map.put ("process-history", ParamType.BOOLEAN);
+		map.put ("pass-size", ParamType.INTEGER);
+		map.put ("page-size", ParamType.INTEGER);
+		return map;
 	}
 }
 

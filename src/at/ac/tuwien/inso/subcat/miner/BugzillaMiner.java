@@ -347,12 +347,12 @@ public class BugzillaMiner extends Miner {
 	}
 
 	@Override
-	public void run () throws MinerException {
-		processComments = settings.srcGetParameter ("process-comments", true);
-		processHistory = settings.srcGetParameter ("process-history", true);
-		passSize = settings.srcGetParameter ("pass-size", 10);
-		pageSize = settings.srcGetParameter ("page-size", 50);
-		
+	public void run () throws MinerException, ParameterException {
+		processComments = settings.bugGetParameter (this, "process-comments", true);
+		processHistory = settings.bugGetParameter (this, "process-history", true);
+		passSize = settings.bugGetParameter (this, "pass-size", 10);
+		pageSize = settings.bugGetParameter (this, "page-size", 50);
+
 		for (int i = 0; i < settings.bugThreads; i++) {
 			Worker worker = new Worker ();
 			workers.add (worker);

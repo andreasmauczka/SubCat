@@ -59,7 +59,7 @@ public abstract class Miner {
 		this.listeners.addAll (listeners);
 	}
 	
-	public abstract void run () throws MinerException;
+	public abstract void run () throws MinerException, ParameterException;
 
 	public abstract void stop ();
 

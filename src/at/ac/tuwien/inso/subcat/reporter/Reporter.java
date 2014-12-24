@@ -118,6 +118,7 @@ public class Reporter {
 		options.addOption ("D", "list-dictionaries", false, "List all dictionaries");
 
 		
+		at.ac.tuwien.inso.subcat.utility.Reporter errReporter = new at.ac.tuwien.inso.subcat.utility.Reporter ();
 		Settings settings = new Settings ();
 		ModelPool pool = null;
 		Model model = null;
@@ -134,12 +135,14 @@ public class Reporter {
 			}
 
 			if (cmd.hasOption ("db") == false) {
-				System.err.println ("Option --db is required");
+				errReporter.error ("reporter", "Option --db is required");
+				errReporter.printSummary ();
 				return ;
 			}
 
 			if (cmd.hasOption ("config") == false) {
-				System.err.println ("Option --config is required");
+				errReporter.error ("reporter", "Option --config is required");
+				errReporter.printSummary ();
 				return ;
 			}
 
@@ -148,10 +151,12 @@ public class Reporter {
 			try {
 				configParser.parse (config, new File (cmd.getOptionValue ("config")));
 			} catch (IOException e) {
-				System.err.println ("Could not read configuration file: " + e.getMessage ());
+				errReporter.error ("reporter", "Could not read configuration file: " + e.getMessage ());
+				errReporter.printSummary ();
 				return ;
 			} catch (ParserException e) {
-				System.err.println ("Could not parse configuration file: " + e.getMessage ());
+				errReporter.error ("reporter", "Could not parse configuration file: " + e.getMessage ());
+				errReporter.printSummary ();
 				return ;
 			}
 
@@ -169,7 +174,8 @@ public class Reporter {
 			
 			File dbf = new File (cmd.getOptionValue ("db"));
 			if (dbf.exists() == false || dbf.isFile () == false) {
-				System.err.println ("Invalid database file path");
+				errReporter.error ("reporter", "Invalid database file path");
+				errReporter.printSummary ();
 				return ;
 			}
 			
@@ -198,19 +204,22 @@ public class Reporter {
 			
 			Integer projId = null;
 			if (cmd.hasOption ("project") == false) {
-				System.err.println ("Option --project is required");
+				errReporter.error ("reporter", "Option --project is required");
+				errReporter.printSummary ();
 				return ;
 			} else {
 				try {
 					projId = Integer.parseInt (cmd.getOptionValue ("project"));
 				} catch (NumberFormatException e) {
-					System.err.println ("Invalid project ID");
+					errReporter.error ("reporter", "Invalid project ID");
+					errReporter.printSummary ();
 					return ;
 				}
 			}
 
 			if (cmd.hasOption ("output") == false) {
-				System.err.println ("Option --output is required");
+				errReporter.error ("reporter", "Option --output is required");
+				errReporter.printSummary ();
 				return ;
 			}
 
@@ -219,7 +228,8 @@ public class Reporter {
 			Project project = model.getProject (projId);
 
 			if (project == null) {
-				System.err.println ("Invalid project ID");
+				errReporter.error ("reporter", "Invalid project ID");
+				errReporter.printSummary ();
 				return ;
 			}
 
@@ -246,10 +256,13 @@ public class Reporter {
 					}
 
 					if (valid == false) {
-						System.err.println ("Invalid bug dictionary ID");
+						errReporter.error ("reporter", "Invalid bug dictionary ID");
+						errReporter.printSummary ();
+						return ;
 					}
 				} catch (NumberFormatException e) {
-					System.err.println ("Invalid bug dictionary ID");
+					errReporter.error ("reporter", "Invalid bug dictionary ID");
+					errReporter.printSummary ();
 					return ;
 				}
 			}
@@ -269,16 +282,20 @@ public class Reporter {
 					}
 					
 					if (valid == false) {
-						System.err.println ("Invalid commit dictionary ID");
+						errReporter.error ("reporter", "Invalid commit dictionary ID");
+						errReporter.printSummary ();
+						return ;
 					}
 				} catch (NumberFormatException e) {
-					System.err.println ("Invalid commit dictionary ID");
+					errReporter.error ("reporter", "Invalid commit dictionary ID");
+					errReporter.printSummary ();
 					return ;
 				}
 			}
 
 			if (cmd.hasOption ("format") == false) {
-				System.err.println ("Option --format is required");
+				errReporter.error ("reporter", "Option --format is required");
+				errReporter.printSummary ();
 				return ;
 			}
 
@@ -287,44 +304,49 @@ public class Reporter {
 			try {
 				int id = Integer.parseInt (cmd.getOptionValue ("format"));
 				if (id < 1 || id > exporter.getWriters ().size ()) {
-					System.err.println ("Invalid output format");
+					errReporter.error ("reporter", "Invalid output format");
+					errReporter.printSummary ();
 					return ;
 				}
 				
 				writer = exporter.getWriters ().get (id - 1);
 			} catch (NumberFormatException e) {
-				System.err.println ("Invalid output format");
+				errReporter.error ("reporter", "Invalid output format");
+				errReporter.printSummary ();
 				return ;
 			}
 
 			ExporterConfig exporterConfig = null;
 			if (cmd.hasOption ("report") == false) {
-				System.err.println ("Option --report is required");
+				errReporter.error ("reporter", "Option --report is required");
+				errReporter.printSummary ();
 				return ;
 			} else {
 				try {
 					int id = Integer.parseInt (cmd.getOptionValue ("report"));
 					if (id < 1 || id > config.getExporterConfigs ().size ()) {
-						System.err.println ("Invalid reporter ID");
+						errReporter.error ("reporter", "Invalid reporter ID");
+						errReporter.printSummary ();
 						return ;
 					}
 					
 					exporterConfig = config.getExporterConfigs ().get (id -1);
 				} catch (NumberFormatException e) {
-					System.err.println ("Invalid reporter ID");
+					errReporter.error ("reporter", "Invalid reporter ID");
+					errReporter.printSummary ();
 					return ;
 				}
 			}
 
 			exporter.export (exporterConfig, project, commitDictId, bugDictId, settings, writer, outputPath);
 		} catch (ParseException e) {
-			System.err.println ("Parsing failed: " + e.getMessage ());
+			errReporter.error ("reporter", "Parsing failed: " + e.getMessage ());
 		} catch (ClassNotFoundException e) {
-			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			errReporter.error ("reporter", "Failed to create a database connection: " + e.getMessage ());
 		} catch (SQLException e) {
-			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			errReporter.error ("reporter", "Failed to create a database connection: " + e.getMessage ());
 		} catch (ReporterException e) {
-			System.err.println ("Reporter Error: " + e.getMessage ());
+			errReporter.error ("reporter", "Reporter Error: " + e.getMessage ());
 		} finally {
 			if (model != null) {
 				model.close ();
@@ -333,5 +355,7 @@ public class Reporter {
 				pool.close ();
 			}
 		}
+
+		errReporter.printSummary ();
 	}
 }

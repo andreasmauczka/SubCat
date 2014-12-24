@@ -56,6 +56,7 @@ import at.ac.tuwien.inso.subcat.model.Model.Stats;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.ObjectCallback;
 import at.ac.tuwien.inso.subcat.model.Project;
+import at.ac.tuwien.inso.subcat.utility.Reporter;
 import at.ac.tuwien.inso.subcat.utility.XmlReaderException;
 import at.ac.tuwien.inso.subcat.utility.classifier.Dictionary;
 import at.ac.tuwien.inso.subcat.utility.classifier.DictionaryParser;
@@ -275,6 +276,9 @@ public class PostProcessor {
 		options.addOption ("m", "smart-matching", true, "Smart user matching configuration. Syntax: <method>:<distance>");
 		options.addOption ("M", "list-matching-methods", false, "List smart matching methods");
 
+		final Reporter reporter = new Reporter ();
+		reporter.startTimer ();
+
 		Settings settings = new Settings ();
 		ModelPool pool = null;
 
@@ -306,13 +310,15 @@ public class PostProcessor {
 			}
 			
 			if (cmd.hasOption ("db") == false) {
-				System.err.println ("Option --db is required");
+				reporter.error ("post-processor", "Option --db is required");
+				reporter.printSummary ();
 				return ;
 			}
 
 			File dbf = new File (cmd.getOptionValue ("db"));
 			if (dbf.exists() == false || dbf.isFile () == false) {
-				System.err.println ("Invalid database file path");
+				reporter.error ("post-processor", "Invalid database file path");
+				reporter.printSummary ();
 				return ;
 			}
 			
@@ -331,13 +337,15 @@ public class PostProcessor {
 
 			Integer projId = null;
 			if (cmd.hasOption ("project") == false) {
-				System.err.println ("Option --project is required");
+				reporter.error ("post-processor", "Option --project is required");
+				reporter.printSummary ();
 				return ;
 			} else {
 				try {
 					projId = Integer.parseInt(cmd.getOptionValue ("project"));
 				} catch (NumberFormatException e) {
-					System.err.println ("Invalid project ID");
+					reporter.error ("post-processor", "Invalid project ID");
+					reporter.printSummary ();
 					return ;
 				}
 			}
@@ -349,7 +357,8 @@ public class PostProcessor {
 
 			
 			if (project == null) {
-				System.err.println ("Invalid project ID");
+				reporter.error ("post-processor", "Invalid project ID");
+				reporter.printSummary ();
 				return ;
 			}
 			
@@ -362,10 +371,12 @@ public class PostProcessor {
 							Dictionary dict = dp.parseFile (path);
 							settings.bugDictionaries.add (dict);
 						} catch (FileNotFoundException e) {
-							System.err.println ("File  not found: "  + path +  ": " + e.getMessage ());					
+							reporter.error ("post-processor", "File  not found: "  + path +  ": " + e.getMessage ());					
+							reporter.printSummary ();
 							return ;
 						} catch (XmlReaderException e) {
-							System.err.println ("XML Error: " + path + ": " + e.getMessage ());					
+							reporter.error ("post-processor", "XML Error: " + path + ": " + e.getMessage ());					
+							reporter.printSummary ();
 							return ;
 						}
 					}
@@ -379,10 +390,12 @@ public class PostProcessor {
 						Dictionary dict = dp.parseFile (path);
 						settings.srcDictionaries.add (dict);
 					} catch (FileNotFoundException e) {
-						System.err.println ("File  not found: "  + path +  ": " + e.getMessage ());					
+						reporter.error ("post-processor", "File  not found: "  + path +  ": " + e.getMessage ());					
+						reporter.printSummary ();
 						return ;
 					} catch (XmlReaderException e) {
-						System.err.println ("XML Error: " + path + ": " + e.getMessage ());					
+						reporter.error ("post-processor", "XML Error: " + path + ": " + e.getMessage ());					
+						reporter.printSummary ();
 						return ;
 					}
 				}
@@ -392,13 +405,15 @@ public class PostProcessor {
 				String str = cmd.getOptionValue ("smart-matching");
 				String[] parts = str.split (":");
 				if (parts.length != 2) {
-					System.err.println ("Unexpected smart-matching format");
+					reporter.error ("post-processor", "Unexpected smart-matching format");
+					reporter.printSummary ();
 					return ;
 				}
 
 				HashFunc func = HashFunc.getHashFunc (parts[0]);
 				if (func == null) {
-					System.err.println ("Unknown smart matching hash function");
+					reporter.error ("post-processor", "Unknown smart matching hash function");
+					reporter.printSummary ();
 					return ;
 				}
 
@@ -410,7 +425,8 @@ public class PostProcessor {
 				}
 
 				if (dist < 0) {
-					System.err.println ("Invalid smart matching edist distance");
+					reporter.error ("post-processor", "Invalid smart matching edist distance");
+					reporter.printSummary ();
 					return ;
 				}
 
@@ -426,7 +442,8 @@ public class PostProcessor {
 				for (String stepName : cmd.getOptionValues ("processor-step")) {
 					PostProcessorTask step = steps.get (stepName);
 					if (step == null) {
-						System.err.println ("Unknown processor step: '" + stepName + "'");
+						reporter.error ("post-processor", "Unknown processor step: '" + stepName + "'");
+						reporter.printSummary ();
 						return ;
 					}
 
@@ -448,35 +465,35 @@ public class PostProcessor {
 					@Override
 					public void commit(PostProcessor proc) {
 						commitCount++;
-						System.out.println("Commit " + commitCount + "/" + stats.commitCount);
+						reporter.note ("post-processor", "status: Commit " + commitCount + "/" + stats.commitCount);
 					}
 
 					@Override
 					public void bug(PostProcessor proc) {
 						bugCount++;
-						System.out.println("Bug " + bugCount + "/" + stats.bugCount);
+						reporter.note ("post-processor", "status: Bug " + bugCount + "/" + stats.bugCount);
 					}
 				});
 			}
 
 			processor.process ();
 		} catch (ParseException e) {
-			System.err.println ("Parsing failed: " + e.getMessage ());
+			reporter.error ("post-processor", "Parsing failed: " + e.getMessage ());
 			if (printTraces == true) {
 				e.printStackTrace ();
 			}
 		} catch (ClassNotFoundException e) {
-			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			reporter.error ("post-processor", "Failed to create a database connection: " + e.getMessage ());
 			if (printTraces == true) {
 				e.printStackTrace ();
 			}
 		} catch (SQLException e) {
-			System.err.println ("Failed to create a database connection: " + e.getMessage ());
+			reporter.error ("post-processor", "Failed to create a database connection: " + e.getMessage ());
 			if (printTraces == true) {
 				e.printStackTrace ();
 			}
 		} catch (PostProcessorException e) {
-			System.err.println ("Post-Processor Error: " + e.getMessage ());			
+			reporter.error ("post-processor", "Post-Processor Error: " + e.getMessage ());			
 			if (printTraces == true) {
 				e.printStackTrace ();
 			}
@@ -485,6 +502,8 @@ public class PostProcessor {
 				pool.close ();
 			}
 		}
+
+		reporter.printSummary (true);
 	}
 }
 

@@ -1,4 +1,4 @@
-/* RunnableMiner.java
+/* ParameterException.java
  *
  * Copyright (C) 2014 Florian Brosch
  *
@@ -31,34 +31,17 @@
 package at.ac.tuwien.inso.subcat.miner;
 
 
-public class RunnableMiner extends Thread {
-	private MinerRunner runner;
+public class ParameterException extends Exception {
+	private static final long serialVersionUID = 2193255661889822770L;
 	private Miner miner;
 
-	public RunnableMiner (MinerRunner runner, Miner miner) {
-		assert (runner != null);
-		assert (miner != null);
-
-		this.runner = runner;
+	public ParameterException (Miner miner, String msg) {
+		super (msg);
 		this.miner = miner;
 	}
 
-	@Override
-	public void run () {
-		try {
-			miner.run ();
-		} catch (MinerException e) {
-			runner.stop (e);
-		} catch (ParameterException e) {
-			runner.stop (e);
-		}
-	}
-	
+
 	public Miner getMiner () {
 		return miner;
-	}
-	
-	public MinerRunner getRunner () {
-		return runner;
 	}
 }

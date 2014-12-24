@@ -53,19 +53,19 @@ public class Settings {
 	public boolean bugEnableUntrustedCertificates = false;
 	public int bugThreads = 1;
 	public long bugCooldownTime = 0;
-	public Map<String, Object> bugSpecificParams
-		= new HashMap<String, Object> ();
+	public Map<String, String> bugSpecificParams
+		= new HashMap<String, String> ();
 
-	public boolean bugGetParameter (String name, boolean defaultValue) {
-		return getParameter (bugSpecificParams, name, defaultValue);
+	public boolean bugGetParameter (Miner miner, String name, boolean defaultValue) throws ParameterException {
+		return getParameter (miner, bugSpecificParams, name, defaultValue);
 	}
 
-	public int bugGetParameter (String name, int defaultValue) {
-		return getParameter (bugSpecificParams, name, defaultValue);
+	public int bugGetParameter (Miner miner, String name, int defaultValue) throws ParameterException {
+		return getParameter (miner, bugSpecificParams, name, defaultValue);
 	}
 
-	public String bugGetParameter (String name, String defaultValue) {
-		return getParameter (bugSpecificParams, name, defaultValue);
+	public String bugGetParameter (Miner miner, String name, String defaultValue) {
+		return getParameter (miner, bugSpecificParams, name, defaultValue);
 	}
 
 
@@ -78,19 +78,19 @@ public class Settings {
 	public String srcRemote = "";
 	public String srcRemotePw = null;
 	public String srcRemoteUser = null;
-	public Map<String, Object> srcSpecificParams
-		= new HashMap<String, Object> ();
+	public Map<String, String> srcSpecificParams
+		= new HashMap<String, String> ();
 
-	public boolean srcGetParameter (String name, boolean defaultValue) {
-		return getParameter (srcSpecificParams, name, defaultValue);
+	public boolean srcGetParameter (Miner miner, String name, boolean defaultValue) throws ParameterException {
+		return getParameter (miner, srcSpecificParams, name, defaultValue);
 	}
 
-	public int srcGetParameter (String name, int defaultValue) {
-		return getParameter (srcSpecificParams, name, defaultValue);
+	public int srcGetParameter (Miner miner, String name, int defaultValue) throws ParameterException {
+		return getParameter (miner, srcSpecificParams, name, defaultValue);
 	}
 
-	public String srcGetParameter (String name, String defaultValue) {
-		return getParameter (srcSpecificParams, name, defaultValue);
+	public String srcGetParameter (Miner miner, String name, String defaultValue) {
+		return getParameter (miner, srcSpecificParams, name, defaultValue);
 	}
 
 	
@@ -98,33 +98,52 @@ public class Settings {
 	// Helper:
 	//
 	
-	private boolean getParameter (Map<String, Object> params, String name, boolean defaultValue) {
-		Object obj = params.get (name);
-		if (obj == null) {
+	private boolean getParameter (Miner miner, Map<String, String> params, String name, boolean defaultValue) throws ParameterException {
+		assert (miner != null);
+		assert (params != null);
+		assert (name != null);
+		
+		String value = params.get (name);
+		if (value == null) {
 			return defaultValue;
 		}
 
-		assert (obj instanceof Boolean);
-		return (Boolean) obj;
+		if (value.equalsIgnoreCase ("true")) {
+			return true;
+		} else if (value.equalsIgnoreCase ("false")) {
+			return false;				
+		} else {
+			throw new ParameterException (miner, "Invalid argument type for '" + name + "', expected boolean");
+		}
 	}
 
-	private int getParameter (Map<String, Object> params, String name, int defaultValue) {
-		Object obj = params.get (name);
-		if (obj == null) {
+	private int getParameter (Miner miner, Map<String, String> params, String name, int defaultValue) throws ParameterException {
+		assert (miner != null);
+		assert (params != null);
+		assert (name != null);
+
+		String value = params.get (name);
+		if (value == null) {
 			return defaultValue;
 		}
 
-		assert (obj instanceof Integer);
-		return (Integer) obj;		
+		try {
+			return Integer.parseInt (value);
+		} catch (NumberFormatException e) {
+			throw new ParameterException (miner, "Invalid argument type for '" + name + "', expected integer");
+		}
 	}
 
-	private String getParameter (Map<String, Object> params, String name, String defaultValue) {
-		Object obj = params.get (name);
-		if (obj == null) {
+	private String getParameter (Miner miner, Map<String, String> params, String name, String defaultValue) {
+		assert (miner != null);
+		assert (params != null);
+		assert (name != null);
+
+		String value = params.get (name);
+		if (value == null) {
 			return defaultValue;
 		}
-
-		assert (obj instanceof String);
-		return (String) obj;		
+		
+		return value;
 	}
 }

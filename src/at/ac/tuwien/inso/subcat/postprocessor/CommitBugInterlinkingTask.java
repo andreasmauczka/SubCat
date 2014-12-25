@@ -175,7 +175,7 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 			return ;
 		}
 
-		if (added.contains (certainty)) {
+		if (added.contains (bugId)) {
 			// Already registered
 			return ;
 		}
@@ -183,7 +183,7 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 		Bug bug = model.getBug (commit.getProject (), Integer.toString (bugId));
 		if (bug != null) {
 			model.addBugfixCommit (commit, bug);
-			added.add (certainty);
+			added.add (bugId);
 		}
 	}
 

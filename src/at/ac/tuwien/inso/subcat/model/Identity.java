@@ -103,8 +103,15 @@ public class Identity {
 			}
 		}
 
-		if (includeMail && mail != null) {
-			String local = mail.substring (0, mail.indexOf ('@')).toLowerCase ();
+		if (includeMail && mail != null && mail.length () > 0) {
+			int endIndex = mail.indexOf ('@');
+			String local;
+			if (endIndex >= 0) {
+				local = mail.substring (0, endIndex);
+			} else {
+				local = mail;
+			}
+			local = local.toLowerCase ();
 			String[] fragments = patternNameSplitter.split (local);
 			addAllNameFragments (set, fragments);
 		}

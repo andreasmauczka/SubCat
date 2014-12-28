@@ -62,11 +62,12 @@ import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.model.User;
+import at.ac.tuwien.inso.subcat.utility.Reporter;
 
 
 public class GitMiner extends Miner {
 	private final static String DEFAULT_HEAD = "refs/heads/master";
-	
+
 	private Settings settings;
 	private Project project;
 	private ModelPool pool;
@@ -157,7 +158,7 @@ public class GitMiner extends Miner {
 		}
 	}
 
-	public GitMiner (Settings settings, Project project, ModelPool pool) {
+	public GitMiner (Settings settings, Project project, ModelPool pool, Reporter reporter) {
 		assert (settings != null);
 		assert (project != null);
 		assert (pool != null);

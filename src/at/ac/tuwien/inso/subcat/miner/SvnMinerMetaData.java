@@ -39,6 +39,7 @@ import java.util.Map;
 import at.ac.tuwien.inso.subcat.miner.Miner.MinerType;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
+import at.ac.tuwien.inso.subcat.utility.Reporter;
 import at.ac.tuwien.inso.subcat.utility.XmlReader;
 
 
@@ -73,8 +74,8 @@ public class SvnMinerMetaData extends MetaData {
 
 	
 	@Override
-	public Miner create (Settings settings, Project project, ModelPool pool) {
-		return new SvnMiner (settings, project, pool);
+	public Miner create (Settings settings, Project project, ModelPool pool, Reporter reporter) {
+		return new SvnMiner (settings, project, pool, reporter);
 	}
 
 	@Override

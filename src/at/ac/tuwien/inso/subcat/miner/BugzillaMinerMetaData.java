@@ -36,6 +36,7 @@ import java.util.Map;
 import at.ac.tuwien.inso.subcat.miner.Miner.MinerType;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
+import at.ac.tuwien.inso.subcat.utility.Reporter;
 
 
 public class BugzillaMinerMetaData extends MetaData {
@@ -63,8 +64,8 @@ public class BugzillaMinerMetaData extends MetaData {
 	}
 
 	@Override
-	public Miner create (Settings settings, Project project, ModelPool pool) {
-		return new BugzillaMiner (settings, project, pool);
+	public Miner create (Settings settings, Project project, ModelPool pool, Reporter reporter) {
+		return new BugzillaMiner (settings, project, pool, reporter);
 	}
 
 	@Override

@@ -43,6 +43,7 @@ import java.util.LinkedHashMap;
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
 
+import at.ac.tuwien.inso.subcat.utility.Reporter;
 import at.ac.tuwien.inso.subcat.utility.XmlReader;
 import at.ac.tuwien.inso.subcat.utility.XmlReaderException;
 import at.ac.tuwien.inso.subcat.utility.Lemmatizer;
@@ -69,6 +70,7 @@ import org.eclipse.jgit.treewalk.EmptyTreeIterator;
 
 public class SvnMiner extends Miner {
 
+	private Reporter reporter;
 	private Settings settings;
 	private Project project;
 	private Model model;
@@ -79,11 +81,12 @@ public class SvnMiner extends Miner {
 	private static String ANON_USER = "anon";
 	private Map<String, ManagedFile> fileCache;
 	
-	public SvnMiner (Settings settings, Project project, ModelPool pool) {
+	public SvnMiner (Settings settings, Project project, ModelPool pool, Reporter reporter) {
 		assert (settings != null);
 		assert (project != null);
 		assert (pool != null);
-		
+
+		this.reporter = reporter;
 		this.settings = settings;
 		this.project = project;
 		this.pool = pool;
@@ -186,8 +189,7 @@ public class SvnMiner extends Miner {
 						fileCache.remove (stats.oldPath);
 					}
 					else{
-						System.out.println("WARNING: could not find: " + path + " to delete in Revision " + revision + " @ SvnMiner");
-						//TODO: Add logging code
+						reporter.warning (this.getName (), "could not find: " + path + " to delete in Revision " + revision + " @ SvnMiner");
 					}
 						
 					
@@ -209,8 +211,7 @@ public class SvnMiner extends Miner {
 						}
 					}
 					else{
-						System.out.println("WARNING: could not find: " + path + " to modify in Revision " + revision + " @ SvnMiner");
-						//TODO: Add logging code
+						reporter.warning (this.getName (), "could not find: " + path + " to modify in Revision " + revision + " @ SvnMiner");
 					}
 				}
 				break;

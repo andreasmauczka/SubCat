@@ -71,7 +71,7 @@ public class MinerRunner {
 		}
 	}
 	
-	private MinerRunner (ModelPool pool, Settings settings) throws MinerException {
+	private MinerRunner (ModelPool pool, Settings settings, Reporter reporter) throws MinerException {
 		assert (settings != null);
 
 		init ();
@@ -99,7 +99,7 @@ public class MinerRunner {
 			}
 
 			if (meta.is (settings)) {
-				Miner miner = meta.create (settings, project, pool);
+				Miner miner = meta.create (settings, project, pool, reporter);
 				miner.addListener (listeners);
 				this.miners.add (new RunnableMiner (this, miner));
 				foundMinerTypes.add (meta.getType ());
@@ -205,7 +205,7 @@ public class MinerRunner {
 		options.addOption (null, "src-miner-option", true, "Source miner specific option. Format: <option-name>:value");
 		options.getOption ("src-miner-option").setArgs(Option.UNLIMITED_VALUES);
 
-		Reporter reporter = new Reporter ();
+		final Reporter reporter = new Reporter ();
 		reporter.startTimer ();
 
 		boolean printTraces = false;
@@ -346,7 +346,7 @@ public class MinerRunner {
 				}				
 			}
 
-			MinerRunner runner = new MinerRunner (pool, settings);
+			MinerRunner runner = new MinerRunner (pool, settings, reporter);
 			if (cmd.hasOption ("verbose")) {
 				printTraces = true;
 				runner.addListener (new MinerListener () {

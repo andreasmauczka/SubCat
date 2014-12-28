@@ -62,6 +62,7 @@ import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.model.Severity;
 import at.ac.tuwien.inso.subcat.model.Status;
 import at.ac.tuwien.inso.subcat.model.User;
+import at.ac.tuwien.inso.subcat.utility.Reporter;
 
 
 public class BugzillaMiner extends Miner {
@@ -83,6 +84,7 @@ public class BugzillaMiner extends Miner {
 	private LinkedBlockingQueue<QueueEntry> queue = new LinkedBlockingQueue<QueueEntry> ();
 	private boolean run = true;
 
+	private Reporter reporter;
 	private BugzillaContext context;
 	private Settings settings;
 	private ModelPool pool;
@@ -153,15 +155,62 @@ public class BugzillaMiner extends Miner {
 			}
 		}
 
+		private boolean isSaxError (Throwable e) {
+			while (e != null) {
+				if (e instanceof org.xml.sax.SAXParseException) {
+					return true;
+				}
+				
+				e = e.getCause ();
+			}
+
+			return false;
+		}
+		
 		private void process (List<BugzillaBug> bzBugs, List<Integer> bzBugIds) throws BugzillaException, SQLException {
+			try {
+				_process (bzBugs, bzBugIds);
+				return ;
+			} catch (BugzillaException e) {
+				if (isSaxError (e) == false) {
+					throw e;
+				}
+			}
+
+			// Likely triggered by invalid characters.
+			// Get all bugs one by one, skip the broken ones.
+
+			for (BugzillaBug bzBug : bzBugs) {
+				try {
+					LinkedList<BugzillaBug> _bzBugs = new LinkedList<BugzillaBug> ();
+					_bzBugs.add (bzBug);
+
+					LinkedList<Integer> _bzBugIds = new LinkedList<Integer> ();
+					_bzBugIds.add (bzBug.getId ());
+
+					_process (_bzBugs, _bzBugIds);
+				} catch (BugzillaException e) {
+					if (isSaxError (e)) {
+						reporter.warning (BugzillaMiner.this.getName ().toLowerCase (), "Could not process and store bug #" + bzBug.getId () + ": " + e.getMessage ());
+					} else {
+						throw e;
+					}
+				}
+			}
+		}
+
+		private void _process (List<BugzillaBug> bzBugs, List<Integer> bzBugIds) throws BugzillaException, SQLException {
 			assert (bzBugs != null);
 			assert (bzBugIds != null);
 			assert (bzBugs.size () == bzBugIds.size ());
 
 			// Get data:
-			Map<Integer, BugzillaHistory[]> _histories = context.getHistory (bzBugIds);
-			Map<Integer, BugzillaComment[]> _comments = context.getComments (bzBugIds);
+			Map<Integer, BugzillaHistory[]> _histories;
+			Map<Integer, BugzillaComment[]> _comments;
 
+			_histories = context.getHistory (bzBugIds);
+			_comments = context.getComments (bzBugIds);
+			
 			for (BugzillaBug bzBug : bzBugs) {
 				BugzillaComment[] comments = _comments.get (bzBug.getId ());
 				Identity creator = null;
@@ -336,11 +385,12 @@ public class BugzillaMiner extends Miner {
 	}
 	
 
-	public BugzillaMiner (Settings settings, Project project, ModelPool pool) {
+	public BugzillaMiner (Settings settings, Project project, ModelPool pool, Reporter reporter) {
 		assert (settings != null);
 		assert (project != null);
 		assert (pool != null);
 		
+		this.reporter = reporter;
 		this.settings = settings;
 		this.project = project;
 		this.pool = pool;

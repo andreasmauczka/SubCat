@@ -7,6 +7,8 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.LinkedList;
 
+import org.sqlite.SQLiteConfig;
+
 import at.ac.tuwien.inso.subcat.utility.sentiment.Sentiment;
 
 
@@ -32,21 +34,33 @@ public class ModelPool {
 	private LinkedList<ModelModificationListener> listeners = new LinkedList<ModelModificationListener> ();
 	private String name;
 
-	
+	private String[] extensions;
+
+
 	//
 	// Public API:
 	//
 
+	public ModelPool (String name, String[] extensions) throws ClassNotFoundException, SQLException {
+		this (name, 1, extensions);
+	}
+
 	public ModelPool (String name) throws ClassNotFoundException, SQLException {
-		this (name, 1);
+		this (name, new String[0]);
 	}
 
 	public ModelPool (String name, int connPoolSize) throws ClassNotFoundException, SQLException {
+		this (name, connPoolSize, new String[0]);
+	}
+
+	public ModelPool (String name, int connPoolSize, String[] extensions) throws ClassNotFoundException, SQLException {
 		assert (connPoolSize >= 1);
 		assert (name != null);
+		assert (extensions != null);
 
 		Class.forName ("org.sqlite.JDBC");
 		this.name = name;
+		this.extensions = extensions;
 
 		this.connPoolSize = 0;
 		setConnectionPoolSize (connPoolSize);
@@ -54,7 +68,7 @@ public class ModelPool {
 
 	public synchronized Model getModel () throws SQLException {
 		Connection conn = popConnection ();
-		return new Model (this, conn);
+		return new Model (this, conn, extensions);
 	} 
 	
 	public synchronized void setConnectionPoolSize (int poolSize) throws SQLException {
@@ -144,8 +158,11 @@ public class ModelPool {
 
 	private Connection createConnection () throws SQLException {
 		// TODO: Escape path
-		Connection conn = DriverManager.getConnection ("jdbc:sqlite:" + name);
+		SQLiteConfig config = new SQLiteConfig ();
+		config.enableLoadExtension (true);
 
+		Connection conn = DriverManager.getConnection ("jdbc:sqlite:" + name, config.toProperties());
+		
 		Statement stmt = conn.createStatement();
 		//stmt.executeUpdate ("PRAGMA journal_mode=MEMORY");
 		stmt.executeUpdate ("PRAGMA temp_store=OFF");

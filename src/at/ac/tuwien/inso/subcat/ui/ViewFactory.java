@@ -227,8 +227,10 @@ public class ViewFactory {
 		options.addOption ("c", "commit-dictionary", true, "The commit dictionary ID to use");
 		options.addOption ("b", "bug-dictionary", true, "The bug dictionary ID to use");
 		options.addOption ("D", "list-dictionaries", false, "List all dictionaries");
+		options.addOption ("e", "db-extension", true, "Sqlite extension");
 		
 		Reporter reporter = new Reporter ();
+		String[] extensions = new String[0];
 		ModelPool pool = null;
 		Model model = null;
 
@@ -243,6 +245,10 @@ public class ViewFactory {
 				return ;
 			}
 
+			if (cmd.hasOption ("db-extension")) {
+				extensions = cmd.getOptionValues ("db-extension");
+			}
+			
 			if (cmd.hasOption ("db") == false) {
 				reporter.error ("explorer", "Option --db is required");
 				reporter.printSummary ();
@@ -277,7 +283,7 @@ public class ViewFactory {
 				return ;
 			}
 			
-			pool = new ModelPool (cmd.getOptionValue ("db"), 2);
+			pool = new ModelPool (cmd.getOptionValue ("db"), 2, extensions);
 			model = pool.getModel ();
 
 			if (cmd.hasOption ("list-projects")) {

@@ -756,6 +756,8 @@ public class Model {
 		+ "(SELECT COUNT(*) FROM Commits WHERE project = ?),"
 		+ "(SELECT COUNT(*) FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
+	private static final String LOAD_EXTENSION =
+		"SELECT load_extension (?)";
 
 	
 	//
@@ -1033,18 +1035,35 @@ public class Model {
 	private ModelPool pool;
 	private Connection conn;
 
-
 	
 	//
 	// Creation & Destruction:
 	//
 	
-	public Model (ModelPool pool, Connection conn) throws SQLException {
+	public Model (ModelPool pool, Connection conn, String[] extensions) throws SQLException {
+		assert (extensions != null);
+		
 		this.pool = pool;
 		this.conn = conn;
-		createTables ();
-	}
 
+		createTables ();
+
+		// Load drivers:
+		PreparedStatement stmt = conn.prepareStatement (LOAD_EXTENSION);
+		try {
+			for (String ext : extensions) {
+				stmt.setString (1, ext);
+				stmt.execute ();
+			}
+		} finally {
+			stmt.close ();
+		}
+	}
+	
+	public Model (ModelPool pool, Connection conn) throws SQLException {
+		this (pool, conn, new String[0]);
+	}
+	
 	public synchronized boolean close () {
 		try {
 			if (conn != null) {
@@ -2915,7 +2934,7 @@ public class Model {
 		assert (hadNext);
 		return res.getInt (1);
 	}
-
+	
 	private void createTables () throws SQLException {
 		assert (conn != null);
 

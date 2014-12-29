@@ -146,6 +146,8 @@ public class DistributionChartController extends ChartController implements Dist
 		assert (identifier != null);
 
 		Map<String, Object> map = viewController.getVariables ();
+		map.put ("year", view.getSelectedYear ());
+
 		for (Map.Entry<DropDownData, Integer> entry : identifier.getSelectedFilterConfigs ().entrySet()) {
 			String name = entry.getKey ().getConfig ().getVariableName ();
 			Integer value = entry.getValue ();

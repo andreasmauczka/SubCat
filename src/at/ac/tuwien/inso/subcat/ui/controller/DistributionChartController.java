@@ -150,7 +150,7 @@ public class DistributionChartController extends ChartController implements Dist
 
 		for (Map.Entry<DropDownData, Integer> entry : identifier.getSelectedFilterConfigs ().entrySet()) {
 			String name = entry.getKey ().getConfig ().getVariableName ();
-			Integer value = entry.getValue ();
+			Integer value = entry.getKey ().getData ().get (entry.getValue ()).id;
 
 			map.put (name, value);
 		}

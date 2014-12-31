@@ -297,7 +297,7 @@ public class GitMiner extends Miner {
 	private void processCommit (Repository repository, RevWalk walk, RevCommit rev, Map<String, ManagedFile> fileCache) throws SQLException, IOException {
 		Identity author = resolveIdentity (rev.getAuthorIdent ());
 		Identity committer = resolveIdentity (rev.getCommitterIdent ());
-		Date date = new Date (rev.getCommitTime ());
+		Date date = new java.util.Date((long) rev.getCommitTime () * 1000);
 		String message = rev.getFullMessage ();
 
 		Map<String, FileStats> fileStats = new HashMap<String, FileStats> ();

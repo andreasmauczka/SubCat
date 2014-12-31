@@ -228,16 +228,19 @@ public class ViewFactory {
 		options.addOption ("b", "bug-dictionary", true, "The bug dictionary ID to use");
 		options.addOption ("D", "list-dictionaries", false, "List all dictionaries");
 		options.addOption ("e", "db-extension", true, "Sqlite extension");
-		
+		options.addOption ("v", "verbose", false, "Show details");
+
 		Reporter reporter = new Reporter ();
 		String[] extensions = new String[0];
 		ModelPool pool = null;
 		Model model = null;
 
 		CommandLineParser parser = new PosixParser ();
+		boolean printDetails = false;
 		
 		try {
 			CommandLine cmd = parser.parse (options, args);
+			printDetails = cmd.hasOption ("verbose");
 
 			if (cmd.hasOption ("help")) {
 				HelpFormatter formatter = new HelpFormatter ();
@@ -284,6 +287,7 @@ public class ViewFactory {
 			}
 			
 			pool = new ModelPool (cmd.getOptionValue ("db"), 2, extensions);
+			pool.setPrintTemplates (printDetails);
 			model = pool.getModel ();
 
 			if (cmd.hasOption ("list-projects")) {
@@ -415,12 +419,24 @@ public class ViewFactory {
 			display.dispose();
 		} catch (ParseException e) {
 			reporter.error ("explorer", "Parsing failed: " + e.getMessage ());
+			if (printDetails == true) {
+				e.printStackTrace ();
+			}
 		} catch (ClassNotFoundException e) {
 			reporter.error ("explorer", "Failed to create a database connection: " + e.getMessage ());
+			if (printDetails == true) {
+				e.printStackTrace ();
+			}
 		} catch (SQLException e) {
 			reporter.error ("explorer", "Failed to create a database connection: " + e.getMessage ());
+			if (printDetails == true) {
+				e.printStackTrace ();
+			}
 		} catch (SemanticException e) {
 			reporter.error ("explorer", "Semantic Error: " + e.getMessage ());
+			if (printDetails == true) {
+				e.printStackTrace ();
+			}
 		} finally {
 			if (model != null) {
 				model.close ();

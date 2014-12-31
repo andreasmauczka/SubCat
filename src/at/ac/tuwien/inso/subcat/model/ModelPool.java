@@ -34,6 +34,7 @@ public class ModelPool {
 	private LinkedList<ModelModificationListener> listeners = new LinkedList<ModelModificationListener> ();
 	private String name;
 
+	private boolean printTemplates = false;
 	private String[] extensions;
 
 
@@ -68,7 +69,9 @@ public class ModelPool {
 
 	public synchronized Model getModel () throws SQLException {
 		Connection conn = popConnection ();
-		return new Model (this, conn, extensions);
+		Model model = new Model (this, conn, extensions);
+		model.setPrintTemplates (printTemplates);
+		return model;
 	} 
 	
 	public synchronized void setConnectionPoolSize (int poolSize) throws SQLException {
@@ -344,7 +347,15 @@ public class ModelPool {
 		for (ModelModificationListener listener : listeners) {
 			listener.sentimentAdded (comment, sentiment);
 		}
-	}	
+	}
+
+	public void setPrintTemplates (boolean printTemplates) {
+		this.printTemplates = printTemplates;
+	}
+
+	public boolean getPrintTemplates () {
+		return this.printTemplates;
+	}
 }
 
 

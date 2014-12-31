@@ -1032,6 +1032,7 @@ public class Model {
 	}
 
 
+	private boolean printTemplates = false;
 	private ModelPool pool;
 	private Connection conn;
 
@@ -1062,6 +1063,14 @@ public class Model {
 	
 	public Model (ModelPool pool, Connection conn) throws SQLException {
 		this (pool, conn, new String[0]);
+	}
+
+	public void setPrintTemplates (boolean printTemplates) {
+		this.printTemplates = printTemplates;
+	}
+
+	public boolean getPrintTemplates () {
+		return this.printTemplates;
 	}
 	
 	public synchronized boolean close () {
@@ -2071,10 +2080,16 @@ public class Model {
 		assert (conn != null);
 		assert (queryConfig != null);
 		assert (vars != null);
-		
+
 		LinkedList<Query.VariableSegment> paramOrder = new LinkedList<Query.VariableSegment> ();
 		String query = queryConfig.getQuery (vars.keySet (), paramOrder);
-
+		if (printTemplates == true) {	
+			System.out.println (queryConfig.getStart ().getFile ().getName () + ": " + queryConfig.getStart ().toString () + "-" + queryConfig.getEnd () + ": " + queryConfig.toString ());
+			for (Map.Entry<String, Object> var : vars.entrySet ()) {
+				System.out.println (" - " + var.getKey () + " = " + var.getValue ());
+			}
+			System.out.println ();
+		}
 
 		// Create the query:
 		PreparedStatement stmt = conn.prepareStatement (query);
@@ -2116,7 +2131,7 @@ public class Model {
 			}
 			i++;
 		}
-		
+
 		return stmt;
 	}
 
@@ -2199,7 +2214,7 @@ public class Model {
 
 		return data;
 	}
-	
+
 	public TrendChartData getTrendChartData (TrendChartPlotConfig trendChartPlotConfig, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (conn != null);
 		assert (trendChartPlotConfig != null);
@@ -2700,7 +2715,7 @@ public class Model {
 		// Statement:
 		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_STATUSES);
 		stmt.setInt (1, proj.getId ());
-	
+
 		// Collect data:
 		HashMap<Integer, Status> statuses = new HashMap<Integer, Status> ();
 		ResultSet res = stmt.executeQuery ();

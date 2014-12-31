@@ -73,6 +73,11 @@ public class Query extends ConfigNode {
 		public void acceptChildren (ConfigVisitor visitor) {
 			super.acceptChildren (visitor);
 		}
+
+		@Override
+		public String toString () {
+			return segment;
+		}
 	}
 
 	public static class VariableSegment extends Segment {
@@ -109,6 +114,11 @@ public class Query extends ConfigNode {
 		@Override
 		public void acceptChildren (ConfigVisitor visitor) {
 			super.acceptChildren (visitor);
+		}
+
+		@Override
+		public String toString () {
+			return "$(" + varName + ")";
 		}
 	}
 
@@ -161,5 +171,14 @@ public class Query extends ConfigNode {
 		for (Segment seg : segments) {
 			seg.accept (visitor);
 		}
+	}
+
+	@Override
+	public String toString () {
+		StringBuilder builder = new StringBuilder ();
+		for (Segment seg : segments) {
+			builder.append (seg.toString ());
+		}
+		return builder.toString ();
 	}
 }

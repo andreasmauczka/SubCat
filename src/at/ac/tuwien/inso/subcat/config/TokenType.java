@@ -74,5 +74,6 @@ public enum TokenType {
 	STRING,			// "<whatever>"
 	BOOLEAN,		// true, false
 
-	REQUIRES		// Requires
+	REQUIRES,		// Requires
+	WORD_STATS		// WordStats
 }

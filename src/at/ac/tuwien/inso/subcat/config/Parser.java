@@ -133,7 +133,14 @@ public class Parser {
 		name = parseName ();
 		query = parseQuery ();
 
-		ExporterConfig expConf = new ExporterConfig (name, query, current.getStart (), current.getEnd ());
+		boolean wordStats = false;
+		if (accept (TokenType.WORD_STATS)) {
+			expect (TokenType.ASSIGN);
+			wordStats = parseBoolean ();
+			expect (TokenType.SEMICOLON);
+		}
+
+		ExporterConfig expConf = new ExporterConfig (name, query, current.getStart (), current.getEnd (), wordStats);
 		expConf.setRequirements (requires);
 		if (!config.addExporterConfig (expConf)) {
 			throw new ParserException ("Exporter `" + expConf.getName () + "' already defined.", current.getStart (), current.getEnd ());

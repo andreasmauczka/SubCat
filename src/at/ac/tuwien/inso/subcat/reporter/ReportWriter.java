@@ -31,16 +31,26 @@
 package at.ac.tuwien.inso.subcat.reporter;
 
 import at.ac.tuwien.inso.subcat.miner.Settings;
-import at.ac.tuwien.inso.subcat.model.ResultCallback;
 import at.ac.tuwien.inso.subcat.model.Project;
 
-public abstract class ReportWriter implements ResultCallback {
+
+public abstract class ReportWriter {
 	public abstract String getTypeName ();
 	public abstract String getLabel ();
 
 	public abstract void init (Project project, Settings settings, String outputPath)
 		throws ReporterException;
 
+
+	public abstract void writeHeader (String[] columnNames)
+		throws ReporterException;
+	
+	public abstract void writeSet (String[] data)
+		throws ReporterException;
+
+	public abstract void writeFooter (String[] columnNames)
+		throws ReporterException;
+	
 	public abstract void cleanup ()
 		throws ReporterException;
 }

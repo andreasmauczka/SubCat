@@ -32,20 +32,18 @@ package at.ac.tuwien.inso.subcat.reporter;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
-import at.ac.tuwien.inso.subcat.config.SemanticException;
 import at.ac.tuwien.inso.subcat.miner.Settings;
 import at.ac.tuwien.inso.subcat.model.Project;
 
+
 public class XmlReportWriter extends ReportWriter {
 	private XMLStreamWriter writer;
+	private String[] names;
 
 	@Override
 	public String getTypeName () {
@@ -70,30 +68,51 @@ public class XmlReportWriter extends ReportWriter {
 	}
 
 	@Override
-	public void processResult (ResultSet res) throws SemanticException, SQLException, Exception {
-		ResultSetMetaData meta = res.getMetaData ();
-		int colCount = meta.getColumnCount ();
+	public void writeHeader (String[] names) throws ReporterException {
+		assert (names != null);
 
-		writer.writeStartDocument ();
-		writer.writeStartElement ("report");
+		try {
+			writer.writeStartDocument ();
+			writer.writeStartElement ("report");
+		} catch (XMLStreamException e) {
+			throw new ReporterException (e);
+		}
+	}
 
-		while (res.next ()) {
+	@Override
+	public void writeSet (String[] data) throws ReporterException {
+		assert (names != null && this.names != null);
+		assert (names.length == data.length);
+		
+		try {
 			writer.writeStartElement ("column");
-			for (int i = 1; i <= colCount ; i++) {
-				String text = res.getString (i);
-				String label = meta.getColumnLabel (i);
-
+			for (int i = 0; i < data.length; i++) {
+				String text = data[i];
+				String label = names[i];
+	
 				writer.writeStartElement ("entry");
 				writer.writeAttribute ("column", label);
 				writer.writeCharacters (text);
 				writer.writeEndElement ();
 			}
 			writer.writeEndElement ();
+		} catch (XMLStreamException e) {
+			throw new ReporterException (e);
 		}
-
-		writer.writeEndElement ();
-		writer.writeEndDocument ();
 	}
+
+	@Override
+	public void writeFooter (String[] names) throws ReporterException {
+		assert (names != null && this.names != null);
+
+		try {
+			writer.writeEndElement ();
+			writer.writeEndDocument ();
+		} catch (XMLStreamException e) {
+			throw new ReporterException (e);
+		}
+	}
+
 	
 	@Override
 	public void cleanup () throws ReporterException {

@@ -32,11 +32,17 @@ package at.ac.tuwien.inso.subcat.reporter;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -49,10 +55,13 @@ import at.ac.tuwien.inso.subcat.config.Configuration;
 import at.ac.tuwien.inso.subcat.config.ExporterConfig;
 import at.ac.tuwien.inso.subcat.config.Parser;
 import at.ac.tuwien.inso.subcat.config.ParserException;
+import at.ac.tuwien.inso.subcat.config.SemanticException;
 import at.ac.tuwien.inso.subcat.miner.Settings;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Project;
+import at.ac.tuwien.inso.subcat.model.ResultCallback;
+import at.ac.tuwien.inso.subcat.utility.Lemmatizer;
 
 
 public class Reporter {
@@ -90,8 +99,11 @@ public class Reporter {
 		vars.put ("bugDict", bugDictId);
 
 		try {
-			formatter.init (project, settings, outputPath);
-			model.rawForeach (config.getQuery (), vars, formatter);
+			if (config.getWordStats ()) {
+				exportWordStats (config, project, commitDictId, bugDictId, settings, formatter, outputPath, vars);				
+			} else {
+				exportRows (config, project, commitDictId, bugDictId, settings, formatter, outputPath, vars);				
+			}
 		} catch (ReporterException e) {
 			throw e;
 		} catch (Exception e) {
@@ -101,6 +113,116 @@ public class Reporter {
 		}
 	}
 
+	private void exportWordStats (final ExporterConfig config, Project project, int commitDictId, int bugDictId, Settings settings, final ReportWriter formatter, String outputPath, Map<String, Object> vars) throws SQLException, Exception {
+		formatter.init (project, settings, outputPath);
+		model.rawForeach (config.getQuery (), vars, new ResultCallback () {
+
+			@Override
+			public void processResult (ResultSet res) throws SemanticException, SQLException, Exception {
+				ResultSetMetaData meta = res.getMetaData ();
+				String[] titles = new String[meta.getColumnCount ()];
+				if (titles.length != 2) {
+					throw new SemanticException ("semantic error: invalid column count, expected: (<string>, <string>)", config.getStart (), config.getEnd ());
+				}
+
+				if (meta.getColumnType (1) != Types.VARCHAR || meta.getColumnType (2) != Types.VARCHAR) {
+					throw new SemanticException ("semantic error: invalid column type, expected: (<string>, <string>), got "
+						+ "(<" + meta.getColumnTypeName (1) + ">, <" + meta.getColumnTypeName (2) + ">)",
+						config.getStart (), config.getEnd ());					
+				}
+
+				Map<String, Map<String, Integer>> data = new HashMap<String, Map<String, Integer>> ();
+				Lemmatizer lemmatiser = new Lemmatizer ();
+
+				Set<String> categoryNames = new HashSet<String> ();
+
+				while (res.next ()) {
+					String category = res.getString (1);					
+					categoryNames.add (category);
+
+					List<String> lemma = lemmatiser.lemmatize (res.getString (2));
+					
+					for (String word : lemma) {
+						Map<String, Integer> counter = data.get (word);
+						if (counter == null) {
+							counter = new HashMap<String, Integer> ();
+							data.put (word, counter);
+						}
+
+						Integer wordCount = counter.get (category);
+						if (wordCount == null) {
+							wordCount = 0;
+						}
+
+						counter.put (category, wordCount + 1);
+					}
+				}
+
+
+				String[] header = new String[categoryNames.size () + 1];
+				header[0] = "word";
+
+				int i = 1;
+				for (String catName : categoryNames) {
+					header[i] = catName;
+					i++;
+				}
+
+				formatter.writeHeader (header);
+				
+				for (Entry<String, Map<String, Integer>>  entry : data.entrySet ()) {
+					Map<String, Integer> scores = entry.getValue ();
+					String[] row = new String[header.length];
+
+					row[0] = entry.getKey ();
+					i = 1;
+					for (String cat : categoryNames) {
+						Integer score = scores.get (cat);
+						if (score == null) {
+							score = 0;
+						}
+						row[i] = score.toString ();
+						i++;
+						
+					}
+
+					formatter.writeSet (row);
+				}
+				
+				formatter.writeFooter (header);
+			}
+		});		
+	}
+
+	private void exportRows (ExporterConfig config, Project project, int commitDictId, int bugDictId, Settings settings, final ReportWriter formatter, String outputPath, Map<String, Object> vars) throws SQLException, Exception {
+		formatter.init (project, settings, outputPath);
+		model.rawForeach (config.getQuery (), vars, new ResultCallback () {
+
+			@Override
+			public void processResult (ResultSet res) throws SemanticException, SQLException, Exception {
+				ResultSetMetaData meta = res.getMetaData ();
+				String[] titles = new String[meta.getColumnCount ()];
+				for (int i = 0; i < titles.length ; i++) {
+					titles[i] = meta.getColumnLabel (i + 1);
+				}
+
+
+				formatter.writeHeader (titles);
+				
+				while (res.next ()) {
+					String[] data = new String[titles.length];
+					for (int i = 0; i < data.length ; i++) {
+						data[i] = res.getString (i + 1);
+					}
+					
+					formatter.writeSet (data);
+				}
+
+				formatter.writeFooter (titles);
+			}
+		});
+	}
+	
 	public static void main (String[] args) {
 		Options options = new Options ();
 		options.addOption ("h", "help", false, "Show this options");
@@ -116,10 +238,12 @@ public class Reporter {
 		options.addOption ("c", "commit-dictionary", true, "The commit dictionary ID to use");
 		options.addOption ("b", "bug-dictionary", true, "The bug dictionary ID to use");
 		options.addOption ("D", "list-dictionaries", false, "List all dictionaries");
+		options.addOption ("v", "verbose", false, "Show details");
 
 		
 		at.ac.tuwien.inso.subcat.utility.Reporter errReporter = new at.ac.tuwien.inso.subcat.utility.Reporter ();
 		Settings settings = new Settings ();
+		boolean verbose = false;
 		ModelPool pool = null;
 		Model model = null;
 
@@ -127,7 +251,9 @@ public class Reporter {
 		
 		try {
 			CommandLine cmd = parser.parse (options, args);
-
+			verbose = cmd.hasOption ("verbose");
+			
+			
 			if (cmd.hasOption ("help")) {
 				HelpFormatter formatter = new HelpFormatter ();
 				formatter.printHelp ("postprocessor", options);
@@ -180,6 +306,7 @@ public class Reporter {
 			}
 			
 			pool = new ModelPool (cmd.getOptionValue ("db"), 2);
+			pool.setPrintTemplates (verbose);
 			model = pool.getModel ();
 
 			if (cmd.hasOption ("list-formats")) {
@@ -236,7 +363,7 @@ public class Reporter {
 			if (cmd.hasOption ("list-dictionaries")) {
 				List<at.ac.tuwien.inso.subcat.model.Dictionary> dictionaries = model.getDictionaries (project);
 				for (at.ac.tuwien.inso.subcat.model.Dictionary dict : dictionaries) {
-					System.out.println ("  (" + dict.getId () + ") " + dict.getName ());
+					System.out.println ("  (" + dict.getId () + ") " + " " + dict.getContext () + " " + dict.getName ());
 				}
 				return ;
 			}
@@ -341,12 +468,24 @@ public class Reporter {
 			exporter.export (exporterConfig, project, commitDictId, bugDictId, settings, writer, outputPath);
 		} catch (ParseException e) {
 			errReporter.error ("reporter", "Parsing failed: " + e.getMessage ());
+			if (verbose == true) {
+				e.printStackTrace ();
+			}
 		} catch (ClassNotFoundException e) {
 			errReporter.error ("reporter", "Failed to create a database connection: " + e.getMessage ());
+			if (verbose == true) {
+				e.printStackTrace ();
+			}
 		} catch (SQLException e) {
 			errReporter.error ("reporter", "Failed to create a database connection: " + e.getMessage ());
+			if (verbose == true) {
+				e.printStackTrace ();
+			}
 		} catch (ReporterException e) {
 			errReporter.error ("reporter", "Reporter Error: " + e.getMessage ());
+			if (verbose == true) {
+				e.printStackTrace ();
+			}
 		} finally {
 			if (model != null) {
 				model.close ();

@@ -4,8 +4,9 @@ package at.ac.tuwien.inso.subcat.config;
 public class ExporterConfig extends OptionalConfigNode {
 	private String name;
 	private Query query;
+	private boolean wordStats;
 
-	public ExporterConfig (String name, Query query, SourcePos start, SourcePos end) {
+	public ExporterConfig (String name, Query query, SourcePos start, SourcePos end, boolean wordStats) {
 		super (start, end);
 
 		assert (name != null);
@@ -13,6 +14,7 @@ public class ExporterConfig extends OptionalConfigNode {
 
 		this.name = name;
 		this.query = query;
+		this.wordStats = wordStats;
 	}
 	
 	public String getName () {
@@ -23,12 +25,17 @@ public class ExporterConfig extends OptionalConfigNode {
 		return query;
 	}
 
+	public boolean getWordStats () {
+		return wordStats;
+	}
+	
 	@Override
 	public void accept (ConfigVisitor visitor) {
 		assert (visitor != null);
 
 		visitor.visitExporterConfig (this);
 	}
+
 	@Override
 	public void acceptChildren (ConfigVisitor visitor) {
 		super.acceptChildren (visitor);

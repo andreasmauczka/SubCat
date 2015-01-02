@@ -237,6 +237,9 @@ public class Scanner {
 		if (idStr.equals ("Reporter")) {
 			return new Token (TokenType.REPORTER, start, getCurrentPos (-1), idStr);
 		}
+		if (idStr.equals ("WordStats")) {
+			return new Token (TokenType.WORD_STATS, start, getCurrentPos (-1), idStr);
+		}
 		if (idStr.equals ("ProjectView")) {
 			return new Token (TokenType.PROJECT_VIEW, start, getCurrentPos (-1), idStr);
 		}

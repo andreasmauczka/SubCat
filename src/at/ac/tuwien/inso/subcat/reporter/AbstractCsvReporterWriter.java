@@ -33,13 +33,10 @@ package at.ac.tuwien.inso.subcat.reporter;
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
-import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
-import java.sql.SQLException;
 
-import at.ac.tuwien.inso.subcat.config.SemanticException;
 import at.ac.tuwien.inso.subcat.miner.Settings;
 import at.ac.tuwien.inso.subcat.model.Project;
+
 
 public abstract class AbstractCsvReporterWriter extends ReportWriter {
 	private PrintWriter writer;
@@ -89,46 +86,31 @@ public abstract class AbstractCsvReporterWriter extends ReportWriter {
 	}
 
 	@Override
-	public void processResult (ResultSet res) throws SemanticException, SQLException {
-		ResultSetMetaData meta = res.getMetaData ();
-		int colCount = meta.getColumnCount ();
+	public void writeHeader (String[] names) throws ReporterException {
+		writeSet (names);
+	}
+		
+	@Override
+	public void writeSet (String[] data) throws ReporterException {
+		writer.append (rowStart);
 		boolean isFirst = true;
 
-		// header:
-		writer.append (rowStart);
-
-		for (int i = 1; i <= colCount ; i++) {
+		for (String value : data) {
 			if (!isFirst) {
 				writer.append (valueSeparator);
 			}
-
-			String label = meta.getColumnLabel (i);
+				
 			writer.append (valueStart);
-			writer.append (escapeValue (label));
+			writer.append (escapeValue (value));
 			writer.append (valueEnd);
 			isFirst = false;
 		}
-
 		writer.append (rowEnd);
+	}
 
-		// data
-		while (res.next ()) {
-			writer.append (rowStart);
-			isFirst = true;
 
-			for (int i = 1; i <= colCount ; i++) {
-				if (!isFirst) {
-					writer.append (valueSeparator);
-				}
-				
-				String value = res.getString (i);
-				writer.append (valueStart);
-				writer.append (escapeValue (value));
-				writer.append (valueEnd);
-				isFirst = false;
-			}
-			writer.append (rowEnd);
-		}
+	@Override
+	public void writeFooter (String[] names) throws ReporterException {
 	}
 
 	protected String escapeValue (String value) {

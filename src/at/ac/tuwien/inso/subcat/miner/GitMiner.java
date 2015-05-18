@@ -76,7 +76,7 @@ public class GitMiner extends Miner {
 
 	private boolean processDiffs;
 	private String startRef;
-
+	
 
 	private static class DiffOutputStream extends OutputStream {
 		private enum State {
@@ -91,6 +91,7 @@ public class GitMiner extends Miner {
 		private int totalChunks = 0;
 		private int totalAddedEmpty = 0;
 		private int totalRemovedEmpty = 0;
+		private int lineCount;
 
 		private State state = State.NONE;
 		private boolean empty = false;
@@ -126,9 +127,20 @@ public class GitMiner extends Miner {
 			this.state = State.NONE;
 			this.empty = false;
 		}
+
+		public void resetFile () {
+			lineCount = 0;
+		}
 		
 		@Override
 		public void write (int b) {
+			if (lineCount < 5) {
+				if (b == '\n') {
+					lineCount++;
+				}
+				return ;
+			}
+
 			if (b == '\n') {
 				lastWasNewline = true;
 				if (empty == true) {
@@ -385,7 +397,7 @@ public class GitMiner extends Miner {
 		if (processDiffs == false) {
 			return ;
 		}
-		
+
 		try {
 			DiffFormatter df = new DiffFormatter (outputStream);
 			df.setDiffComparator (RawTextComparator.WS_IGNORE_CHANGE);
@@ -444,6 +456,7 @@ public class GitMiner extends Miner {
 				FileStats fileStats = new FileStats ();
 				fileStatsMap.put (path, fileStats);
 
+				outputStream.resetFile ();
 				df.format(de);
 				df.flush();
 

@@ -400,7 +400,6 @@ public class GitMiner extends Miner {
 
 		try {
 			DiffFormatter df = new DiffFormatter (outputStream);
-			df.setDiffComparator (RawTextComparator.WS_IGNORE_CHANGE);
 			df.setRepository (repository);
 			df.setDetectRenames (true);
 			

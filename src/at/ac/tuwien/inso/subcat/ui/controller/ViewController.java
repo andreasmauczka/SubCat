@@ -31,6 +31,7 @@
 package at.ac.tuwien.inso.subcat.ui.controller;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 import at.ac.tuwien.inso.subcat.model.Project;
@@ -39,6 +40,7 @@ import at.ac.tuwien.inso.subcat.model.Project;
 public class ViewController {
 	private Project project;
 	private HashMap<String, Object> globalVars;
+	private LinkedList<ChartController> charts = new LinkedList<ChartController> ();
 	
 	public ViewController (Project project, HashMap<String, Object> vars) {
 		assert (project != null);
@@ -57,5 +59,16 @@ public class ViewController {
 		map.put ("project", project.getId ());
 		map.putAll (globalVars);
 		return map;
+	}
+	
+	public void addChartController (ChartController chart) {
+		assert (chart != null);
+		charts.add (chart);
+	}
+
+	public void variableChanged () {
+		for (ChartController controller : charts) {
+			controller.viewVariableChanged ();
+		}
 	}
 }

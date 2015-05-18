@@ -39,6 +39,7 @@ import java.util.Map.Entry;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.layout.GridData;
@@ -52,7 +53,7 @@ import org.jfree.experimental.chart.swt.ChartComposite;
 import at.ac.tuwien.inso.subcat.model.PieChartData;
 
 
-public class PieChart extends Composite {
+public class PieChart extends ChartComposite {
 
 	//
 	// Helper:
@@ -195,8 +196,14 @@ public class PieChart extends Composite {
 		StateItem item = new StateItem (this, 0, data.getName (), data.getData (), data.getTotal (), data.getShowTotal ()); // TODO: showTotal
 		item.setLayoutData(new GridData (SWT.FILL, SWT.CENTER, true, false, 1, 1));
 	}
-	
-	
+
+	public void clear () {
+	    for (Control control : getChildren ()) {
+	        control.dispose();
+	    }
+	}
+
+
 	//
 	// Test Method:
 	//

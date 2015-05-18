@@ -44,4 +44,6 @@ public abstract class ChartController {
 		this.viewController = viewController;
 		this.model = model;			
 	}
+
+	public abstract void viewVariableChanged ();
 }

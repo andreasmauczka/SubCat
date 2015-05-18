@@ -38,6 +38,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
@@ -104,7 +105,6 @@ public class Model {
 		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
 		+ ")";
 	
-	// TODO: rename to User
 	private static final String USER_TABLE =
 		"CREATE TABLE IF NOT EXISTS Users ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -113,6 +113,12 @@ public class Model {
 		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
 		+ ")";
 
+	private static final String SELECTED_USER_TABLE =
+		"CREATE TEMP TABLE IF NOT EXISTS SelectedUsers ("
+		+ "id			INTEGER	PRIMARY KEY					NOT NULL,"
+		+ "FOREIGN KEY(id) REFERENCES Users (id)"
+		+ ")";
+	
 	private static final String IDENTITY_TABLE =
 		"CREATE TABLE IF NOT EXISTS Identities ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -472,7 +478,16 @@ public class Model {
 		+ "  SET comments = comments + 1 "
 		+ "  WHERE Bugs.id = NEW.bug; "
 		+ "END ";
+	
+	private static final String SELECT_START_DATE =
+		"SELECT"
+		+ " min(date) "
+		+ "FROM "
+		+ " Commits "
+		+ "WHERE "
+		+ " project = ?";
 
+	
 	private static final String SELECT_ALL_COMMITS =
 		"SELECT"
 		+ " Commits.id					AS cId,"
@@ -700,7 +715,7 @@ public class Model {
 		+ "WHERE "
 		+ " project = ?";
 
-	private static final String SELECT_ALL_USERS_CONTEXT =
+	private static final String SELECT_ALL_IDENTITIES_CONTEXT =
 		"SELECT "
 		+ " u.id, "
 		+ " u.name, "
@@ -716,7 +731,7 @@ public class Model {
 		+ " AND u.project = ? "
 		+ " AND i.context = ? ";
 
-	private static final String SELECT_ALL_USERS =
+	private static final String SELECT_ALL_IDENTITIES =
 		"SELECT "
 		+ " u.id, "
 		+ " u.name, "
@@ -730,7 +745,22 @@ public class Model {
 		+ "WHERE "
 		+ " u.id = i.user "
 		+ " AND u.project = ? ";
-	
+
+	private static final String SELECT_ALL_USERS =
+		"SELECT "
+		+ " u.id, "
+		+ " u.name "
+		+ "FROM "
+		+ " Users u "
+		+ "WHERE "
+		+ " u.project = ? ";
+
+	private static final String SELECT_SELECTED_USERS =
+		"SELECT "
+		+ " id "
+		+ "FROM "
+		+ " SelectedUsers";
+
 	private static final String SELECT_ATTACHMENT_IDENTITY =
 		"SELECT "
 		+ " u.id,"
@@ -794,6 +824,11 @@ public class Model {
 		+ "(project, name)"
 		+ "VALUES (?,?)";
 
+	private static final String SELECTED_USER_INSERTION =
+		"INSERT INTO SelectedUsers"
+		+ "(id) "
+		+ "VALUES (?)";
+	
 	private static final String IDENTITY_INSERTION =
 		"INSERT INTO Identities"
 		+ "(mail, name, user, context)"
@@ -998,6 +1033,9 @@ public class Model {
 	private static final String DELETE_USERS =
 		"DELETE FROM Users WHERE project = ?";
 
+	private static final String DELETE_SELECTED_USERS =
+		"DELETE FROM SelectedUsers";
+	
 	private static final String DELETE_SENTENCE_SENTIMENTS =
 		"DELETE FROM SentenceSentiment "
 		+ "WHERE groupId IN "
@@ -2503,7 +2541,7 @@ public class Model {
 		boolean do_next = true;
 		while (res.next () && do_next) {
 			Integer id = res.getInt (1);
-			Date date = res.getDate (2);
+			Date date = resGetDate (res, 2);
 			String title = res.getString (3);
 			Integer linesAdded = res.getInt (4);
 			Integer linesRemoved = res.getInt (5);
@@ -2551,7 +2589,7 @@ public class Model {
 			}
 			Component component = components.get (res.getInt (8));
 			String title = res.getString (9);
-			Date creation = res.getDate (10);
+			Date creation = resGetDate (res, 10);
 			Priority priority = priorities.get (res.getInt (11));
 			Severity severity = severities.get (res.getInt (12));
 	
@@ -2580,7 +2618,7 @@ public class Model {
 		if (res.next ()) {
 			int id = res.getInt (1);
 			String title = res.getString (8);
-			Date creation = res.getDate (9);
+			Date creation = resGetDate (res, 9);
 
 			User user = null;
 			Identity identity = null;
@@ -2764,7 +2802,7 @@ public class Model {
 			Status status = new Status (res.getInt (2), proj, res.getString (3));
 			User user = userFromResult (res, proj, 7, 8);
 			Identity identity = identityFromResult (res, user, 4, 10, 5, 6);
-			Date creation = res.getDate (9);
+			Date creation = resGetDate (res, 9);
 
 			BugHistory entry = new BugHistory (id, bug, status, identity, creation);
 			history.add (entry);
@@ -2789,7 +2827,7 @@ public class Model {
 		ResultSet res = stmt.executeQuery ();
 		while (res.next ()) {
 			Integer id = res.getInt (1);
-			Date creation = res.getDate (2);
+			Date creation = resGetDate (res, 2);
 			User user = userFromResult (res, proj, 6, 7);
 			Identity identity = identityFromResult (res, user, 3, 9, 4, 5);
 			String content = res.getString (8);
@@ -2808,7 +2846,7 @@ public class Model {
 		assert (proj.getId () != null);
 		
 		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_USERS_CONTEXT);
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_IDENTITIES_CONTEXT);
 		stmt.setInt (1, proj.getId ());
 		stmt.setString (2, context);
 	
@@ -2853,7 +2891,7 @@ public class Model {
 		assert (proj.getId () != null);
 		
 		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_USERS);
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_IDENTITIES);
 		stmt.setInt (1, proj.getId ());
 	
 		// Collect data:
@@ -2867,7 +2905,27 @@ public class Model {
 	
 		return identities;
 	}
+
+	public List<User> getUsers (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+		
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_USERS);
+		stmt.setInt (1, proj.getId ());
 	
+		// Collect data:
+		LinkedList<User> identities = new LinkedList<User> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			User user = userFromResult (res, proj, 1, 2);
+			identities.add (user);
+		}
+	
+		return identities;
+	}
+
 	public Project getProject (int id) throws SQLException {
 		assert (conn != null);
 
@@ -2878,7 +2936,7 @@ public class Model {
 		// Collect data:
 		ResultSet res = stmt.executeQuery ();
 		if (res.next ()) {
-			Date date = res.getDate (2);
+			Date date = resGetDate (res, 2);
 			String domain = res.getString (3);
 			String product = res.getString (4);
 			String revision = res.getString (5);
@@ -2901,7 +2959,7 @@ public class Model {
 		ResultSet res = stmt.executeQuery ();
 		while (res.next ()) {
 			Integer id = res.getInt (1);
-			Date date = res.getDate (2);
+			Date date = resGetDate (res, 2);
 			String domain = res.getString (3);
 			String product = res.getString (4);
 			String revision = res.getString (5);
@@ -2937,6 +2995,60 @@ public class Model {
 		return dictionaries;
 	}
 
+	public Date getStartDate (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+		
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_START_DATE);
+		stmt.setInt (1, proj.getId ());
+
+		
+		// Collect data:
+		ResultSet res = stmt.executeQuery ();
+		if (res.next ()) {
+			return resGetDate (res, 1);
+		}
+	
+		return new Date ();
+	}
+
+	public List<Integer> getUserSelection () throws SQLException {
+		assert (conn != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_SELECTED_USERS);
+
+		// Collect data:
+		LinkedList<Integer> users = new LinkedList<Integer> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			users.add (res.getInt (1));
+		}
+		
+		return users;
+	}
+
+	public void updateUserSelection (List<Integer> selectedUsers) throws SQLException {
+		assert (conn != null);
+		assert (selectedUsers != null);
+
+		// Drop old selections:
+		PreparedStatement stmt = conn.prepareStatement (DELETE_SELECTED_USERS);
+		stmt.executeUpdate();
+		stmt.close ();
+		
+		// Insert new selections:
+		stmt = conn.prepareStatement (SELECTED_USER_INSERTION);
+		for (Integer id : selectedUsers) {
+			stmt.setInt (1, id);
+			stmt.executeUpdate();
+		}
+
+		stmt.close ();
+	}
+
 	//
 	// Helper:
 	//
@@ -2949,7 +3061,17 @@ public class Model {
 		assert (hadNext);
 		return res.getInt (1);
 	}
-	
+
+	private Date resGetDate (ResultSet res, int pos) throws SQLException {
+		SimpleDateFormat formatter = new SimpleDateFormat ("yyyy-MM-dd HH:mm:ss");
+	    try {
+			return formatter.parse (res.getString (pos));
+		} catch (ParseException e) {
+			// TODO
+			return null;
+		}
+	}
+
 	private void createTables () throws SQLException {
 		assert (conn != null);
 
@@ -2986,6 +3108,7 @@ public class Model {
 		stmt.executeUpdate (SENTENCE_SENTIMENT_TABLE);
 		stmt.executeUpdate (BLOCK_SENTIMENT_TABLE);
 		stmt.executeUpdate (SENTIMENT_TABLE);
+		stmt.executeUpdate (SELECTED_USER_TABLE);
 		stmt.close ();
 	}
 }

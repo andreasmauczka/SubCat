@@ -33,6 +33,7 @@ package at.ac.tuwien.inso.subcat.ui;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -43,7 +44,11 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PosixParser;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.custom.SashForm;
 import org.eclipse.swt.custom.ScrolledComposite;
+import org.eclipse.swt.custom.StackLayout;
+import org.eclipse.swt.events.SelectionEvent;
+import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
@@ -60,7 +65,9 @@ import at.ac.tuwien.inso.subcat.config.ParserException;
 import at.ac.tuwien.inso.subcat.config.PieChartGroupConfig;
 import at.ac.tuwien.inso.subcat.config.ProjectViewConfig;
 import at.ac.tuwien.inso.subcat.config.SemanticException;
+import at.ac.tuwien.inso.subcat.config.TeamViewConfig;
 import at.ac.tuwien.inso.subcat.config.TrendChartGroupConfig;
+import at.ac.tuwien.inso.subcat.config.UserViewConfig;
 import at.ac.tuwien.inso.subcat.config.ViewConfig;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
@@ -69,10 +76,15 @@ import at.ac.tuwien.inso.subcat.ui.controller.DistributionChartController;
 import at.ac.tuwien.inso.subcat.ui.controller.PieChartController;
 import at.ac.tuwien.inso.subcat.ui.controller.TrendChartController;
 import at.ac.tuwien.inso.subcat.ui.controller.ViewController;
+import at.ac.tuwien.inso.subcat.ui.events.UserListListener;
 import at.ac.tuwien.inso.subcat.ui.widgets.DistributionChart;
 import at.ac.tuwien.inso.subcat.ui.widgets.PieChart;
 import at.ac.tuwien.inso.subcat.ui.widgets.TrendChart;
+import at.ac.tuwien.inso.subcat.ui.widgets.UserList;
 import at.ac.tuwien.inso.subcat.utility.Reporter;
+
+import org.eclipse.swt.widgets.Menu;
+import org.eclipse.swt.widgets.MenuItem;
 
 
 public class ViewFactory {
@@ -94,7 +106,7 @@ public class ViewFactory {
 		public ViewBuilder () {
 		}
 
-		public void build (ViewConfig config, TabFolder folder, Project project, HashMap<String, Object> vars) throws SemanticException, SQLException {
+		public ViewController build (ViewConfig config, TabFolder folder, Project project, HashMap<String, Object> vars) throws SemanticException, SQLException {
 			assert (project != null);
 			assert (config != null);
 			assert (folder != null);
@@ -117,6 +129,7 @@ public class ViewFactory {
 			}
 
 			this.folder = null;
+			return viewController;
 		}
 		
 		@Override
@@ -135,7 +148,8 @@ public class ViewFactory {
 			scroll.setLayout (new FillLayout ());
 
 			PieChart view = new PieChart (scroll, SWT.NONE);
-			new PieChartController (model, view, groupConfig, flags, viewController);
+			PieChartController pieController = new PieChartController (model, view, groupConfig, flags, viewController);
+			viewController.addChartController (pieController);
 
 			scroll.setExpandHorizontal(true);
 			scroll.setExpandVertical(true);
@@ -158,7 +172,9 @@ public class ViewFactory {
 			page.setText (groupConfig.getName ());
 
 			TrendChart view = new TrendChart (folder, SWT.NONE);
-			view.addTrendViewListener (new TrendChartController (model, flags, view, groupConfig, viewController));
+			TrendChartController trendController = new TrendChartController (model, flags, view, groupConfig, viewController);
+			view.addTrendViewListener (trendController);
+			viewController.addChartController (trendController);
 			page.setControl (view);
 		}
 
@@ -175,7 +191,9 @@ public class ViewFactory {
 			page.setText (config.getName ());
 
 			DistributionChart view = new DistributionChart (folder, SWT.NONE);
-			view.addDistributionViewListener (new DistributionChartController (model, flags, view, config, viewController));
+			DistributionChartController distController = new DistributionChartController (model, flags, view, config, viewController);
+			view.addDistributionViewListener (distController);
+			viewController.addChartController (distController);
 			page.setControl (view);
 		}
 	}
@@ -184,6 +202,89 @@ public class ViewFactory {
 	public ViewFactory (Model model, Configuration config) {
 		this.model = model;
 		this.config = config;
+	}
+
+	public Composite createUserViewComposite (Composite parent, int style, Project proj, int commitDictId, int bugDictId, UserViewConfig config) throws SemanticException, SQLException {
+		assert (config != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		this.flags = model.getFlags (proj);
+
+		SashForm sash = new SashForm (parent, SWT.HORIZONTAL);
+		sash.setLayout (new FillLayout ());
+		final UserList users = new UserList (sash, SWT.NONE, model.getUsers (proj), false);
+
+		TabFolder folder = new TabFolder (sash, SWT.NONE);
+		model.updateUserSelection (new ArrayList<Integer> ());
+		final HashMap<String, Object> vars = new HashMap<String, Object> ();
+		vars.put ("project", proj.getId ());
+		vars.put ("commitDict", commitDictId);
+		vars.put ("bugDict", bugDictId);
+		vars.put ("user", -1);					
+
+		ViewBuilder builder = new ViewBuilder ();
+		final ViewController viewController = builder.build (config, folder, proj, vars);
+
+		users.addUserListListener (new UserListListener () {
+			@Override
+			public void selectionChanged () {
+				List<Integer> selectedUsers = users.getSelectedIDs ();
+				assert (selectedUsers.size () <= 1);
+				if (selectedUsers.size () > 0) {
+					vars.put ("user", selectedUsers.get (0));
+				} else {
+					vars.put ("user", -1);					
+				}
+				viewController.variableChanged ();
+			}
+		});
+		
+		return sash;
+	}
+
+	public Composite createTeamViewComposite (Composite parent, int style, Project proj, int commitDictId, int bugDictId, TeamViewConfig config) throws SemanticException, SQLException {
+		assert (config != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		this.flags = model.getFlags (proj);
+
+		SashForm sash = new SashForm (parent, SWT.HORIZONTAL);
+		sash.setLayout (new FillLayout ());
+		final UserList users = new UserList (sash, SWT.NONE, model.getUsers (proj), true);
+
+		TabFolder folder = new TabFolder (sash, SWT.NONE);
+		model.updateUserSelection (new ArrayList<Integer> ());
+		final HashMap<String, Object> vars = new HashMap<String, Object> ();
+		vars.put ("project", proj.getId ());
+		vars.put ("commitDict", commitDictId);
+		vars.put ("bugDict", bugDictId);
+
+		ViewBuilder builder = new ViewBuilder ();
+		final ViewController viewController = builder.build (config, folder, proj, vars);
+
+		users.addUserListListener (new UserListListener () {
+			@Override
+			public void selectionChanged () {
+				try {
+					List<Integer> selectedUsers = users.getSelectedIDs ();
+					model.updateUserSelection (selectedUsers);
+					viewController.variableChanged ();
+					if (model.getPrintTemplates ()) {
+						System.out.println ("Selected Users:");
+						for (Integer id : model.getUserSelection ()) {
+							System.out.println (" - " + id);
+						}
+					}
+				} catch (SQLException e) {
+					e.printStackTrace();
+					assert (false);
+				}
+			}
+		});
+		
+		return sash;
 	}
 
 	public Composite createProjectViewComposite (Composite parent, int style, Project proj, int commitDictId, int bugDictId, ProjectViewConfig config) throws SemanticException, SQLException {
@@ -400,23 +501,184 @@ public class ViewFactory {
 
 			// UI:
 			Display display = new Display ();
-			Shell shell = new Shell (display);
-			shell.setLayout (new FillLayout ());
+			final Shell shell = new Shell (display);
+			final StackLayout stack = new StackLayout ();
+			shell.setLayout (stack);
+
+			Composite _projectControl = null;
+			Composite _teamControl = null;
+			Composite _userControl = null;
 
 			if (config.getProjectViewConfig () != null) {
 				ViewFactory factory = new ViewFactory (model, config);
-				factory.createProjectViewComposite (shell, SWT.NONE, project, commitDictId, bugDictId, config.getProjectViewConfig ());
+				_projectControl = factory.createProjectViewComposite (shell, SWT.NONE, project, commitDictId, bugDictId, config.getProjectViewConfig ());
 			}
 
+			if (config.getTeamViewConfig () != null) {
+				ViewFactory factory = new ViewFactory (model, config);
+				_teamControl = factory.createTeamViewComposite (shell, SWT.NONE, project, commitDictId, bugDictId, config.getTeamViewConfig ());
+			}
+
+			if (config.getUserViewConfig () != null) {
+				ViewFactory factory = new ViewFactory (model, config);
+				_userControl = factory.createUserViewComposite (shell, SWT.NONE, project, commitDictId, bugDictId, config.getUserViewConfig ());
+			}
+			
+			final Composite projectControl = _projectControl;
+			final Composite teamControl = _teamControl;
+			final Composite userControl = _userControl;
+			
+			// Menu:
+			Menu menu = new Menu(shell, SWT.BAR);
+			shell.setMenuBar(menu);
+			
+			MenuItem mntmNewSubmenu = new MenuItem (menu, SWT.CASCADE);
+			mntmNewSubmenu.setText ("Views");
+
+			Menu viewMenu = new Menu (shell, SWT.DROP_DOWN);
+			mntmNewSubmenu.setMenu (viewMenu);
+
+			Composite defaultView = null;
+
+			if (projectControl != null) {
+				MenuItem projectRadio = new MenuItem(viewMenu, SWT.RADIO);
+				projectRadio.setText("Project View");
+				projectRadio.addSelectionListener (new SelectionListener () {
+					@Override
+					public void widgetDefaultSelected (SelectionEvent arg0) {
+						stack.topControl = projectControl;
+						shell.layout ();
+					}
+	
+					@Override
+					public void widgetSelected (SelectionEvent arg0) {
+						stack.topControl = projectControl;
+						shell.layout ();
+					}
+				});
+
+				defaultView = projectControl;
+				projectRadio.setSelection (true);
+			}
+
+			if (teamControl != null) {
+				MenuItem teamRadio = new MenuItem(viewMenu, SWT.RADIO);
+				teamRadio.setText("Team View");
+				teamRadio.addSelectionListener (new SelectionListener () {
+					@Override
+					public void widgetDefaultSelected (SelectionEvent arg0) {
+						stack.topControl = teamControl;
+						shell.layout ();
+					}
+	
+					@Override
+					public void widgetSelected (SelectionEvent arg0) {
+						stack.topControl = teamControl;
+						shell.layout ();
+					}
+				});
+
+				if (defaultView == null) {
+					defaultView = teamControl;
+					teamRadio.setSelection (true);
+				}
+			}
+
+			if (userControl != null) {
+				MenuItem userRadio = new MenuItem(viewMenu, SWT.RADIO);
+				userRadio.setText("User View");
+				userRadio.addSelectionListener (new SelectionListener () {
+					@Override
+					public void widgetDefaultSelected (SelectionEvent arg0) {
+						stack.topControl = userControl;
+						shell.layout ();
+					}
+	
+					@Override
+					public void widgetSelected (SelectionEvent arg0) {
+						stack.topControl = userControl;
+						shell.layout ();
+					}
+				});
+
+				if (defaultView == null) {
+					defaultView = userControl;
+					userRadio.setSelection (true);
+				}
+			}
+
+			stack.topControl = defaultView;
+
+			
+			// Display:
 			shell.pack();
 			shell.open ();
+
 			while (!shell.isDisposed ()) {
 				if (!display.readAndDispatch ()) {
 					display.sleep ();
 				}
 			}
-			
 			display.dispose();
+			
+			
+			/*/ UI:
+			Display display = new Display ();
+
+			Shell teamShell = new Shell (display, SWT.CLOSE);
+			teamShell.setLayout (new FillLayout ());
+
+			Shell projectShell = new Shell (display, SWT.CLOSE);
+			projectShell.setLayout (new FillLayout ());
+
+			projectShell.setText ("Project View");
+			teamShell.setText ("Team View");
+
+			if (config.getTeamViewConfig () != null) {
+				ViewFactory factory = new ViewFactory (model, config);
+				factory.createTeamViewComposite (teamShell, SWT.NONE, project, commitDictId, bugDictId, config.getTeamViewConfig ());
+
+				teamShell.pack();
+				teamShell.open ();
+			} else {
+				teamShell.dispose ();
+			}
+
+			if (config.getProjectViewConfig () != null) {
+				ViewFactory factory = new ViewFactory (model, config);
+				factory.createProjectViewComposite (projectShell, SWT.NONE, project, commitDictId, bugDictId, config.getProjectViewConfig ());
+
+				projectShell.pack();
+				projectShell.open ();
+			} else {
+				projectShell.dispose ();
+			}
+
+			teamShell.addListener (SWT.CLOSE, new Listener () {
+				@Override
+				public void handleEvent (Event event) {
+					teamShell.dispose ();
+				}
+			});
+
+			projectShell.addListener (SWT.CLOSE, new Listener () {
+				@Override
+				public void handleEvent (Event event) {
+					projectShell.dispose ();
+				}
+			});
+
+	        while (!display.isDisposed ()) {
+	        	if (teamShell.isDisposed () && projectShell.isDisposed ()) {
+	        		break;
+	        	}
+				if (!display.readAndDispatch ()) {
+					display.sleep ();
+				}
+			}
+
+			display.dispose();
+			*/
 		} catch (ParseException e) {
 			reporter.error ("explorer", "Parsing failed: " + e.getMessage ());
 			if (printDetails == true) {
@@ -448,212 +710,4 @@ public class ViewFactory {
 
 		reporter.printSummary ();
 	}
-
-	
-	/*
-	public static void main (String[] args) {
-		ModelPool pool = null;
-		Model model = null;
-		try {
-			// Dummy Model:
-			pool = new ModelPool ("foo.db");
-			model = pool.getModel ();
-
-			Project project = model.addProject (new Date (), "", "", "");
-			model.addFlag (project, "FOO");
-			Component component1 = model.addComponent(project, "Component 1");
-
-			Status status1 = model.addStatus(project, "OPEN");
-			model.addStatus(project, "CLOSED");
-			model.setDefaultStatus (status1);
-
-			
-			User user1 = model.addUser (project, "user 1");
-			Identity identity1a = model.addIdentity ("user1@mail.endl", "user1a", user1);
-			Identity identity1b = model.addIdentity ("user1@mail.endl", "user1b", user1);
-			
-			User user2 = model.addUser (project, "user 2");
-			Identity identity2a = model.addIdentity ("user2@mail.endl", "user2a", user2);
-			model.addIdentity ("user2@mail.endl", "user2b", user2);
-
-			User user3 = model.addUser (project, "user 3");
-			Identity identity3a = model.addIdentity ("user3@mail.endl", "user3a", user3);
-			model.addIdentity ("user3@mail.endl", "user3b", user3);
-
-			Severity sev1 = model.addSeverity(project, "blocker");
-			model.addSeverity(project, "critical");
-			model.addSeverity(project, "major");
-			model.addSeverity(project, "normal");
-			model.addSeverity(project, "minor");
-			model.addSeverity(project, "trivial");
-			model.addSeverity(project, "enhancment");
-
-			Priority priority1 = model.addPriority (project, "Immediate");
-			model.addPriority (project, "Urgent");
-			model.addPriority (project, "High");
-			model.addPriority (project, "Normal");
-			model.addPriority (project, "Low");
-
-			
-			model.addCommit(project, identity1a, identity1a, new Date (), "commit 1", 1, 5, 5);
-			model.addCommit(project, identity1a, identity1a, new Date (), "commit 3", 1, 5, 5);
-			model.addCommit(project, identity1a, identity1a, new Date (), "commit 3", 1, 5, 5);
-
-			model.addCommit(project, identity2a, identity2a, new Date (), "commit 4", 1, 5, 5);
-			model.addCommit(project, identity2a, identity2a, new Date (), "commit 5", 1, 5, 5);
-			model.addCommit(project, identity2a, identity2a, new Date (), "commit 6", 1, 5, 5);
-
-			model.addCommit(project, identity3a, identity1a, new Date (), "commit 7", 1, 5, 5);
-			model.addCommit(project, identity3a, identity1a, new Date (), "commit 8", 1, 5, 5);
-			model.addCommit(project, identity3a, identity1a, new Date (), "commit 9", 1, 5, 5);
-
-			
-	
-			model.addBug("1", identity1b, component1, "bug 1", new Date (), priority1, sev1);
-			model.addBug("2", identity1b, component1, "bug 1", new Date (), priority1, sev1);
-			model.addBug("3", identity1b, component1, "bug 1", new Date (), priority1, sev1);
-			model.addBug("4", identity1b, component1, "bug 1", new Date (), priority1, sev1);
-			model.addBug("5", identity1b, component1, "bug 1", new Date (), priority1, sev1);
-			model.addBug("6", identity1b, component1, "bug 1", new Date (), priority1, sev1);
-			model.addBug("7", identity1b, component1, "bug 1", new Date (), priority1, sev1);
-			model.addBug("8", identity1b, component1, "bug 1", new Date (), priority1, sev1);
-			model.addBug("9", identity1b, component1, "bug 1", new Date (), priority1, sev1);
-			model.addBug("10", identity1b, component1, "bug 1", new Date (), priority1, sev1);
-			
-			
-			// Configuration:
-			Configuration config = new Configuration ();
-			Parser parser = new Parser ();
-			String content = "\n"
-					+ "ProjectView = { \n"
-
-					+ "  DistributionCharts = {\n"
-					+ "    Name = \"Distributions\";\n"
-
-					+ "    DistributionOption = {\n"
-					+ "      Name = \"Bugs\";\n"
-
-					+ "	     Filter = {\n"
-					+ "        VarName = priority;\n"
-					+ "	       Query = \"SELECT id, name FROM Priorities WHERE project = \" + project;\n"
-					+ "	     };\n"
-
-					+ "      Filter = {\n"
-					+ "        VarName = severity;\n"
-					+ "        Query = \"SELECT id, name FROM Severity WHERE project = \" + project;\n"
-					+ "	     };\n"
-
-					+ "      Filter = {\n"
-					+ "        VarName = status;\n"
-					+ "        Query = \"SELECT id, name FROM Status WHERE project = \" + project;\n"
-					+ "	     };\n"
-
-					+ "      Attributes = {\n"
-					+ "        Attribute = {\n"
-					+ "          Name = \"Comments\";\n"
-					+ "          Query = \"SELECT CAST(strftime('%m', creation) AS INTEGER), avg(comments), median(comments), lower_quartile(comments), upper_quartile(comments), min(comments), max(comments), count (*) FROM Bugs\";\n"
-					+ "        };\n"
-					+ "        Attribute = {\n"
-					+ "          Name = \"Patches\";\n"
-					+ "          Query = \"SELECT CAST(strftime('%m', creation) AS INTEGER), avg(comments), median(comments), lower_quartile(comments), upper_quartile(comments), min(comments), max(comments), count (*) FROM Bugs\";\n"
-					+ "        };\n"
-					+ "      };\n"
-
-					+ "	   };\n"
-					+ "	 };\n"
-					
-					+ "  TrendCharts = {\n"
-					+ "    Name = \"Bug Trends\";\n"
-
-					+ "    TrendChart = {\n"
-					+ "      Name = \"Group 1\";\n"
-
-					+ "      DropDown = {\n"
-					+ "        VarName = categories;\n"
-					+ "        Query = \"SELECT id, name FROM Categories\";\n"
-					+ "        DataQuery = \"SELECT CAST(strftime('%m', creation) AS INTEGER), COUNT(id)"
-					+ "							FROM Bugs"
-					+ "							WHERE component IN (SELECT id FROM Components WHERE project = \" + project + \")"
-					+ "								AND severity = \" + severity + \""
-					+ "								AND category = \" + categories + \""
-					+ "								AND CAST(strftime('%Y', creation) AS INTEGER) = \" + year + \""
-					+ "							GROUP BY strftime('%m', creation)\";\n"
-					+ "      };\n"
-					
-					+ "      OptionList = {\n"
-					+ "        VarName = severity;\n"
-					+ "        Query = \"SELECT id, name FROM Severity\";\n"
-					+ "      };\n"
-
-					+ "    };\n"
-					+ "  };\n"
-
-					
-					+ "  PieCharts = {\n"
-					+ "    Name = \"Source Overview\";\n"
-
-					+ "    PieChart = {\n"
-					+ "       Name = \"Pie 1\";\n"
-					+ "       Query = \"SELECT name, (SELECT COUNT () FROM Commits WHERE Commits.category = Categories.id) AS count FROM  Categories WHERE project = \" + project + \" ORDER BY name \";"
-					+ "       ShowTotal = true;\n"
-					+ "    };\n"
-
-					+ "    PieChart = {\n"
-					+ "       Name = \"Pie 2\";\n"
-					+ "       Query = \"SELECT name, (SELECT COUNT () FROM Commits WHERE Commits.category = Categories.id) AS count FROM  Categories WHERE project = \" + project + \" ORDER BY name \";"
-					+ "       ShowTotal = true;\n"
-					+ "    };\n"					
-
-					+ "    PieChart = {\n"
-					+ "       Name = \"Pie 3\";\n"
-					+ "       Query = \"SELECT name, (SELECT COUNT () FROM Commits WHERE Commits.category = Categories.id) AS count FROM  Categories WHERE project = \" + project + \" ORDER BY name \";"
-					+ "       ShowTotal = true;\n"
-					+ "    };\n"					
-
-					+ "    PieChart = {\n"
-					+ "       Name = \"Pie 4\";\n"
-					+ "       Query = \"SELECT name, (SELECT COUNT () FROM Commits WHERE Commits.category = Categories.id) AS count FROM  Categories WHERE project = \" + project + \" ORDER BY name \";"
-					+ "       ShowTotal = true;\n"
-					+ "    };\n"					
-
-					+ "    PieChart = {\n"
-					+ "       Name = \"Pie 5\";\n"
-					+ "       Query = \"SELECT name, (SELECT COUNT () FROM Commits WHERE Commits.category = Categories.id) AS count FROM  Categories WHERE project = \" + project + \" ORDER BY name \";"
-					+ "       ShowTotal = true;\n"
-					+ "    };\n"					
-
-					+ "  };\n"
-					+ "};\n"
-					+ "\n";
-
-			
-			parser.parse (config, new File ("/foo/bar/baz"), content.getBytes());
-
-
-			// UI:
-			Display display = new Display ();
-			Shell shell = new Shell (display);
-			shell.setLayout (new FillLayout ());
-
-			ViewFactory factory = new ViewFactory (model, config);
-			factory.createProjectViewComposite (shell, SWT.NONE, project, config.getProjectViewConfig());
-
-			shell.pack();
-			shell.open ();
-			while (!shell.isDisposed ()) {
-				if (!display.readAndDispatch ()) {
-					display.sleep ();
-				}
-			}
-			
-			display.dispose();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		
-		if (model != null) {
-			model.close ();
-		}
-	}
-	*/
 }

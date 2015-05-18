@@ -61,16 +61,16 @@ public class DistributionChartController extends ChartController implements Dist
 
 		this.view = view;
 
-		Calendar now = Calendar.getInstance();
-		int endYear = now.get (Calendar.YEAR);
-		now.setTime (viewController.getProject ().getDate ());
-		int startYear = now.get(Calendar.YEAR);
-
-		view.setYearRange (startYear, endYear);
-
-		Map<String, Object> vars = viewController.getVariables ();
-
 		try {
+			Calendar now = Calendar.getInstance();
+			int endYear = now.get (Calendar.YEAR);
+			now.setTime (model.getStartDate (viewController.getProject ()));
+			int startYear = now.get(Calendar.YEAR);
+	
+			view.setYearRange (startYear, endYear);
+	
+			Map<String, Object> vars = viewController.getVariables ();
+
 			DistributionChartConfigData configData =  model.getDistributionChartData (config, vars);
 			view.addConfiguration (configData, flags);
 
@@ -85,6 +85,22 @@ public class DistributionChartController extends ChartController implements Dist
 			e.printStackTrace();
 		}
 
+	}
+
+	@Override
+	public void viewVariableChanged () {
+		for (DistributionChart.ChartIdentifier identifier : view.getIdentifiers ()) {
+			try {
+				view.removeData (identifier);
+				drawLine (identifier);
+			} catch (SemanticException e) {
+				// TODO
+				e.printStackTrace ();				
+			} catch (SQLException e) {
+				// TODO 
+				e.printStackTrace();
+			}
+		}
 	}
 
 	@Override

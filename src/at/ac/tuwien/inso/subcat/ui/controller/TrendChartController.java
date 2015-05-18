@@ -65,17 +65,16 @@ public class TrendChartController extends ChartController implements TrendChartL
 		
 		this.view = view;
 
-
-		Calendar now = Calendar.getInstance();
-		int endYear = now.get (Calendar.YEAR);
-		now.setTime (viewController.getProject ().getDate ());
-		int startYear = now.get (Calendar.YEAR);
-
-		view.setYearRange (startYear, endYear);
-
-		Map<String, Object> vars = viewController.getVariables ();
-
 		try {
+			Calendar now = Calendar.getInstance();
+			int endYear = now.get (Calendar.YEAR);
+			now.setTime (model.getStartDate (viewController.getProject ()));
+			int startYear = now.get (Calendar.YEAR);
+	
+			view.setYearRange (startYear, endYear);
+	
+			Map<String, Object> vars = viewController.getVariables ();
+
 			for (TrendChartConfig trendConf : groupConfig.getTrendChartConfigs ()) {
 				TrendChartConfigData trendConfData;
 					trendConfData = model.getChartGroupConfigData (trendConf, vars);
@@ -89,7 +88,24 @@ public class TrendChartController extends ChartController implements TrendChartL
 			e.printStackTrace();
 		}
 	}
-	
+
+	@Override
+	public void viewVariableChanged () {
+		LinkedList<ChartIdentifier> identifiers = new LinkedList<ChartIdentifier> (view.getSelectedIdentifiers());
+		for (ChartIdentifier identifier : identifiers) {
+			try {
+				view.removeData (identifier);
+				drawLine (identifier);
+			} catch (SemanticException e) {
+				// TODO
+				e.printStackTrace ();
+			} catch (SQLException e) {
+				// TODO
+				e.printStackTrace();
+			}
+		}
+	}
+
 	@Override
 	public void timeSelectionChanged () {
 		LinkedList<ChartIdentifier> identifiers = new LinkedList<ChartIdentifier> (view.getSelectedIdentifiers());

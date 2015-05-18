@@ -43,7 +43,11 @@ import at.ac.tuwien.inso.subcat.ui.widgets.PieChart;
 
 
 public class PieChartController extends ChartController {
-
+	private PieChartGroupConfig groupConfig;
+	private List<String> flags;
+	private PieChart view;
+	private Model model;
+	
 	public PieChartController(Model model, PieChart view, PieChartGroupConfig groupConfig, List<String> flags, ViewController viewController) {
 		super(model, viewController);
 
@@ -51,9 +55,19 @@ public class PieChartController extends ChartController {
 		assert (view != null);
 		assert (groupConfig != null);
 		assert (viewController != null);
-		
 
+		this.groupConfig = groupConfig;
+		this.model = model;
+		this.flags = flags;
+		this.view = view;
+
+		redraw ();
+	}
+
+	private void redraw () {
 		try {
+			view.clear ();
+
 			for (PieChartConfig pieConf : groupConfig.getCharts ()) {
 				if (pieConf.show (flags)) {
 					Map<String, Object> vars = getVariables ();
@@ -72,5 +86,10 @@ public class PieChartController extends ChartController {
 
 	protected Map<String, Object> getVariables () {
 		return viewController.getVariables ();
+	}
+
+	@Override
+	public void viewVariableChanged () {
+		redraw ();
 	}
 }

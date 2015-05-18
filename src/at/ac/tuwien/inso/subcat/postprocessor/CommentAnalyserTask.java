@@ -38,7 +38,7 @@ public class CommentAnalyserTask extends PostProcessorTask {
 	private HashFunc hashFunc = new DirectHashFunc ();
 	private int nameWordDistance = 0;
 
-		
+
 	private class CommentAnalyser extends ContentNodeVisitor<Identity> {
 		private LinkedList<CommentNode<Identity>> analysedComments;
 		private List<Comment> comments;
@@ -99,7 +99,7 @@ public class CommentAnalyserTask extends PostProcessorTask {
 			if (authorsById.size () == 2) {
 				for (Identity id : authorsById.values ()) {
 					if (id.getId () != commentIdentity.getId ()) {
-						globalIdentity = commentIdentity;
+						globalIdentity = id;
 						break;
 					}
 				}

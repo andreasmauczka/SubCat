@@ -67,6 +67,7 @@ public class Commit {
 		this.title = title;
 		this.linesAdded = linesAdded;
 		this.linesRemoved = linesRemoved;
+		this.changedFiles = changedFiles;
 	}
 
 	public Integer getId () {

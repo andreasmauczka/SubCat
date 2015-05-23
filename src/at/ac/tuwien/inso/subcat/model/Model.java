@@ -205,7 +205,18 @@ public class Model {
 		+ "comment		INTEGER								NOT NULL,"
 		+ "FOREIGN KEY(comment) REFERENCES Comments (id)"
 		+ ")";
-	
+
+	private static final String ATTACHMENT_ISOBSOLETE_TABLE =
+			"CREATE TABLE IF NOT EXISTS ObsoleteAttachments ("
+			+ "id			INTEGER							NOT NULL,"
+			+ "identity		INTEGER								NOT NULL,"
+			+ "date			TEXT								NOT NULL,"
+			+ "isObsolete	INTEGER								NOT NULL,"
+			+ "FOREIGN KEY(id) REFERENCES Attachments (id),"
+			+ "FOREIGN KEY(identity) REFERENCES Identities (id)"
+			+ ")";
+
+	/*
 	private static final String ATTACHMENT_REPLACEMENT_TABLE =
 		"CREATE TABLE IF NOT EXISTS AttachmentReplacements ("
 		+ "old			INTEGER								NOT NULL,"
@@ -214,6 +225,7 @@ public class Model {
 		+ "FOREIGN KEY(old) REFERENCES Attachments (id),"
 		+ "FOREIGN KEY(new) REFERENCES Attachments (id)"
 		+ ")";
+	*/
 
 	private static final String ATTACHMENT_STATUS_TABLE =
 		"CREATE TABLE IF NOT EXISTS AttachmentStatus ("
@@ -794,6 +806,11 @@ public class Model {
 	// Insertions:
 	//
 	
+	private static final String OBSOLETE_ATTACHMENT_INSERTION =
+		"INSERT INTO ObsoleteAttachments "
+		+ "(id, identity, date, isObsolete) "
+		+ "VALUES ( ?, ?, ?, ?);";
+
 	private static final String BUG_CATEGORY_INSERTION =
 		"INSERT INTO BugCategories "
 		+ "(bug, category) "
@@ -865,11 +882,12 @@ public class Model {
 		+ "(identifier, comment)"
 		+ "VALUES (?, ?)";
 
+	/*
 	private static final String ATTACHMENT_REPLACEMENT_INSERTION =
 		"INSERT INTO AttachmentReplacements"
 		+ "(old, new)"
 		+ "VALUES (?, ?)";
-
+	*/
 	
 	private static final String ATTACHMENT_STATUS_INSERTION
 		= "INSERT INTO AttachmentStatus"
@@ -1160,6 +1178,23 @@ public class Model {
 		stmt.close ();
 
 		return new Stats (commitCount, bugCount);
+	}
+
+	public void setAttachmentIsObsolete (Attachment attachment, Identity identity, Date date, boolean value) throws SQLException {
+		assert (conn != null);
+		assert (attachment != null);
+		assert (attachment.getId () != null);
+		assert (identity != null);
+		assert (identity.getId () != null);
+		assert (date != null);
+
+		PreparedStatement stmt = conn.prepareStatement (OBSOLETE_ATTACHMENT_INSERTION);
+		stmt.setInt (1, attachment.getId ());
+		stmt.setInt (2, identity.getId ());
+		stmt.setString (3, dateFormat.format (date));
+		stmt.setBoolean (4, value);
+		stmt.executeUpdate();
+		stmt.close ();
 	}
 	
 	public void addFlag (Project proj, String flag) throws SQLException {
@@ -1524,6 +1559,7 @@ public class Model {
 		pool.emitAttachmentAdded (attachment);
 	}
 
+	/*
 	public void addAttachmentReplacement (Attachment oldAtt, Attachment newAtt) throws SQLException {
 		assert (oldAtt != null);
 		assert (newAtt != null);
@@ -1539,6 +1575,7 @@ public class Model {
 
 		pool.emitAttachmentReplacementAdded (oldAtt, newAtt);
 	}
+	*/
 	
 	public AttachmentHistory addAttachmentHistory (Identity identity, AttachmentStatus status, Attachment attachment, Date date) throws SQLException {
 		AttachmentHistory histo = new AttachmentHistory (null, identity, status, attachment, date);
@@ -3104,11 +3141,12 @@ public class Model {
 		stmt.executeUpdate (BUG_CATEGORIES_TABLE);
 		stmt.executeUpdate (COMMIT_CATEGORIES_TABLE);
 		stmt.executeUpdate (DICTIONARY_TABLE);
-		stmt.executeUpdate (ATTACHMENT_REPLACEMENT_TABLE);
+		//stmt.executeUpdate (ATTACHMENT_REPLACEMENT_TABLE);
 		stmt.executeUpdate (SENTENCE_SENTIMENT_TABLE);
 		stmt.executeUpdate (BLOCK_SENTIMENT_TABLE);
 		stmt.executeUpdate (SENTIMENT_TABLE);
 		stmt.executeUpdate (SELECTED_USER_TABLE);
+		stmt.executeUpdate (ATTACHMENT_ISOBSOLETE_TABLE);
 		stmt.close ();
 	}
 }

@@ -108,13 +108,13 @@ public class BugzillaMiner extends Miner {
 		public String id;
 		public Comment comment;
 		public LinkedList<BugzillaAttachmentHistoryEntry> history = new LinkedList<BugzillaAttachmentHistoryEntry> ();
-		public String oldId;
 	}
 	
 	private class BugzillaAttachmentHistoryEntry {
 		public Identity identity;
 		public String status;
 		public Date date;
+		public Boolean isObsolete;
 	}
 	
 	private class Worker extends Thread {
@@ -245,17 +245,15 @@ public class BugzillaMiner extends Miner {
 				for (BugzillaAttachment att : attachments) {
 					Attachment attachment = model.addAttachment (att.id, att.comment);
 					for (BugzillaAttachmentHistoryEntry histo : att.history) {
-						AttachmentStatus attStatus = resolveAttachmentStatus (histo.status);
-						model.addAttachmentHistory (histo.identity, attStatus, attachment, histo.date);
-					}
-
-					if (att.oldId != null) {
-						Attachment origAttachment = storedAttachments.get (att.oldId);
-						if (origAttachment != null) {
-							model.addAttachmentReplacement (origAttachment, attachment);
+						if (histo.status != null) {
+							AttachmentStatus attStatus = resolveAttachmentStatus (histo.status);
+							model.addAttachmentHistory (histo.identity, attStatus, attachment, histo.date);
+						}
+						if (histo.isObsolete != null) {
+							model.setAttachmentIsObsolete (attachment, histo.identity, histo.date, histo.isObsolete);
 						}
 					}
-					
+
 					storedAttachments.put (att.id, attachment);
 				}
 			}
@@ -266,36 +264,30 @@ public class BugzillaMiner extends Miner {
 
 			// TODO: Regex
 			
-			final String attachmentPrefix = "Created an attachment (id=";
-			if (!text.startsWith (attachmentPrefix)) {
+			final String attachmentPrefixOld = "Created an attachment (id=";
+			final String attachmentPrefixNew = "Created attachment ";
+			char endChar;
+			int idStart;
+			
+			if (text.startsWith (attachmentPrefixOld)) {
+				endChar = ')';
+				idStart = attachmentPrefixOld.length ();
+			} else if (text.startsWith (attachmentPrefixNew)) {
+				idStart = attachmentPrefixNew.length ();
+				endChar = '\n';
+			} else {
 				return ;
 			}
 
-			int idStart = attachmentPrefix.length ();
 			int iter = idStart;
 
 			while (Character.isDigit (text.charAt (iter))) {
 				iter++;
 			}
 
-			if (text.charAt (iter) == ')') {
+			if (text.charAt (iter) == endChar) {
 				BugzillaAttachment attachment = new BugzillaAttachment ();
 				attachment.id = text.substring (idStart, iter);
-				attachment.comment = cmnt;
-				attachments.add (attachment);
-			}
-		}
-
-		private String regexAttachmentUpdate = "^\\(From update of attachment [0-9]*\\)\nAttachment ([0-9]*) pushed as ([0-9]*).*";
-		private Pattern pAttachmentUpdate = Pattern.compile (regexAttachmentUpdate);
-
-		private void extractPachUpdateId (Comment cmnt, List<BugzillaAttachment> attachments) {
-			String text = cmnt.getContent ();
-			Matcher m = pAttachmentUpdate.matcher (text);
-			if (m.matches ()) {
-				BugzillaAttachment attachment = new BugzillaAttachment ();
-				attachment.id = m.group (2);
-				attachment.oldId = m.group (1);
 				attachment.comment = cmnt;
 				attachments.add (attachment);
 			}
@@ -316,12 +308,16 @@ public class BugzillaMiner extends Miner {
 				String cmntContent = comment.getText ();
 
 				Comment cmnt = model.addComment (bug, cmntCreation, cmntCreator, cmntContent);
+				// TODO: Duplications
+				// TODO: Patch Reviews / Comment on Attachment
 				extractPatchId (cmnt, attachments);
-				extractPachUpdateId (cmnt, attachments);
 			}
 		}
 		
 		private BugzillaAttachment getAttachment (List<BugzillaAttachment> attachments, String id) {
+			assert (attachments != null);
+			assert (id != null);
+
 			for (BugzillaAttachment att : attachments) {
 				if (att.id.equals (id)) {
 					return att;
@@ -354,18 +350,19 @@ public class BugzillaMiner extends Miner {
 
 						model.addBugHistory (bug, bugStat, identity, date);
 					}
-					
+
+					// TODO: Store fieldName=blocks, fieldName==depends_on, CC					
 					if (change.getAttachmentId () != null) {
 						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
 
 						String status = change.getFieldName ();
 						if (status.equals ("attachments.isobsolete")) {
 							if (change.getAdded ().equals ("1")) {
-								attHisto.status = "obsolete";
+								attHisto.isObsolete = true;
 							} else {
-								attHisto.status = "ongoing";
+								attHisto.isObsolete = false;
 							}
-						} else if (status.equals ("attachments.status")) {
+						} else if (status.equals ("attachments.gnome_attachment_status") || status.equals ("flagtypes.name")) {
 							attHisto.status = change.getAdded ();
 						} else {
 							continue;
@@ -525,7 +522,7 @@ public class BugzillaMiner extends Miner {
 
 	private synchronized BugzillaProduct getBugzillaProduct (String productName) throws BugzillaException, MinerException {
 		assert (productName != null);
-		
+
 		Integer[] ids = context.getAccessibleProducts ();
 		BugzillaProduct[] products = context.getProducts (ids);
 		for (BugzillaProduct product : products) {

@@ -68,8 +68,8 @@ import at.ac.tuwien.inso.subcat.utility.Reporter;
 public class BugzillaMiner extends Miner {
 	private Pattern patternMailValidator = Pattern.compile ("^[_A-Za-z0-9-]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$");
 
-	private int pageSize = 50;
-	private int passSize = 5;
+	private int pageSize;
+	private int passSize;
 
 	// LinkedBlockingQueue does not allow `null`
 	// as poison
@@ -397,8 +397,8 @@ public class BugzillaMiner extends Miner {
 	public void run () throws MinerException, ParameterException {
 		processComments = settings.bugGetParameter (this, "process-comments", true);
 		processHistory = settings.bugGetParameter (this, "process-history", true);
-		passSize = settings.bugGetParameter (this, "pass-size", 10);
-		pageSize = settings.bugGetParameter (this, "page-size", 50);
+		passSize = settings.bugGetParameter (this, "pass-size", 20);
+		pageSize = settings.bugGetParameter (this, "page-size", 200);
 
 		for (int i = 0; i < settings.bugThreads; i++) {
 			Worker worker = new Worker ();

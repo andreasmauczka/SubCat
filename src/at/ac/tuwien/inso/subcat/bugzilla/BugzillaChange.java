@@ -41,14 +41,23 @@ public class BugzillaChange {
 			Integer attachmentId) {
 
 		assert (fieldName != null);
-		assert (added != null);
-		
-		this.fieldName = fieldName;
-		this.removed = removed;
-		this.added = added;
+
+		this.fieldName = nullify (fieldName);
+		this.removed = nullify (removed);
+		this.added = nullify (added);
 		this.attachmentId = attachmentId;
 	}
 
+	private static String nullify (String str) {
+		if (str == null) {
+			return null;
+		}
+		if ("".equals (str.trim ())) {
+			return null;
+		}
+		return str;
+	}
+	
 	public String getFieldName () {
 		return fieldName;
 	}

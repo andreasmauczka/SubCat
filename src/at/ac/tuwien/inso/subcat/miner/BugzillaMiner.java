@@ -221,7 +221,7 @@ public class BugzillaMiner extends Miner {
 				Component component = resolveComponent (bzBug.getComponent ());
 				Severity severity = resolveSeverity (bzBug.getSeverity ());
 				Priority priority = resolvePriority (bzBug.getPriority ());
-				String identifier = new Integer (bzBug.getId ()).toString ();
+				Integer identifier = bzBug.getId ();
 				Date creation = bzBug.getCreationTime ();
 				String title = bzBug.getSummary ();
 

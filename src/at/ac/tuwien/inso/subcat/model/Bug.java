@@ -41,9 +41,9 @@ public class Bug {
 	private Date creation;
 	private Priority priority;
 	private Severity severity;
-	private String identifier;
+	private Integer identifier;
 
-	public Bug (Integer id, String identifier, Identity identity, Component component,
+	public Bug (Integer id, Integer identifier, Identity identity, Component component,
 			String title, Date creation, Priority priority, Severity severity) {
 		assert (component != null);
 		assert (title != null);
@@ -61,7 +61,7 @@ public class Bug {
 		this.severity = severity;
 	}
 
-	public String getIdentifier () {
+	public Integer getIdentifier () {
 		return identifier;
 	}
 

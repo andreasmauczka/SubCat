@@ -174,7 +174,7 @@ public class Model {
 	private static final String BUG_TABLE =
 		"CREATE TABLE IF NOT EXISTS Bugs ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
-		+ "identifier	TEXT								NOT NULL,"
+		+ "identifier	INTEGER								NOT NULL,"
 		+ "identity		INT											,"
 		+ "component	INT									NOT NULL,"
 		+ "title		TEXT								NOT NULL,"
@@ -805,7 +805,7 @@ public class Model {
 	//
 	// Insertions:
 	//
-	
+
 	private static final String OBSOLETE_ATTACHMENT_INSERTION =
 		"INSERT INTO ObsoleteAttachments "
 		+ "(id, identity, date, isObsolete) "
@@ -1609,7 +1609,7 @@ public class Model {
 		pool.emitAttachmentHistoryAdded (history);
 	}
 	
-	public Bug addBug (String identifier, Identity identity, Component component,
+	public Bug addBug (Integer identifier, Identity identity, Component component,
 			String title, Date creation, Priority priority, Severity severity) throws SQLException {
 		Bug bug = new Bug (null, identifier, identity, component, title, creation, priority, severity);
 		add (bug);
@@ -1632,7 +1632,7 @@ public class Model {
 		PreparedStatement stmt = conn.prepareStatement (BUG_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
 
-		stmt.setString (1, bug.getIdentifier ());
+		stmt.setInt (1, bug.getIdentifier ());
 		if (bug.getIdentity () != null) {
 			stmt.setInt (2, bug.getIdentity ().getId ());
 		} else {
@@ -2619,7 +2619,7 @@ public class Model {
 			Identity identity = null;
 
 			Integer id = res.getInt (1);
-			String identifier = res.getString (2);
+			Integer identifier = res.getInt (2);
 			if (res.getInt (3) != 0) {
 				user = userFromResult (res, proj, 6, 7);
 				identity = identityFromResult (res, user, 3, 15, 4, 5);
@@ -2639,7 +2639,7 @@ public class Model {
 		res.close ();
 	}
 
-	public Bug getBug (Project proj, String identifier) throws SQLException {
+	public Bug getBug (Project proj, Integer identifier) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
 		assert (proj.getId () != null);
@@ -2647,7 +2647,7 @@ public class Model {
 
 		PreparedStatement stmt = conn.prepareStatement (SELECT_BUG);
 		stmt.setInt (1, proj.getId ());
-		stmt.setString (2, identifier);
+		stmt.setInt (2, identifier);
 		
 
 		// Execution:

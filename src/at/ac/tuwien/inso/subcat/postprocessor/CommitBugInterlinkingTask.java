@@ -180,7 +180,7 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 			return ;
 		}
 
-		Bug bug = model.getBug (commit.getProject (), Integer.toString (bugId));
+		Bug bug = model.getBug (commit.getProject (), bugId);
 		if (bug != null) {
 			model.addBugfixCommit (commit, bug);
 			added.add (bugId);

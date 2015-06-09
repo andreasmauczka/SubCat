@@ -1,0 +1,6 @@
+#!/bin/sh
+
+java -cp target/classes/:target/dependency/commons-cli-1.1.jar:target/dependency/commons-codec-1.4.jar:target/dependency/commons-lang3-3.3.2.jar:target/dependency/commons-logging-1.1.1.jar:target/dependency/ejml-0.23.jar:target/dependency/httpclient-4.1.3.jar:target/dependency/httpcore-4.1.4.jar:target/dependency/JavaEWAH-0.7.9.jar:target/dependency/javax.json-api-1.0.jar:target/dependency/jaxb-api-2.2.7.jar:target/dependency/jcommon-1.0.23.jar:target/dependency/jfreechart-1.0.17.jar:target/dependency/jfreechart-swt-1.0.17.jar:target/dependency/jfreesvg-2.0.jar:target/dependency/joda-time-2.1.jar:target/dependency/jollyday-0.4.7.jar:target/dependency/jsch-0.1.50.jar:target/dependency/junit-3.8.1.jar:target/dependency/org.eclipse.jgit-3.5.1.201410131835-r.jar:target/dependency/org.eclipse.swt.gtk.linux.x86_64-4.4.jar:target/dependency/sqlite-jdbc-3.7.2.jar:target/dependency/stanford-corenlp-3.4.1.jar:target/dependency/stanford-corenlp-3.4.1-models.jar:target/dependency/ws-commons-util-1.0.2.jar:target/dependency/xalan-2.7.0.jar:target/dependency/xercesImpl-2.8.0.jar:target/dependency/xml-apis-1.3.04.jar:target/dependency/xmlrpc-client-3.1.3.jar:target/dependency/xmlrpc-common-3.1.3.jar:target/dependency/xom-1.2.10.jar   at.ac.tuwien.inso.subcat.miner.MinerRunner "$@"
+
+
+

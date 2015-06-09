@@ -523,15 +523,12 @@ public class BugzillaMiner extends Miner {
 	private synchronized BugzillaProduct getBugzillaProduct (String productName) throws BugzillaException, MinerException {
 		assert (productName != null);
 
-		Integer[] ids = context.getAccessibleProducts ();
-		BugzillaProduct[] products = context.getProducts (ids);
-		for (BugzillaProduct product : products) {
-			if (productName.equals (product.getName ())) {
-				return product;
-			}
+		BugzillaProduct product = context.getProduct (productName);
+		if (product == null) {
+			throw new MinerException ("Product '" + productName + "' not found.");
 		}
-
-		throw new MinerException ("Product '" + productName + "' not found.");
+		
+		return product;
 	}
 
 	private synchronized Status resolveStatus (String name) throws SQLException {

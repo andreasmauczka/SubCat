@@ -49,7 +49,7 @@ public abstract class MetaData {
 	
 	public abstract String name ();
 	
-	public abstract boolean is (Settings settings);
+	public abstract boolean is (Project project, Settings settings);
 	
 	public abstract Miner create (Settings settings, Project project, ModelPool pool, Reporter reporter);
 

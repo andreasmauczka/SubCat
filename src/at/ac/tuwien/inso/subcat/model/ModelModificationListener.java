@@ -30,11 +30,15 @@
 
 package at.ac.tuwien.inso.subcat.model;
 
+import java.util.Date;
+
 import at.ac.tuwien.inso.subcat.utility.sentiment.Sentiment;
 
 public interface ModelModificationListener {
 
 	public void projectAdded (Project project);
+
+	public void projectUpdated (Project project);
 
 	public void userAdded (User user);
 
@@ -51,6 +55,8 @@ public interface ModelModificationListener {
 	public void componentAdded (Component component);
 
 	public void bugAdded (Bug bug);
+
+	public void bugUpdated (Bug bug);
 
 	public void bugHistoryAdded (BugHistory history);
 
@@ -74,6 +80,8 @@ public interface ModelModificationListener {
 
 	public void attachmentAdded (Attachment attachment);
 
+	public void attachmentUpdated (Attachment attachment);
+
 	public void attachmentStatusAdded (AttachmentStatus status);
 
 	public void attachmentHistoryAdded (AttachmentHistory history);
@@ -88,4 +96,7 @@ public interface ModelModificationListener {
 			Attachment newAtt);
 
 	public void sentimentAdded (Comment comment, Sentiment<Identity> sentiment);
+
+	public void attachmentIsObsoleteAdded (Attachment attachment,
+			Identity identity, Date date, boolean value);
 }

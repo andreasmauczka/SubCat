@@ -51,6 +51,7 @@ public class Settings {
 	public String bugLoginPw = null;
 	public String bugTrackerName = null;
 	public boolean bugEnableUntrustedCertificates = false;
+	public boolean bugUpdate = false;
 	public int bugThreads = 1;
 	public long bugCooldownTime = 0;
 	public Map<String, String> bugSpecificParams

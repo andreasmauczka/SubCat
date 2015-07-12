@@ -2,10 +2,10 @@ package at.ac.tuwien.inso.subcat.model;
 
 public class Attachment {
 	private Comment comment;
-	private String identifier;
+	private Integer identifier;
 	private Integer id;
 
-	public Attachment (Integer id, String identifier, Comment comment) {
+	public Attachment (Integer id, Integer identifier, Comment comment) {
 		assert (comment != null);
 		assert (identifier != null);
 		
@@ -18,7 +18,7 @@ public class Attachment {
 		return comment;
 	}
 
-	public String getIdentifier () {
+	public Integer getIdentifier () {
 		return identifier;
 	}
 

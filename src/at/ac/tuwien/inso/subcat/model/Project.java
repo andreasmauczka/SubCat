@@ -36,16 +36,20 @@ import java.util.Date;
 public class Project {
 	private Integer id;
 	private Date date;
+	private Date lastBugDate;
+	private String bugTracker;
 	private String domain;
 	private String product;
 	private String revision;
 
-	public Project (Integer id, Date date, String domain, String product,
+	public Project (Integer id, Date date, Date lastBugDate, String bugTracker, String domain, String product,
 			String revision) {
 		assert (date != null);
 
 		this.id = id;
 		this.date = date;
+		this.lastBugDate = lastBugDate;
+		this.bugTracker = bugTracker;
 		this.domain = domain;
 		this.product = product;
 		this.revision = revision;
@@ -67,6 +71,18 @@ public class Project {
 		assert (date != null);
 
 		this.date = date;
+	}
+
+	public Date getLastBugMiningDate () {
+		return lastBugDate;
+	}
+
+	public void setLastBugMiningDate (Date lastBugDate) {
+		this.lastBugDate = lastBugDate;
+	}
+
+	public String getBugTracker () {
+		return bugTracker;
 	}
 
 	public String getDomain () {

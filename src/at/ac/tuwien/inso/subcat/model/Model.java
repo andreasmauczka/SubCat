@@ -82,14 +82,16 @@ public class Model {
 	//
 	// Table Creation:
 	//
-	
-	
+
+
 	// Note: Dates are not supported by Sqlite
 
 	private static final String PROJECT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Projects ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
 		+ "date			TEXT								NOT NULL,"
+		+ "lastBugDate	TEXT								        ,"
+		+ "bugTracker   TEXT										,"
 		+ "domain		TEXT								        ,"
 		+ "product		TEXT								        ,"
 		+ "revision		TEXT								        ,"
@@ -122,6 +124,7 @@ public class Model {
 	private static final String IDENTITY_TABLE =
 		"CREATE TABLE IF NOT EXISTS Identities ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "identifier	INTEGER								        ,"
 		+ "context		VARCHAR(3)							NOT NULL,"
 		+ "mail			TEXT								        ,"
 		+ "name			TEXT								NOT NULL,"
@@ -171,6 +174,7 @@ public class Model {
 		+ "UNIQUE (project, name)"
 		+ ")";
 
+	// TODO: Add isObsolete
 	private static final String BUG_TABLE =
 		"CREATE TABLE IF NOT EXISTS Bugs ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -208,24 +212,14 @@ public class Model {
 
 	private static final String ATTACHMENT_ISOBSOLETE_TABLE =
 			"CREATE TABLE IF NOT EXISTS ObsoleteAttachments ("
-			+ "id			INTEGER							NOT NULL,"
+			+ "id			INTEGER PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+			+ "attachment	INTEGER								NOT NULL,"
 			+ "identity		INTEGER								NOT NULL,"
 			+ "date			TEXT								NOT NULL,"
 			+ "isObsolete	INTEGER								NOT NULL,"
-			+ "FOREIGN KEY(id) REFERENCES Attachments (id),"
+			+ "FOREIGN KEY(attachment) REFERENCES Attachments (id),"
 			+ "FOREIGN KEY(identity) REFERENCES Identities (id)"
 			+ ")";
-
-	/*
-	private static final String ATTACHMENT_REPLACEMENT_TABLE =
-		"CREATE TABLE IF NOT EXISTS AttachmentReplacements ("
-		+ "old			INTEGER								NOT NULL,"
-		+ "new			INTEGER								NOT NULL,"
-		+ "PRIMARY KEY (old, new),"
-		+ "FOREIGN KEY(old) REFERENCES Attachments (id),"
-		+ "FOREIGN KEY(new) REFERENCES Attachments (id)"
-		+ ")";
-	*/
 
 	private static final String ATTACHMENT_STATUS_TABLE =
 		"CREATE TABLE IF NOT EXISTS AttachmentStatus ("
@@ -250,12 +244,14 @@ public class Model {
 	private static final String COMMENT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Comments ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "pos          INTEGER                             NOT NULL,"
 		+ "creation		TEXT								NOT NULL,"
 		+ "bug			INT									NOT NULL,"
 		+ "identity		INT									NOT NULL,"
 		+ "content		TEXT								NOT NULL,"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
-		+ "FOREIGN KEY(bug) REFERENCES Bugs (id)"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "UNIQUE (bug, pos)"
 		+ ")";
 
 	private static final String STATUS_TABLE =
@@ -490,6 +486,36 @@ public class Model {
 		+ "  SET comments = comments + 1 "
 		+ "  WHERE Bugs.id = NEW.bug; "
 		+ "END ";
+
+	private static final String SELECT_BUG_STATS =	
+		"SELECT "
+		+ " Bugs.id,"
+		+ " (SELECT COUNT() FROM Comments WHERE Comments.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM BugHistories WHERE BugHistories.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM Attachments, Comments WHERE Attachments.comment = Comments.id AND Comments.bug = Bugs.id) "
+		+ "FROM "
+		+ " Bugs, Components "
+		+ "WHERE "
+		+ " Components.id = Bugs.component "
+		+ " AND Bugs.identifier = ? "
+		+ " AND Components.project = ? ";
+
+	private static final String SELECT_ATTACHMENT_STATS =
+		"SELECT"
+		+ " Attachments.id,"
+		+ " Attachments.identifier,"
+		+ " (SELECT COUNT() FROM ObsoleteAttachments WHERE ObsoleteAttachments.attachment = Attachments.id),"
+		+ " (SELECT COUNT() FROM AttachmentHistory WHERE AttachmentHistory.attachment = Attachments.id) "
+		+ "FROM "
+		+ " Bugs, Attachments, Comments "
+		+ "WHERE "
+		+ " Attachments.comment = Comments.id"
+		+ " AND Comments.bug = Bugs.id"
+		+ " AND Bugs.id = ?"
+		+ "GROUP BY "
+		+ " Attachments.id "
+		+ "ORDER BY "
+		+ " Attachments.id";
 	
 	private static final String SELECT_START_DATE =
 		"SELECT"
@@ -520,7 +546,9 @@ public class Model {
 		+ " Commits.changedFiles, "
 		+ " AuthorIdentity.context		AS aiId,"
 		+ " CommitterIdentity.context	AS ciId,"
-		+ " Commits.identifier "
+		+ " Commits.identifier, "
+		+ " AuthorIdentity.identifier, "
+		+ " CommitterIdentity.identifier "
 		+ "FROM"
 		+ " Commits "
 		+ "LEFT JOIN Identities AuthorIdentity"
@@ -550,7 +578,8 @@ public class Model {
 		+ " Bugs.severity,"
 		+ " Bugs.comments,"
 		+ " Bugs.curStat, "
-		+ " Identity.context		AS aiContext "
+		+ " Identity.context		AS aiContext, "
+		+ " Identity.identifier "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -580,7 +609,8 @@ public class Model {
 		+ " Identity.context		AS aiContext,"
 		+ " Components.name,"
 		+ " Priorities.name			AS pName,"
-		+ " Severity.name			AS sName "
+		+ " Severity.name			AS sName, "
+		+ " Identity.identifier "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -648,7 +678,9 @@ public class Model {
 		+ " date,"
 		+ " domain,"
 		+ " product,"
-		+ " revision "
+		+ " revision, "
+		+ " lastBugDate,"
+		+ " bugTracker "
 		+ "FROM"
 		+ " Projects";
 
@@ -658,7 +690,9 @@ public class Model {
 		+ " date,"
 		+ " domain,"
 		+ " product,"
-		+ " revision "
+		+ " revision, "
+		+ " lastBugDate,"
+		+ " bugTracker "
 		+ "FROM"
 		+ " Projects "
 		+ "WHERE "
@@ -675,6 +709,7 @@ public class Model {
 	private static final String SELECT_ALL_COMMENTS =
 		"SELECT"
 		+ " Comments.id,"
+		+ " Comments.pos,"
 		+ " Comments.creation,"
 		+ " Identity.id				AS aiId,"
 		+ " Identity.name			AS aiName,"
@@ -682,7 +717,8 @@ public class Model {
 		+ " Users.id				AS auId,"
 		+ " Users.name				AS auName,"
 		+ " Comments.content, "
-		+ " Identity.context		AS aiContext "
+		+ " Identity.context		AS aiContext,"
+		+ " Identity.identifier "
 		+ "FROM"
 		+ " Comments "
 		+ "LEFT JOIN Identities Identity"
@@ -690,7 +726,31 @@ public class Model {
 		+ "LEFT JOIN Users "
 		+ " ON Users.id = Identity.user "
 		+ "WHERE"
-		+ " Comments.bug = ?";
+		+ " Comments.bug = ?"
+		+ "ORDER BY"
+		+ " Comments.pos";
+
+	private static final String SELECT_COMMENT_BY_INDEX =
+		"SELECT"
+		+ " Comments.id,"
+		+ " Comments.creation,"
+		+ " Identity.id				AS aiId,"
+		+ " Identity.name			AS aiName,"
+		+ " Identity.mail			AS aiMail,"
+		+ " Users.id				AS auId,"
+		+ " Users.name				AS auName,"
+		+ " Comments.content, "
+		+ " Identity.context		AS aiContext,"
+		+ " Identity.identifier "
+		+ "FROM"
+		+ " Comments "
+		+ "LEFT JOIN Identities Identity"
+		+ " ON Comments.identity = Identity.id "
+		+ "LEFT JOIN Users "
+		+ " ON Users.id = Identity.user "
+		+ "WHERE"
+		+ " Comments.bug = ?"
+		+ " AND Comments.pos = ?";
 
 	private static final String SELECT_FULL_HISTORY =
 		"SELECT"
@@ -703,7 +763,8 @@ public class Model {
 		+ " Users.id				AS auId,"
 		+ " Users.name				AS auName,"
 		+ " BugHistories.date, "
-		+ " Identity.context		AS iContext "
+		+ " Identity.context		AS iContext."
+		+ " Identity.identifier "
 		+ "FROM"
 		+ " BugHistories "
 		+ "LEFT JOIN Identities Identity"
@@ -728,20 +789,39 @@ public class Model {
 		+ " project = ?";
 
 	private static final String SELECT_ALL_IDENTITIES_CONTEXT =
-		"SELECT "
-		+ " u.id, "
-		+ " u.name, "
-		+ " i.id, "
-		+ " i.context, "
-		+ " i.mail, "
-		+ " i.name, "
-		+ " i.user "
-		+ "FROM "
-		+ " Users u, Identities i "
-		+ "WHERE "
-		+ " u.id = i.user "
-		+ " AND u.project = ? "
-		+ " AND i.context = ? ";
+			"SELECT "
+			+ " u.id, "
+			+ " u.name, "
+			+ " i.id, "
+			+ " i.context, "
+			+ " i.mail, "
+			+ " i.name, "
+			+ " i.user,"
+			+ " i.identifier "
+			+ "FROM "
+			+ " Users u, Identities i "
+			+ "WHERE "
+			+ " u.id = i.user "
+			+ " AND u.project = ? "
+			+ " AND i.context = ? ";
+
+	private static final String SELECT_IDENTITY_BY_IDENTIFIER =
+			"SELECT "
+			+ " u.id, "
+			+ " u.name, "
+			+ " i.id, "
+			+ " i.context, "
+			+ " i.mail, "
+			+ " i.name, "
+			+ " i.user,"
+			+ " i.identifier "
+			+ "FROM "
+			+ " Users u, Identities i "
+			+ "WHERE "
+			+ " u.id = i.user "
+			+ " AND u.project = ? "
+			+ " AND i.context = ? "
+			+ " AND i.identifier = ?";
 
 	private static final String SELECT_ALL_IDENTITIES =
 		"SELECT "
@@ -751,7 +831,8 @@ public class Model {
 		+ " i.context, "
 		+ " i.mail, "
 		+ " i.name, "
-		+ " i.user "
+		+ " i.user,"
+		+ " i.identifier "
 		+ "FROM "
 		+ " Users u, Identities i "
 		+ "WHERE "
@@ -780,7 +861,8 @@ public class Model {
 		+ " i.id,"
 		+ " i.context,"
 		+ " i.name,"
-		+ " i.mail "
+		+ " i.mail, "
+		+ " i.identifier "
 		+ "FROM "
 		+ " Attachments a,"
 		+ " Comments c,"
@@ -798,6 +880,15 @@ public class Model {
 		+ "(SELECT COUNT(*) FROM Commits WHERE project = ?),"
 		+ "(SELECT COUNT(*) FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
+	private static final String SELECT_ATTACHMENT_STATES =
+		"SELECT "
+		+ " id,"
+		+ " name "
+		+ "FROM "
+		+ " AttachmentStatus "
+		+ "WHERE"
+		+ " project = ?";
+	
 	private static final String LOAD_EXTENSION =
 		"SELECT load_extension (?)";
 
@@ -808,8 +899,8 @@ public class Model {
 
 	private static final String OBSOLETE_ATTACHMENT_INSERTION =
 		"INSERT INTO ObsoleteAttachments "
-		+ "(id, identity, date, isObsolete) "
-		+ "VALUES ( ?, ?, ?, ?);";
+		+ "(attachment, identity, date, isObsolete) "
+		+ "VALUES (?, ?, ?, ?);";
 
 	private static final String BUG_CATEGORY_INSERTION =
 		"INSERT INTO BugCategories "
@@ -828,9 +919,20 @@ public class Model {
 	
 	private static final String PROJECT_INSERTION =
 		"INSERT INTO Projects"
-		+ "(date, domain, product, revision, defaultStatusId)"
-		+ "VALUES (?,?,?,?,?)";
-
+		+ "(date, domain, product, revision, defaultStatusId, lastBugDate, bugTracker)"
+		+ "VALUES (?,?,?,?,?,?,?)";
+	
+	private static final String PROJECT_UPDATE =
+		"UPDATE Projects SET "
+		+ " date = ?,"
+		+ " domain = ?,"
+		+ " product = ?,"
+		+ " revision = ?,"
+		+ " lastBugDate = ?,"
+		+ " bugTracker = ? "
+		+ "WHERE "
+		+ " id = ?";
+	
 	private static final String PROJECT_FLAG_INSERTION =
 			"INSERT INTO ProjectFlags"
 			+ "(project, flag)"
@@ -848,8 +950,8 @@ public class Model {
 	
 	private static final String IDENTITY_INSERTION =
 		"INSERT INTO Identities"
-		+ "(mail, name, user, context)"
-		+ "VALUES (?,?,?,?)";
+		+ "(mail, name, user, context, identifier)"
+		+ "VALUES (?,?,?,?,?)";
 
 	private static final String INTERACTION_INSERTION =
 		"INSERT INTO Interactions"
@@ -877,10 +979,30 @@ public class Model {
 		+ "SELECT ?, ?, ?, ?, ?, ?, ?, defaultStatusId "
 		+ "FROM Projects WHERE id=?";
 
+	private static final String BUG_UPDATE =
+		"UPDATE Bugs SET"
+		+ " identifier = ?,"
+		+ " identity = ?,"
+		+ " component = ?,"
+		+ " title = ?,"
+		+ " creation = ?,"
+		+ " priority = ?,"
+		+ " severity = ?,"
+		+ " curStat = ?"
+		+ "WHERE"
+		+ " id = ?";
+
 	private static final String ATTACHMENT_INSERTION =
 		"INSERT INTO Attachments"
 		+ "(identifier, comment)"
 		+ "VALUES (?, ?)";
+
+	private static final String ATTACHMENT_UPDATE =
+		"UPDATE Attachments SET "
+		+ " identifier = ?,"
+		+ " comment = ? "
+		+ "WHERE"
+		+ " id = ?";
 
 	/*
 	private static final String ATTACHMENT_REPLACEMENT_INSERTION =
@@ -901,8 +1023,8 @@ public class Model {
 
 	private static final String COMMENT_INSERTION =
 		"INSERT INTO Comments"
-		+ "(bug, creation, identity, content)"
-		+ "VALUES (?,?,?,?)";	
+		+ "(bug, pos, creation, identity, content)"
+		+ "VALUES (?,?,?,?,?)";	
 	
 	private static final String STATUS_INSERTION =
 		"INSERT INTO Status"
@@ -1191,10 +1313,12 @@ public class Model {
 		PreparedStatement stmt = conn.prepareStatement (OBSOLETE_ATTACHMENT_INSERTION);
 		stmt.setInt (1, attachment.getId ());
 		stmt.setInt (2, identity.getId ());
-		stmt.setString (3, dateFormat.format (date));
+		resSetDate (stmt, 3, date);
 		stmt.setBoolean (4, value);
 		stmt.executeUpdate();
 		stmt.close ();
+
+		pool.emitAttachmentIsObsoleteAdded (attachment, identity, date, value);
 	}
 	
 	public void addFlag (Project proj, String flag) throws SQLException {
@@ -1230,13 +1354,13 @@ public class Model {
 
 		return flags;
 	}
-	
-	public Project addProject (Date date, String domain, String product, String revision) throws SQLException {
-		Project proj = new Project (null, date, domain, product, revision);
+
+	public Project addProject (Date date, Date lastBugDate, String bugTracker, String domain, String product, String revision) throws SQLException {
+		Project proj = new Project (null, date, lastBugDate, bugTracker, domain, product, revision);
 		add (proj);
 		return proj;
 	}
-
+	
 	public void setDefaultStatus (Status status) throws SQLException {
 		assert (conn != null);
 		assert (status != null);
@@ -1258,10 +1382,12 @@ public class Model {
 		PreparedStatement stmt = conn.prepareStatement (PROJECT_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
 
-		stmt.setString (1, dateFormat.format (project.getDate ()));
+		resSetDate (stmt, 1, project.getDate ());
 		stmt.setString (2, project.getDomain ());
 		stmt.setString (3, project.getProduct ());
 		stmt.setString (4, project.getRevision ());
+		resSetDate (stmt, 6, project.getLastBugMiningDate ());
+		stmt.setString (7, project.getBugTracker ());
 		stmt.executeUpdate();
 
 		project.setId (getLastInsertedId (stmt));
@@ -1269,6 +1395,25 @@ public class Model {
 		stmt.close ();
 
 		pool.emitProjectAdded (project);
+	}
+
+	public void updateProject (Project project) throws SQLException {
+		assert (conn != null);
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (PROJECT_UPDATE);
+		resSetDate (stmt, 1, project.getDate ());
+		stmt.setString (2, project.getDomain ());
+		stmt.setString (3, project.getProduct ());
+		stmt.setString (4, project.getRevision ());
+		resSetDate (stmt, 5, project.getLastBugMiningDate ());
+		stmt.setString (6, project.getBugTracker ());
+		stmt.setInt (7, project.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitProjectUpdated (project);
 	}
 
 	
@@ -1327,8 +1472,8 @@ public class Model {
 		stmt.close ();		
 	}
 	
-	public Identity addIdentity (String context, String mail, String name, User user) throws SQLException {
-		Identity identity = new Identity (null, context, mail, name, user);
+	public Identity addIdentity (Integer identifier, String context, String mail, String name, User user) throws SQLException {
+		Identity identity = new Identity (null, identifier, context, mail, name, user);
 		add (identity);
 		return identity;
 	}
@@ -1346,6 +1491,11 @@ public class Model {
 		stmt.setString (2, identity.getName ());
 		stmt.setInt (3, identity.getUser ().getId ());
 		stmt.setString (4, identity.getContext ());
+		if (identity.getIdentifier () != null) {
+			stmt.setInt (5, identity.getIdentifier ());
+		} else {
+			stmt.setNull (5, Types.INTEGER);
+		}
 		stmt.executeUpdate();
 
 		identity.setId (getLastInsertedId (stmt));
@@ -1376,7 +1526,7 @@ public class Model {
 		stmt.setInt (3, relation.getQuotes ());
 		stmt.setFloat (4, relation.getPos ());
 		stmt.setFloat (5, relation.getNeg ());
-		stmt.setString (6, dateFormat.format (relation.getDate ()));
+		resSetDate (stmt, 6, relation.getDate ());
 		stmt.setInt (7, (relation.isClosed ())? 1 : 0);
 		stmt.executeUpdate();
 
@@ -1532,7 +1682,7 @@ public class Model {
 		pool.emitComponentAdded (component);
 	}
 
-	public Attachment addAttachment (String identifier, Comment comment) throws SQLException {
+	public Attachment addAttachment (Integer identifier, Comment comment) throws SQLException {
 		Attachment att = new Attachment (null, identifier, comment);
 		add (att);
 		return att;
@@ -1542,13 +1692,14 @@ public class Model {
 		assert (conn != null);
 		assert (attachment != null);
 		assert (attachment.getId () == null);
+		assert (attachment.getIdentifier () != null);
 		assert (attachment.getComment () != null);
 		assert (attachment.getComment ().getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
 
-		stmt.setString (1, attachment.getIdentifier ());
+		stmt.setInt (1, attachment.getIdentifier ());
 		stmt.setInt (2, attachment.getComment ().getId ());
 		stmt.executeUpdate();
 
@@ -1559,6 +1710,24 @@ public class Model {
 		pool.emitAttachmentAdded (attachment);
 	}
 
+	public void updateAttachment (Attachment attachment) throws SQLException {
+		assert (conn != null);
+		assert (attachment != null);
+		assert (attachment.getId () != null);
+		assert (attachment.getIdentifier () != null);
+		assert (attachment.getComment () != null);
+		assert (attachment.getComment ().getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_UPDATE);
+		stmt.setInt (1, attachment.getIdentifier ());
+		stmt.setInt (2, attachment.getComment ().getId ());
+		stmt.setInt (3, attachment.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitAttachmentUpdated (attachment);
+	}
+	
 	/*
 	public void addAttachmentReplacement (Attachment oldAtt, Attachment newAtt) throws SQLException {
 		assert (oldAtt != null);
@@ -1599,7 +1768,7 @@ public class Model {
 		stmt.setInt (1, history.getIdentity ().getId ());
 		stmt.setInt (2, history.getAttachment ().getId ());
 		stmt.setInt (3, history.getStatus ().getId ());
-		stmt.setString (4, dateFormat.format (history.getDate ()));
+		resSetDate (stmt, 4, history.getDate ());
 		stmt.executeUpdate();
 
 		history.setId (getLastInsertedId (stmt));
@@ -1640,7 +1809,7 @@ public class Model {
 		}
 		stmt.setInt (3, bug.getComponent ().getId ());
 		stmt.setString (4, bug.getTitle ());
-		stmt.setString (5, dateFormat.format (bug.getCreation ()));
+		resSetDate (stmt, 5, bug.getCreation ());
 		stmt.setInt (6, bug.getPriority ().getId ());
 		stmt.setInt (7, bug.getSeverity ().getId ());
 		stmt.setInt (8, bug.getComponent ().getProject ().getId ());
@@ -1651,6 +1820,38 @@ public class Model {
 		stmt.close ();
 
 		pool.emitBugAdded (bug);
+	}
+
+	public void updateBug (Bug bug) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (bug.getIdentifier () != null);
+		assert (bug.getComponent () != null);
+		assert (bug.getPriority () != null);
+		assert (bug.getSeverity() != null);
+		assert (bug.getIdentity () == null || bug.getIdentity ().getId () != null);
+		assert (bug.getComponent ().getId () != null);
+		assert (bug.getPriority ().getId () != null);
+		assert (bug.getSeverity().getId () != null);
+	
+		PreparedStatement stmt = conn.prepareStatement (BUG_UPDATE);
+		stmt.setInt (1, bug.getIdentifier ());
+		if (bug.getIdentity () != null) {
+			stmt.setInt (2, bug.getIdentity ().getId ());
+		} else {
+			stmt.setNull (2, Types.INTEGER);
+		}
+		stmt.setInt (3, bug.getComponent ().getId ());
+		stmt.setString (4, bug.getTitle ());
+		resSetDate (stmt, 5, bug.getCreation ());
+		stmt.setInt (6, bug.getPriority ().getId ());
+		stmt.setInt (7, bug.getSeverity ().getId ());
+		stmt.setInt (8, bug.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitBugUpdated (bug);
 	}
 
 	public Dictionary addDictionary (String name, String context, Project project) throws SQLException {
@@ -1700,7 +1901,7 @@ public class Model {
 		stmt.setInt (1, history.getBug ().getId ());
 		stmt.setInt (2, history.getStatus ().getId ());
 		stmt.setInt (3, history.getIdentity ().getId ());
-		stmt.setString (4, dateFormat.format (history.getDate ()));
+		resSetDate (stmt, 4, history.getDate ());
 		stmt.executeUpdate();
 
 		history.setId (getLastInsertedId (stmt));
@@ -1710,8 +1911,8 @@ public class Model {
 		pool.emitBugHistoryAdded (history);
 	}
 
-	public Comment addComment (Bug bug, Date creation, Identity identity, String content) throws SQLException {
-		Comment cmnt = new Comment(null, bug, creation, identity, content);
+	public Comment addComment (int index, Bug bug, Date creation, Identity identity, String content) throws SQLException {
+		Comment cmnt = new Comment(null, index, bug, creation, identity, content);
 		add (cmnt);
 		return cmnt;
 	}
@@ -1725,9 +1926,10 @@ public class Model {
 				Statement.RETURN_GENERATED_KEYS);
 
 		stmt.setInt (1, cmnt.getBug ().getId ());
-		stmt.setString (2, dateFormat.format (cmnt.getCreationDate ()));
-		stmt.setInt (3, cmnt.getIdentity ().getId ());
-		stmt.setString (4, cmnt.getContent ());
+		stmt.setInt (2, cmnt.getIndex ());
+		resSetDate (stmt, 3, cmnt.getCreationDate ());
+		stmt.setInt (4, cmnt.getIdentity ().getId ());
+		stmt.setString (5, cmnt.getContent ());
 		stmt.executeUpdate();
 
 		cmnt.setId (getLastInsertedId (stmt));
@@ -1818,7 +2020,7 @@ public class Model {
 		stmt.setInt (1, project.getId ());
 		stmt.setInt (2, commit.getAuthor ().getId ());
 		stmt.setInt (3, commit.getCommitter ().getId ());
-		stmt.setString (4, dateFormat.format (commit.getDate ()));
+		resSetDate (stmt, 4, commit.getDate ());
 		stmt.setString (5, commit.getTitle ());
 		stmt.setInt (6, commit.getLinesAdded ());
 		stmt.setInt (7, commit.getLinesRemoved ());
@@ -2180,7 +2382,7 @@ public class Model {
 			} else if (val instanceof String) {
 				stmt.setString(i, (String) val);
 			} else if (val instanceof Date) {
-				stmt.setString (i, dateFormat.format ((Date) val));
+				resSetDate (stmt, i, (Date) val);
 			} else if (val instanceof Integer[]) {
 				Array arr = conn.createArrayOf ("INTEGER", (Integer[]) val);
 				stmt.setArray(i, arr);
@@ -2231,7 +2433,7 @@ public class Model {
 			} else if (val instanceof String) {
 				stmt.setString(i, (String) val);
 			} else if (val instanceof Date) {
-				stmt.setString (i, dateFormat.format ((Date) val));
+				resSetDate (stmt, i, (Date) val);
 			} else if (val instanceof Integer[]) {
 				Array arr = conn.createArrayOf ("INTEGER", (Integer[]) val);
 				stmt.setArray(i, arr);
@@ -2261,6 +2463,46 @@ public class Model {
 		return stmt;
 	}
 
+	public BugStats getBugStats (Project proj, int identifier) throws SQLException {
+		assert (proj != null);
+		assert (conn != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_BUG_STATS);
+		stmt.setInt (1, identifier);
+		stmt.setInt (2, proj.getId ());
+
+		// Collect bug stats:
+		ResultSet res = stmt.executeQuery ();
+		if (!res.next ()) {
+			return null;
+		}
+
+		int bugId = res.getInt (1);
+		int cmntCnt = res.getInt (2);
+		int histCnt = res.getInt (3);
+		int attCnt  = res.getInt (4);
+
+		
+		// Statement:
+		stmt = conn.prepareStatement (SELECT_ATTACHMENT_STATS);
+		stmt.setInt (1, bugId);
+
+		// Collect attachment stats:
+		res = stmt.executeQuery ();
+		HashMap<Integer, BugAttachmentStats> attStats = new HashMap<Integer, BugAttachmentStats> ();
+		while (res.next ()) {
+			int attId = res.getInt (1);
+			int attIdentifier = res.getInt (2);
+			int attObsCnt = res.getInt (3); 
+			int attHistCnt = res.getInt (4);
+			attStats.put (attIdentifier, new BugAttachmentStats (attId, attIdentifier, attObsCnt, attHistCnt));
+		}
+
+		return new BugStats (bugId, cmntCnt, histCnt, attCnt, attStats);
+	}
+	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (config != null);
 		assert (vars != null);
@@ -2583,9 +2825,9 @@ public class Model {
 			Integer linesAdded = res.getInt (4);
 			Integer linesRemoved = res.getInt (5);
 			User authorUser = userFromResult (res, proj, 9, 10);
-			Identity author = identityFromResult (res, authorUser, 6, 17, 7, 8);
+			Identity author = identityFromResult (res, authorUser, 20, 6, 17, 7, 8);
 			User committerUser = userFromResult (res, proj, 14, 15);
-			Identity committer = identityFromResult (res, committerUser, 11, 18, 12, 13);
+			Identity committer = identityFromResult (res, committerUser, 21, 11, 18, 12, 13);
 			Integer changedFiles = res.getInt (14);
 			String identifier = res.getString (19);
 		
@@ -2622,7 +2864,7 @@ public class Model {
 			Integer identifier = res.getInt (2);
 			if (res.getInt (3) != 0) {
 				user = userFromResult (res, proj, 6, 7);
-				identity = identityFromResult (res, user, 3, 15, 4, 5);
+				identity = identityFromResult (res, user, 16, 3, 15, 4, 5);
 			}
 			Component component = components.get (res.getInt (8));
 			String title = res.getString (9);
@@ -2661,7 +2903,7 @@ public class Model {
 			Identity identity = null;
 			if (res.getInt (2) != 0) {
 				user = userFromResult (res, proj, 5, 6);
-				identity = identityFromResult (res, user, 2, 12, 3, 4);
+				identity = identityFromResult (res, user, 17, 2, 12, 3, 4);
 			}
 
 			int compId = res.getInt (7);
@@ -2689,12 +2931,13 @@ public class Model {
 		return new User (id, proj, name);
 	}
 
-	private Identity identityFromResult (ResultSet res, User user, int idCol, int contextCol, int nameCol, int mailCol) throws SQLException {
+	private Identity identityFromResult (ResultSet res, User user, int identifierCol, int idCol, int contextCol, int nameCol, int mailCol) throws SQLException {
 		Integer id = res.getInt (idCol);
+		Integer identifier = res.getInt (identifierCol);
 		String mail = res.getString (mailCol);
 		String name = res.getString (nameCol);
 		String context = res.getString (contextCol);
-		return new Identity (id, context, mail, name, user);
+		return new Identity (id, identifier, context, mail, name, user);
 	}
 	
 	public void rawForeach (Query query, Map<String, Object> vars, ResultCallback callback) throws SQLException, Exception {
@@ -2762,6 +3005,46 @@ public class Model {
 		return components;
 	}
 
+	public Map<String, Component> getComponentsByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_COMPONENTS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<String, Component> components = new HashMap<String, Component> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Component category = new Component (res.getInt (1), proj, res.getString (2));
+			components.put (category.getName (), category);
+		}
+	
+		return components;
+	}
+
+	public Map<String, AttachmentStatus> getAttachmentStatusByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ATTACHMENT_STATES);
+		stmt.setInt (1, proj.getId ());
+
+		// Collect data:
+		HashMap<String, AttachmentStatus> stats = new HashMap<String, AttachmentStatus> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			AttachmentStatus stat = new AttachmentStatus (res.getInt (1), proj, res.getString (2));
+			stats.put (stat.getName (), stat);
+		}
+	
+		return stats;
+	} 
+
 	public Map<Integer, Severity> getSeverities (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -2777,6 +3060,26 @@ public class Model {
 		while (res.next ()) {
 			Severity severity = new Severity (res.getInt (1), proj, res.getString (2));
 			severities.put (severity.getId (), severity);
+		}
+	
+		return severities;
+	}
+
+	public Map<String, Severity> getSeveritiesByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_SEVERITIES);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<String, Severity> severities = new HashMap<String, Severity> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Severity severity = new Severity (res.getInt (1), proj, res.getString (2));
+			severities.put (severity.getName (), severity);
 		}
 	
 		return severities;
@@ -2802,6 +3105,26 @@ public class Model {
 		return statuses;
 	}
 
+	public Map<String, Status> getStatusesByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_STATUSES);
+		stmt.setInt (1, proj.getId ());
+
+		// Collect data:
+		HashMap<String, Status> statuses = new HashMap<String, Status> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Status status = new Status (res.getInt (1), proj, res.getString (2));
+			statuses.put (status.getName (), status);
+		}
+	
+		return statuses;
+	}
+
 	public Map<Integer, Priority> getPriorities (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -2817,6 +3140,26 @@ public class Model {
 		while (res.next ()) {
 			Priority priority = new Priority (res.getInt (1), proj, res.getString (2));
 			priorities.put (priority.getId (), priority);
+		}
+	
+		return priorities;
+	}
+
+	public Map<String, Priority> getPrioritiesByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_PRIORITIES);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<String, Priority> priorities = new HashMap<String, Priority> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Priority priority = new Priority (res.getInt (1), proj, res.getString (2));
+			priorities.put (priority.getName (), priority);
 		}
 	
 		return priorities;
@@ -2838,7 +3181,7 @@ public class Model {
 			Integer id = res.getInt (1);
 			Status status = new Status (res.getInt (2), proj, res.getString (3));
 			User user = userFromResult (res, proj, 7, 8);
-			Identity identity = identityFromResult (res, user, 4, 10, 5, 6);
+			Identity identity = identityFromResult (res, user, 11, 4, 10, 5, 6);
 			Date creation = resGetDate (res, 9);
 
 			BugHistory entry = new BugHistory (id, bug, status, identity, creation);
@@ -2864,16 +3207,42 @@ public class Model {
 		ResultSet res = stmt.executeQuery ();
 		while (res.next ()) {
 			Integer id = res.getInt (1);
-			Date creation = resGetDate (res, 2);
-			User user = userFromResult (res, proj, 6, 7);
-			Identity identity = identityFromResult (res, user, 3, 9, 4, 5);
-			String content = res.getString (8);
+			Integer index = res.getInt (2);
+			Date creation = resGetDate (res, 3);
+			User user = userFromResult (res, proj, 7, 8);
+			Identity identity = identityFromResult (res, user, 11, 4, 10, 5, 6);
+			String content = res.getString (9);
 
-			Comment comment = new Comment (id, bug, creation, identity, content);
+			Comment comment = new Comment (id, index, bug, creation, identity, content);
 			comments.add (comment);
 		}
 	
 		return comments;
+	}
+
+	public Comment getCommentByIndex (Project proj, Bug bug, int index) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (index >= 0);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_COMMENT_BY_INDEX);
+		stmt.setInt (1, bug.getId ());
+		stmt.setInt (2, index);
+
+		// Collect data:
+		ResultSet res = stmt.executeQuery ();
+		if (res.next ()) {
+			Integer id = res.getInt (1);
+			Date creation = resGetDate (res, 2);
+			User user = userFromResult (res, proj, 6, 7);
+			Identity identity = identityFromResult (res, user, 10, 3, 9, 4, 5);
+			String content = res.getString (8);
+
+			return new Comment (id, index, bug, creation, identity, content);
+		}
+
+		return null;
 	}
 
 	public Collection<Identity> getIdentities (Project proj, String context) throws SQLException {
@@ -2892,13 +3261,35 @@ public class Model {
 		ResultSet res = stmt.executeQuery ();
 		while (res.next ()) {
 			User user = userFromResult (res, proj, 1, 2);
-			Identity identity = identityFromResult (res, user, 3, 4, 6, 5);
+			Identity identity = identityFromResult (res, user, 8, 3, 4, 6, 5);
 			identities.add (identity);
 		}
 	
 		return identities;
 	}
 
+	public Identity getIdentityByIdentifier (Project proj, int identifier, String context) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+		assert (context != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_IDENTITY_BY_IDENTIFIER);
+		stmt.setInt (1, proj.getId ());
+		stmt.setString (2, context);
+		stmt.setInt (3, identifier);
+		
+		// Collect data:
+		ResultSet res = stmt.executeQuery ();
+		if (res.next ()) {
+			User user = userFromResult (res, proj, 1, 2);
+			return identityFromResult (res, user, 8, 3, 4, 6, 5);
+		}
+	
+		return null;
+	}
+	
 	public Identity getIdentityForAttachmentIdentifier (Project proj, String patchId) throws SQLException {
 		assert (patchId != null);
 		assert (proj != null);
@@ -2915,7 +3306,7 @@ public class Model {
 		ResultSet res = stmt.executeQuery ();
 		if (res.next ()) {
 			User user = userFromResult (res, proj, 1, 2);
-			Identity identity = identityFromResult (res, user, 3, 4, 5, 6);
+			Identity identity = identityFromResult (res, user, 7, 3, 4, 5, 6);
 			return identity;
 		}
 	
@@ -2936,7 +3327,7 @@ public class Model {
 		ResultSet res = stmt.executeQuery ();
 		while (res.next ()) {
 			User user = userFromResult (res, proj, 1, 2);
-			Identity identity = identityFromResult (res, user, 3, 4, 6, 5);
+			Identity identity = identityFromResult (res, user, 8, 3, 4, 6, 5);
 			identities.add (identity);
 		}
 	
@@ -2977,8 +3368,10 @@ public class Model {
 			String domain = res.getString (3);
 			String product = res.getString (4);
 			String revision = res.getString (5);
+			Date lastBugDate = resGetDate (res, 6);
+			String bugTracker = res.getString (7);
 	
-			Project proj = new Project (id, date, domain, product, revision);
+			Project proj = new Project (id, date, lastBugDate, bugTracker, domain, product, revision);
 			return proj;
 		}
 
@@ -3000,8 +3393,10 @@ public class Model {
 			String domain = res.getString (3);
 			String product = res.getString (4);
 			String revision = res.getString (5);
-	
-			Project proj = new Project (id, date, domain, product, revision);
+			Date lastBugDate = resGetDate (res, 6);
+			String bugTracker = res.getString (7);
+			
+			Project proj = new Project (id, date, lastBugDate, bugTracker, domain, product, revision);
 			projects.add (proj);
 		}
 	
@@ -3109,6 +3504,14 @@ public class Model {
 		}
 	}
 
+	private void resSetDate (PreparedStatement stmt, int pos, Date date) throws SQLException {
+		if (date != null) {
+			stmt.setString (pos, dateFormat.format (date));
+		} else {
+			stmt.setNull (pos, Types.VARCHAR);
+		}
+	}
+	
 	private void createTables () throws SQLException {
 		assert (conn != null);
 

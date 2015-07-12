@@ -57,7 +57,7 @@ public class SvnMinerMetaData extends MetaData {
 	}
 
 	@Override
-	public boolean is (Settings settings) {
+	public boolean is (Project proj, Settings settings) {
 		assert (settings !=null);
 
 		if (settings.srcLocalPath == null) {

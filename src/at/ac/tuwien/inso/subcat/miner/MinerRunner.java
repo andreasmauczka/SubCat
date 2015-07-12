@@ -71,16 +71,17 @@ public class MinerRunner {
 		}
 	}
 	
-	private MinerRunner (ModelPool pool, Settings settings, Reporter reporter) throws MinerException {
+	private MinerRunner (ModelPool pool, Project project, Settings settings, Reporter reporter) throws MinerException {
 		assert (settings != null);
+		assert (project != null);
+		assert (settings != null);
+		assert (reporter != null);
 
 		init ();
 
-		Project project;
 		Model model = null;
 		try {
 			model = pool.getModel ();
-			project = model.addProject (new Date (), settings.bugTrackerName, settings.bugProductName, null);
 		} catch (SQLException e) {
 			throw new MinerException ("SQL-Error: " + e.getMessage (), e);
 		} finally {
@@ -98,7 +99,7 @@ public class MinerRunner {
 				continue ;
 			}
 
-			if (meta.is (settings)) {
+			if (meta.is (project, settings)) {
 				Miner miner = meta.create (settings, project, pool, reporter);
 				miner.addListener (listeners);
 				this.miners.add (new RunnableMiner (this, miner));
@@ -185,6 +186,8 @@ public class MinerRunner {
 		options.addOption ("h", "help", false, "Show this options");
 		options.addOption ("m", "miner-help", false, "Show miner specific options");
 		options.addOption ("d", "db", true, "The database to process (required)");
+		options.addOption ("p", "project", true, "The project ID to process");
+		options.addOption ("P", "list-projects", false, "List all registered projects");
 		options.addOption ("v", "verbose", false, "Show details");
 
 		options.addOption (null, "bug-repo", true, "Bug Repository URL");
@@ -196,6 +199,7 @@ public class MinerRunner {
 		options.addOption (null, "bug-threads", true, "Thread count used in bug miners");
 		options.addOption (null, "bug-cooldown-time", true, "Bug cooldown time");
 		options.addOption (null, "bug-miner-option", true, "Bug miner specific option. Format: <option-name>:value");
+		options.addOption (null, "bug-update", false, "Mine all changes since the last run");
 		options.getOption ("bug-miner-option").setArgs(Option.UNLIMITED_VALUES);
 
 		options.addOption (null, "src-path", true, "Local source repository path");
@@ -241,74 +245,26 @@ public class MinerRunner {
 				reporter.printSummary ();
 				return ;
 			}			
-		
+
+			printTraces = cmd.hasOption ("verbose");
 			pool = new ModelPool (cmd.getOptionValue ("db"), 2);
 
-			settings.bugRepository = cmd.getOptionValue ("bug-repo");
-			settings.bugProductName = cmd.getOptionValue ("bug-product");
-			settings.bugTrackerName = cmd.getOptionValue ("bug-tracker");
+			if (cmd.hasOption ("list-projects")) {
+				Model model = pool.getModel ();
 
-			
-			if (settings.bugRepository != null && (settings.bugProductName == null || settings.bugTrackerName == null)) {
-				reporter.error ("miner", "--bug-repo should only be used in combination with --bug-product and --bug-tracker");
-				reporter.printSummary ();
-				return ;
-			} else if (settings.bugProductName != null && (settings.bugRepository == null || settings.bugTrackerName == null)) {
-				reporter.error ("miner", "--bug-product should only be used in combination with --bug-repo and --bug-tracker");
-				reporter.printSummary ();
-				return ;
-			} else if (settings.bugTrackerName != null && (settings.bugRepository == null || settings.bugProductName == null)) {
-				reporter.error ("miner", "--bug-tracker should only be used in combination with --bug-repo and --bug-product");
-				reporter.printSummary ();
-				return ;
-			}
-
-
-			settings.bugLoginUser = cmd.getOptionValue ("bug-account");
-			settings.bugLoginPw = cmd.getOptionValue ("bug-passwd");
-
-			if (settings.bugLoginPw == null || settings.bugLoginUser == null) {
-				if (settings.bugLoginPw != null) {
-					reporter.error ("miner", "--bug-passwd should only be used in combination with --bug-account");
-					reporter.printSummary ();
-					return ;
-				} else if (settings.bugLoginUser != null) {
-					reporter.error ("miner", "--bug-account should only be used in combination with --bug-passwd");
-					reporter.printSummary ();
-					return ;
+				for (Project proj : model.getProjects ()) {
+					System.out.println ("  " + proj.getId () + ": " + proj.getDate ());
 				}
-			}
 
-			if (settings.bugLoginUser != null && settings.bugRepository == null) {
-				reporter.error ("post-processor", "--bug-account should only be used in combination with --bug-repo");
-				reporter.printSummary ();
+				model.close ();
 				return ;
 			}
 
-			if (cmd.hasOption ("bug-enable-untrusted")) {
-				settings.bugEnableUntrustedCertificates = true;
-			}
 
-			if (cmd.hasOption ("bug-threads")) {
-				try {
-					settings.bugThreads = Integer.parseInt (cmd.getOptionValue ("bug-threads"));
-				} catch (Exception e) {
-					reporter.error ("miner", "--bug-threads: Invalid parameter type");
-					reporter.printSummary ();
-					return ;
-				}
-			}
 
-			if (cmd.hasOption ("bug-cooldown-time")) {
-				try {
-					settings.bugCooldownTime = Integer.parseInt (cmd.getOptionValue ("bug-cooldown-time"));
-				} catch (Exception e) {
-					reporter.error ("miner", "--bug-cooldown-time: Invalid parameter type");
-					reporter.printSummary ();
-					return ;
-				}
-			}
-			
+			//
+			// Source Repository Mining:
+			//
 
 			settings.srcLocalPath = cmd.getOptionValue ("src-path");
 			settings.srcRemote = cmd.getOptionValue ("src-remote");
@@ -333,22 +289,192 @@ public class MinerRunner {
 				reporter.printSummary ();
 				return ;
 			}
+
 			
-			if (cmd.hasOption ("bug-miner-option")) {
-				for (String str : cmd.getOptionValues ("bug-miner-option")) {
-					addSpecificParameter (settings.bugSpecificParams, str);
+			
+			//
+			// Bug Repository Mining:
+			//
+
+			settings.bugRepository = cmd.getOptionValue ("bug-repo");
+			settings.bugProductName = cmd.getOptionValue ("bug-product");
+			settings.bugTrackerName = cmd.getOptionValue ("bug-tracker");
+			settings.bugEnableUntrustedCertificates = cmd.hasOption ("bug-enable-untrusted");
+			settings.bugLoginUser = cmd.getOptionValue ("bug-account");
+			settings.bugLoginPw = cmd.getOptionValue ("bug-passwd");
+
+			Project project;
+			Model model = pool.getModel ();
+			if (cmd.hasOption ("project")) {
+				try {
+					int projId = Integer.parseInt(cmd.getOptionValue ("project"));
+					project = model.getProject (projId);
+				} catch (NumberFormatException e) {
+					reporter.error ("post-processor", "Invalid project ID");
+					reporter.printSummary ();
+					return ;
+				}
+
+				if (project == null) {
+					reporter.error ("post-processor", "Invalid project ID");
+					reporter.printSummary ();
+					return ;
+				}
+			} else {
+				project = model.addProject (new Date (), null, settings.bugTrackerName, settings.bugRepository, settings.bugProductName, null);
+			}
+			model.close ();
+
+
+			settings.bugUpdate = cmd.hasOption ("bug-update");
+			boolean includeBugs = false;
+			if (settings.bugUpdate) {
+				if (project.getBugTracker () == null || project.getDomain () == null) {
+					reporter.error ("miner", "flag --bug-update is requires previously mined bugs. Use --bug-repository, --bug-product and --bug-tracker.");
+					reporter.printSummary (true);
+					return ;
+				}
+				if (settings.bugTrackerName != null) {
+					reporter.warning ("miner", "flag --bug-tracker without effect");
+				}
+				if (settings.bugProductName != null) {
+					reporter.warning ("miner", "flag --bug-product without effect");
+				}
+				if (settings.bugRepository != null) {
+					reporter.warning ("miner", "flag --bug-repository without effect");
+				}
+
+				settings.bugTrackerName = project.getBugTracker ();
+				settings.bugProductName = project.getProduct ();
+				settings.bugRepository = project.getDomain ();
+				includeBugs = true;
+			} else if (settings.bugRepository != null && settings.bugProductName != null && settings.bugTrackerName != null) {
+				if (!project.getBugTracker ().equalsIgnoreCase (settings.bugTrackerName)
+					|| !project.getProduct ().equalsIgnoreCase (settings.bugProductName)
+					|| !project.getDomain ().equalsIgnoreCase (settings.bugRepository))
+				{
+					reporter.error ("miner", "There are already previously mined bugs for this project. Use --bug-update to update the database.");
+					reporter.printSummary (true);
+					return ;
+				}
+				if (settings.bugRepository == null) {
+					reporter.error ("miner", "flag --bug-repository is required");
+					reporter.printSummary (true);
+					return ;
+				}
+				if (settings.bugProductName == null) {
+					reporter.error ("miner", "flag --bug-product is required");
+					reporter.printSummary (true);
+					return ;
+				}
+				includeBugs = true;
+			}
+
+			if (includeBugs) {
+				if (settings.bugLoginPw == null || settings.bugLoginUser == null) {
+					if (settings.bugLoginPw != null) {
+						reporter.error ("miner", "--bug-passwd should only be used in combination with --bug-account");
+						reporter.printSummary ();
+						return ;
+					} else if (settings.bugLoginUser != null) {
+						reporter.error ("miner", "--bug-account should only be used in combination with --bug-passwd");
+						reporter.printSummary ();
+						return ;
+					}
+				}
+
+				if (cmd.hasOption ("bug-threads")) {
+					try {
+						settings.bugThreads = Integer.parseInt (cmd.getOptionValue ("bug-threads"));
+					} catch (Exception e) {
+						reporter.error ("miner", "--bug-threads: Invalid parameter type");
+						reporter.printSummary ();
+						return ;
+					}
+				}
+
+				if (cmd.hasOption ("bug-cooldown-time")) {
+					try {
+						settings.bugCooldownTime = Integer.parseInt (cmd.getOptionValue ("bug-cooldown-time"));
+					} catch (Exception e) {
+						reporter.error ("miner", "--bug-cooldown-time: Invalid parameter type");
+						reporter.printSummary ();
+						return ;
+					}
+				}
+
+				if (cmd.hasOption ("bug-miner-option")) {
+					for (String str : cmd.getOptionValues ("bug-miner-option")) {
+						addSpecificParameter (settings.bugSpecificParams, str);
+					}
+				}
+
+				if (cmd.hasOption ("src-miner-option")) {
+					for (String str : cmd.getOptionValues ("src-miner-option")) {
+						addSpecificParameter (settings.srcSpecificParams, str);
+					}				
+				}
+			} else {
+				if (settings.bugLoginPw != null) {
+					reporter.error ("miner", "--bug-passwd should only be used in combination with --bug-account");					
+					reporter.printSummary ();
+					return ;
+				}
+				if (settings.bugLoginUser != null) {
+					reporter.error ("miner", "--bug-account should only be used in combination with --bug-account");
+					reporter.printSummary ();
+					return ;
+				}
+				if (settings.bugRepository != null) {
+					reporter.error ("miner", "--bug-repo should only be used in combination with --bug-product and --bug-tracker");
+					reporter.printSummary ();
+					return ;
+				}
+				if (settings.bugProductName != null) {
+					reporter.error ("miner", "--bug-product should only be used in combination with --bug-repo and --bug-tracker");
+					reporter.printSummary ();
+					return ;
+				}
+				if (settings.bugTrackerName != null) {
+					reporter.error ("miner", "--bug-tracker should only be used in combination with --bug-repo and --bug-product");
+					reporter.printSummary ();
+					return ;
+				}
+				if (settings.bugEnableUntrustedCertificates) {
+					reporter.error ("miner", "--bug-enable-untrusted should only be used in combination with --bug-repo, --bug-tracker and --bug-product");
+					reporter.printSummary ();
+					return ;
+				}
+				if (settings.bugUpdate) {
+					reporter.error ("miner", "--bug-update should only be used in combination with --bug-repo, --bug-tracker and --bug-product");
+					reporter.printSummary ();
+					return ;
+				}
+				if (cmd.hasOption ("bug-threads")) {
+					reporter.error ("miner", "--bug-threads should only be used in combination with --bug-repo, --bug-tracker and --bug-product");
+					reporter.printSummary ();
+					return ;
+				}
+				if (cmd.hasOption ("bug-cooldown-time")) {
+					reporter.error ("miner", "--bug-cooldown-time should only be used in combination with --bug-repo, --bug-tracker and --bug-product");
+					reporter.printSummary ();
+					return ;
+				}
+				if (cmd.hasOption ("bug-miner-option")) {
+					reporter.error ("miner", "--bug-miner-option should only be used in combination with --bug-repo, --bug-tracker and --bug-product");
+					reporter.printSummary ();
+					return ;
 				}
 			}
 
-			if (cmd.hasOption ("src-miner-option")) {
-				for (String str : cmd.getOptionValues ("src-miner-option")) {
-					addSpecificParameter (settings.srcSpecificParams, str);
-				}				
-			}
-
-			MinerRunner runner = new MinerRunner (pool, settings, reporter);
+			
+			
+			//
+			// Run:
+			//
+			
+			MinerRunner runner = new MinerRunner (pool, project, settings, reporter);
 			if (cmd.hasOption ("verbose")) {
-				printTraces = true;
 				runner.addListener (new MinerListener () {
 					private Map<Miner, Integer> totals = new HashMap<Miner, Integer> ();
 					
@@ -372,10 +498,11 @@ public class MinerRunner {
 					@Override
 					public void tasksProcessed (Miner miner, int processed) {
 						Integer total = totals.get (miner);
-						reporter.note (miner.getName (), "status: " + processed + "/" + ((total == null)? "?" : total));
+						reporter.note (miner.getName (), "status: " + processed + "/" + ((total == null)? "0" : total));
 					}
 				});
 			}
+
 			runner.run ();
 		} catch (ParameterException e) {
 			reporter.error (e.getMiner ().getName (), e.getMessage ());

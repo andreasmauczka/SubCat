@@ -43,17 +43,19 @@ public class Identity {
 	private Pattern patternNameSplitter = Pattern.compile ("[ |\t|\\.|\\-|_|,|:]+");
 
 	private Integer id;
+	private Integer identifier;
 	private String context;
 	private String mail;
 	private String name;
 	private User user;
 
-	public Identity (Integer id, String context, String mail, String name, User user) {
+	public Identity (Integer id, Integer identifier, String context, String mail, String name, User user) {
 		assert (name != null);
 		assert (user != null);
 		assert (context != null);
 
 		this.id = id;
+		this.identifier = identifier;
 		this.mail = mail;
 		this.name = name;
 		this.user = user;
@@ -68,6 +70,10 @@ public class Identity {
 		this.id = id;
 	}
 
+	public Integer getIdentifier () {
+		return identifier;
+	}
+	
 	public String getMail () {
 		return mail;
 	}

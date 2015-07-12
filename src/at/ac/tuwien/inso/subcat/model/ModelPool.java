@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Date;
 import java.util.LinkedList;
 
 import org.sqlite.SQLiteConfig;
@@ -207,6 +208,12 @@ public class ModelPool {
 		}
 	}
 
+	public void emitAttachmentUpdated (Attachment attachment) {
+		for (ModelModificationListener listener : listeners) {
+			listener.attachmentUpdated (attachment);
+		}
+	}
+
 	synchronized void emitAttachmentHistoryAdded (AttachmentHistory history) {	
 		for (ModelModificationListener listener : listeners) {
 			listener.attachmentHistoryAdded (history);
@@ -216,6 +223,12 @@ public class ModelPool {
 	synchronized void emitBugAdded (Bug bug) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugAdded (bug);
+		}
+	}
+
+	synchronized void emitBugUpdated (Bug bug) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugUpdated (bug);
 		}
 	}
 
@@ -315,6 +328,12 @@ public class ModelPool {
 		}
 	}
 
+	synchronized void emitProjectUpdated (Project project) {
+		for (ModelModificationListener listener : listeners) {
+			listener.projectUpdated (project);
+		}
+	}
+
 	synchronized void emitBugCategoryAdded (Bug bug, Category category) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugCategoryAdded (bug, category);
@@ -355,6 +374,12 @@ public class ModelPool {
 
 	public boolean getPrintTemplates () {
 		return this.printTemplates;
+	}
+
+	public void emitAttachmentIsObsoleteAdded (Attachment attachment, Identity identity, Date date, boolean value) {
+		for (ModelModificationListener listener : listeners) {
+			listener.attachmentIsObsoleteAdded (attachment, identity, date, value);
+		}
 	}
 }
 

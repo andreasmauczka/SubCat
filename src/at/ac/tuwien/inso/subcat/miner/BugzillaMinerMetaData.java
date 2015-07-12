@@ -53,16 +53,20 @@ public class BugzillaMinerMetaData extends MetaData {
 	}
 
 	@Override
-	public boolean is (Settings settings) {
+	public boolean is (Project project, Settings settings) {
 		assert (settings !=null);
+
+		if (settings.bugUpdate && name.equalsIgnoreCase (project.getBugTracker ())) {
+			return true;
+		}
 		
-		if (settings.bugRepository == null || settings.bugProductName == null || settings.bugTrackerName == null) {
-			return false;
+		if (name.equalsIgnoreCase (settings.bugTrackerName)) {
+			return true;
 		}
 
-		return name.equalsIgnoreCase (settings.bugTrackerName);
+		return false;
 	}
-
+	
 	@Override
 	public Miner create (Settings settings, Project project, ModelPool pool, Reporter reporter) {
 		return new BugzillaMiner (settings, project, pool, reporter);
@@ -72,7 +76,7 @@ public class BugzillaMinerMetaData extends MetaData {
 	public boolean checkSpecificParams (Map<String, Object> params, Map<String, String> errors) {
 		assert (params != null);
 		assert (errors != null);
-
+		
 		for (Map.Entry<String, Object> entry : params.entrySet ()) {
 			String name = entry.getKey ();
 			Object val = entry.getValue ();

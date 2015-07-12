@@ -35,18 +35,20 @@ import java.util.Date;
 
 public class Comment {
 	private Integer id;
+	private int index;
 	private Date creation;
 	private Bug bug;
 	private Identity identity;
 	private String content;
 
-	public Comment (Integer id, Bug bug, Date creation, Identity identity, String content) {
+	public Comment (Integer id, int index, Bug bug, Date creation, Identity identity, String content) {
 		assert (bug != null);
 		assert (creation != null);
 		assert (identity != null);
 		assert (content != null);
 
 		this.id = id;
+		this.index = index;
 		this.bug = bug;
 		this.identity = identity;
 		this.content = content;
@@ -55,6 +57,10 @@ public class Comment {
 
 	public Integer getId () {
 		return id;
+	}
+
+	public int getIndex () {
+		return index;
 	}
 
 	public void setId (Integer id) {

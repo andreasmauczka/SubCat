@@ -346,6 +346,27 @@ public class BugzillaContext {
 	}
 
 
+	
+	//
+	// Bugzilla API:
+	//
+
+	public Date getServerTime () throws BugzillaException {
+		Object resObj = execute ("Bugzilla.time");
+		assertType (resObj, Map.class);		
+
+		Map<?,?> map = (Map<?,?>) resObj;
+		return getDateFromResultMap (map, "db_time");
+	}
+
+	public String getBugzillaVersion () throws BugzillaException {
+		Object resObj = execute ("Bugzilla.version");
+		assertType (resObj, Map.class);		
+
+		Map<?,?> map = (Map<?,?>) resObj;
+		return getStringFromResultMap (map, "version");
+	}
+
 
 	//
 	// Product API:
@@ -382,6 +403,20 @@ public class BugzillaContext {
 
 		// Call:
 		return getProductsImpl (params);
+	}
+
+	public BugzillaProduct getProduct (String productName) throws BugzillaException {
+		// Params:
+		Map<String, Object[]> params = new HashMap<String, Object[]> ();
+		params.put ("names", new String[] {productName});
+
+		// Call:
+		BugzillaProduct[] products = getProductsImpl (params);
+		if (products.length > 0) {
+			return products[0];
+		} else {
+			return null;
+		}
 	}
 
 	private BugzillaProduct[] getProductsImpl (Map<String, Object[]> params) throws BugzillaException {
@@ -445,6 +480,10 @@ public class BugzillaContext {
 	}
 	
 	public BugzillaBug[] getBugs (String product, int page, int pageSize) throws BugzillaException {
+		return getBugs (null, product, page, pageSize);
+	}
+	
+	public BugzillaBug[] getBugs (Date changed_since, String product, int page, int pageSize) throws BugzillaException {
 		assert (product != null);
 		assert (pageSize > 0);
 		assert (page > 0);
@@ -456,7 +495,10 @@ public class BugzillaContext {
 		params.put ("product", product);
 		params.put ("limit", pageSize);		
 		params.put ("offset", offset);		
-
+		if (changed_since != null) {
+			params.put ("last_change_time", changed_since);
+		}
+		
 		Object resObj = execute ("Bug.search", new Object[] {params});
 		assertType (resObj, Map.class);
 
@@ -466,6 +508,8 @@ public class BugzillaContext {
 		return processBugHash (map);
 	}
 
+	
+	
 	private BugzillaBug[] processBugHash (Map<?,?> map) throws BugzillaException {
 		assert (map != null);
 
@@ -760,7 +804,7 @@ public class BugzillaContext {
 			String email = getStringFromResultMap (userMap, "email", true);
 			String name = getStringFromResultMap (userMap, "name");
 
-			users[i] = new BugzillaUser(id, realName, email, name);
+			users[i] = new BugzillaUser (id, realName, email, name);
 		}
 
 		return users;
@@ -777,37 +821,50 @@ public class BugzillaContext {
 		try {
 			BugzillaContext context = new BugzillaContext ("https://bugzilla.gnome.org");
 			context.enableUntrustedCertificates ();
-		
-			Map<Integer, BugzillaHistory[]> histories = context.getHistory (559704);
-			for (BugzillaHistory c : histories.get (559704)) {
-				System.out.println (c);
-				for (BugzillaChange v : c.getChanges ()) {
-					System.out.println ("  " + v);
-				}
-			}
 
-			BugzillaProduct[] products = context.getProducts (148);
-			 for (BugzillaProduct p : products) {
-			 	System.out.println(p);
-			 }
+			BugzillaProduct product = context.getProduct ("valadoc");
+			System.out.println ("pid: " + product);
+			
+			// Date since = new java.text.SimpleDateFormat ("dd/MM/yyyy/hh:mm:ss").parse ("01/01/2015/00:00:00");
+			// System.out.println (since);
+			// BugzillaBug[] changedBugs = context.getBugs (since, "valadoc", 1, 5);
+			// for (BugzillaBug bug : changedBugs) {
+			// 	System.out.println(bug);
+			// }
 
-			Integer[] productIds = context.getAccessibleProducts ();
-			for (Integer p : productIds) {
-				System.out.println(p);
-			}
+			// String version = context.getBugzillaVersion ();
+			// System.out.println (version);
+			
+			// Map<Integer, BugzillaHistory[]> histories = context.getHistory (559704);
+			// for (BugzillaHistory c : histories.get (559704)) {
+			// 	System.out.println (c);
+			// 	for (BugzillaChange v : c.getChanges ()) {
+			// 		System.out.println ("  " + v);
+			// 	}
+			// }
 
-			BugzillaBug[] bugs = context.getBugs ("valadoc", 1, 5);
-			for (BugzillaBug bug : bugs) {
-				System.out.println(bug);
-			}
+			// BugzillaProduct[] products = context.getProducts (148);
+			// for (BugzillaProduct p : products) {
+			//  	System.out.println(p);
+			// }
+
+			// Integer[] productIds = context.getAccessibleProducts ();
+			// for (Integer p : productIds) {
+			// 	System.out.println(p);
+			// }
+
+			// BugzillaBug[] bugs = context.getBugs ("valadoc", 1, 5);
+			// for (BugzillaBug bug : bugs) {
+			// 	System.out.println(bug);
+			// }
 	
-			Map<Integer, BugzillaHistory[]> histories = context.getHistory (703688, 692187);
-			for (BugzillaHistory c : histories.get (703688)) {
-				System.out.println (c);
-				for (BugzillaChange v : c.getChanges ()) {
-					System.out.println ("  " + v);
-				}
-			}
+			// histories = context.getHistory (703688, 692187);
+			// for (BugzillaHistory c : histories.get (703688)) {
+			// 	System.out.println (c);
+			// 	for (BugzillaChange v : c.getChanges ()) {
+			// 		System.out.println ("  " + v);
+			// 	}
+			// }
 
 			// context.login ("MY LOGIN", "MY PW");
 			// context.logout ();
@@ -838,6 +895,9 @@ public class BugzillaContext {
 		} catch (BugzillaException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		//} catch (java.text.ParseException e) {
+		//	// TODO Auto-generated catch block
+		//	e.printStackTrace();
 		}
 	}
 	/**/

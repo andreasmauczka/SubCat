@@ -117,4 +117,9 @@ public interface ModelModificationListener {
 
 	public void statusHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Status status);
+
+	public void resolutionAdded (Resolution resolution);
+
+	public void resolutionHistoryAdded (Bug bug, Identity addedBy, Date date,
+			Resolution resolution);
 }

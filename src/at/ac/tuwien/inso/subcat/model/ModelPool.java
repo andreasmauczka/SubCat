@@ -420,5 +420,18 @@ public class ModelPool {
 			listener.statusHistoryAdded (bug, addedBy, date, status);
 		}
 	}
+
+	public void emitResolutionAdded (Resolution resolution) {
+		for (ModelModificationListener listener : listeners) {
+			listener.resolutionAdded (resolution);
+		}
+	}
+
+	public void emitResolutionHistoryAdded (Bug bug, Identity addedBy,
+			Date date, Resolution resolution) {
+		for (ModelModificationListener listener : listeners) {
+			listener.resolutionHistoryAdded (bug, addedBy, date, resolution);
+		}
+	}
 }
 

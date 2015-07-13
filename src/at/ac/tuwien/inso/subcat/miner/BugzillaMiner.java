@@ -61,6 +61,7 @@ import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.Priority;
 import at.ac.tuwien.inso.subcat.model.Project;
+import at.ac.tuwien.inso.subcat.model.Resolution;
 import at.ac.tuwien.inso.subcat.model.Severity;
 import at.ac.tuwien.inso.subcat.model.Status;
 import at.ac.tuwien.inso.subcat.model.User;
@@ -94,6 +95,7 @@ public class BugzillaMiner extends Miner {
 	
 	private Map<String, AttachmentStatus> attachmentStatus = new HashMap<String, AttachmentStatus> ();
 	private Map<String, Component> components = new HashMap<String, Component> ();
+	private Map<String, Resolution> resolutions = new HashMap<String, Resolution> ();
 	private Map<String, Priority> priorities = new HashMap<String, Priority> ();
 	private Map<String, Severity> severities = new HashMap<String, Severity> ();
 	private Map<String, Identity> identities = new HashMap<String, Identity> ();
@@ -224,6 +226,7 @@ public class BugzillaMiner extends Miner {
 				Component component = resolveComponent (bzBug.getComponent ());
 				Severity severity = resolveSeverity (bzBug.getSeverity ());
 				Priority priority = resolvePriority (bzBug.getPriority ());
+				Resolution resolution = resolveResolution (bzBug.getResolution ());
 				Integer identifier = bzBug.getId ();
 				Date creation = bzBug.getCreationTime ();
 				String title = bzBug.getSummary ();
@@ -234,9 +237,9 @@ public class BugzillaMiner extends Miner {
 				// Add to model:
 				Bug bug;
 				if (bugStats == null) {
-					bug = model.addBug (identifier, creator, component, title, creation, priority, severity);
+					bug = model.addBug (identifier, creator, component, title, creation, priority, severity, resolution);
 				} else {
-					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, priority, severity);
+					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, priority, severity, resolution);
 					model.updateBug (bug);
 				}
 
@@ -379,6 +382,7 @@ public class BugzillaMiner extends Miner {
 
 				
 			int bugHistoryCnt = 0;
+			int resolutionCnt = 0;
 			int priorityCnt = 0;
 			int severityCnt = 0;
 			int statusCnt = 0;
@@ -434,6 +438,16 @@ public class BugzillaMiner extends Miner {
 								model.addStatusHistory (bug, addedBy, entry.getWhen (), status);
 							}
 							statusCnt++;
+						}
+					} else if ("resolution".equals (change.getFieldName ())) {
+
+						if (change.getAdded () != null) {
+							if (bugStats == null || resolutionCnt >= bugStats.getResolutionHistoryCount ()) {
+								Identity addedBy = resolveIdentity (entry.getWho ());
+								Resolution resolution = resolveResolution (change.getAdded ());
+								model.addResolutionHistory (bug, addedBy, entry.getWhen (), resolution);
+							}
+							resolutionCnt++;
 						}
 					} else if ("alias".equals (change.getFieldName ())) {
 
@@ -622,6 +636,7 @@ public class BugzillaMiner extends Miner {
 		}
 
 		// Initialise caches based on previously mined data:
+		resolutions = model.getResolutionsByName (project);
 		priorities = model.getPrioritiesByName (project);
 		severities = model.getSeveritiesByName (project);
 		status = model.getStatusesByName (project);
@@ -768,6 +783,18 @@ public class BugzillaMiner extends Miner {
 		return priority;
 	}
 
+	private synchronized Resolution resolveResolution (String name) throws SQLException {
+		assert (name != null);
+
+		Resolution resolution = resolutions.get (name);
+		if (resolution == null) {
+			resolution = model.addResolution (project, name);
+			resolutions.put (name, resolution);
+		}
+		
+		return resolution;		
+	}
+	
 	private synchronized AttachmentStatus resolveAttachmentStatus (String name) throws SQLException {
 		assert (name != null);
 

@@ -400,20 +400,20 @@ public class BugzillaMiner extends Miner {
 								model.addBugCc (bug, entry.getWhen (), addedBy, null, change.getRemoved (), true);
 							}
 						}
-						ccCnt++;
+						ccCnt += (change.getAdded () != null && change.getRemoved () != null)? 2 : 1;
 					} else if ("blocks".equals (change.getFieldName ())) {
 						if (bugStats == null || blocksCnt >= bugStats.getBlocksCount ()) {
 							Identity addedBy = resolveIdentity (entry.getWho ());
-							if (change.getAdded () != null && !"".equals (change.getAdded ())) {
+							if (change.getAdded () != null) {
 								int bugIdentifier = Integer.parseInt (change.getAdded ());
 								model.addBugBlocks (bug, entry.getWhen (), addedBy, null, bugIdentifier, false);
 							}
-							if (change.getRemoved () != null && !"".equals (change.getRemoved ())) {
+							if (change.getRemoved () != null) {
 								int bugIdentifier = Integer.parseInt (change.getRemoved ());
 								model.addBugBlocks (bug, entry.getWhen (), addedBy, null, bugIdentifier, true);
 							}
 						}
-						blocksCnt++;
+						blocksCnt += (change.getAdded () != null && change.getRemoved () != null)? 2 : 1;
 					} else if ("bug_status".equals (change.getFieldName ())) {
 						if (bugStats == null || bugHistoryCnt >= bugStats.getHistoryCount ()) {
 							Identity identity = resolveIdentity (entry.getWho ());

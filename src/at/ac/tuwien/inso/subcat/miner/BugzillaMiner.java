@@ -229,6 +229,7 @@ public class BugzillaMiner extends Miner {
 				Resolution resolution = resolveResolution (bzBug.getResolution ());
 				Integer identifier = bzBug.getId ();
 				Date creation = bzBug.getCreationTime ();
+				Date lastChange = bzBug.getLastChangeTime ();
 				String title = bzBug.getSummary ();
 
 
@@ -237,9 +238,9 @@ public class BugzillaMiner extends Miner {
 				// Add to model:
 				Bug bug;
 				if (bugStats == null) {
-					bug = model.addBug (identifier, creator, component, title, creation, priority, severity, resolution);
+					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, resolution);
 				} else {
-					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, priority, severity, resolution);
+					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, resolution);
 					model.updateBug (bug);
 				}
 

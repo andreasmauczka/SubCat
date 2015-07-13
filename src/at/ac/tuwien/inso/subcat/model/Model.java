@@ -192,6 +192,7 @@ public class Model {
 		+ "component	INT									NOT NULL,"
 		+ "title		TEXT								NOT NULL,"
 		+ "creation		TEXT								NOT NULL,"
+		+ "lastChange	TEXT								NOT NULL,"
 		+ "priority		INT									NOT NULL,"
 		+ "severity		INT									NOT NULL,"
 		+ "resolution	INT									NOT NULL,"
@@ -697,7 +698,8 @@ public class Model {
 		+ " Bugs.curStat, "
 		+ " Identity.context		AS aiContext, "
 		+ " Identity.identifier,"
-		+ " Bugs.resolution "
+		+ " Bugs.resolution,"
+		+ " Bugs.lastChange "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -730,7 +732,8 @@ public class Model {
 		+ " Severity.name			AS sName, "
 		+ " Identity.identifier,"
 		+ " Resolutions.id, "
-		+ " Resolutions.name "
+		+ " Resolutions.name,"
+		+ " Bugs.lastChange "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -1107,8 +1110,8 @@ public class Model {
 
 	private static final String BUG_INSERTION =
 		"INSERT INTO Bugs "
-		+ "(identifier, identity, component, title, creation, priority, severity, curStat, resolution)"
-		+ "SELECT ?, ?, ?, ?, ?, ?, ?, defaultStatusId, ? "
+		+ "(identifier, identity, component, title, creation, priority, severity, curStat, resolution, lastChange)"
+		+ "SELECT ?, ?, ?, ?, ?, ?, ?, defaultStatusId, ?, ? "
 		+ "FROM Projects WHERE id=?";
 
 	private static final String BUG_UPDATE =
@@ -2000,8 +2003,8 @@ public class Model {
 	}
 	
 	public Bug addBug (Integer identifier, Identity identity, Component component,
-			String title, Date creation, Priority priority, Severity severity, Resolution resolution) throws SQLException {
-		Bug bug = new Bug (null, identifier, identity, component, title, creation, priority, severity, resolution);
+			String title, Date creation, Date lastChange, Priority priority, Severity severity, Resolution resolution) throws SQLException {
+		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, resolution);
 		add (bug);
 
 		return bug;
@@ -2036,7 +2039,8 @@ public class Model {
 		stmt.setInt (6, bug.getPriority ().getId ());
 		stmt.setInt (7, bug.getSeverity ().getId ());
 		stmt.setInt (8, bug.getResolution ().getId ());
-		stmt.setInt (9, bug.getComponent ().getProject ().getId ());
+		resSetDate (stmt, 9, bug.getLastChange ());		
+		stmt.setInt (10, bug.getComponent ().getProject ().getId ());
 		stmt.executeUpdate();
 
 		bug.setId (getLastInsertedId (stmt));
@@ -3308,9 +3312,10 @@ public class Model {
 			Priority priority = priorities.get (res.getInt (11));
 			Severity severity = severities.get (res.getInt (12));
 			Resolution resolution = resolutions.get (res.getInt (17));
+			Date lastChange = resGetDate (res, 18);
 
 			Bug bug = new Bug (id, identifier, identity, component,
-				title, creation, priority, severity, resolution);
+				title, creation, lastChange, priority, severity, resolution);
 
 			do_next = callback.processResult (bug);
 		}
@@ -3359,8 +3364,10 @@ public class Model {
 			String resName = res.getString (19);
 			Resolution resolution = new Resolution (resId, proj, resName);
 
+			Date lastChange = resGetDate (res, 20);
+			
 			return new Bug (id, identifier, identity, component,
-				title, creation, priority, severity, resolution);
+				title, creation, lastChange, priority, severity, resolution);
 		}
 
 		return null;

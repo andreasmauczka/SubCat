@@ -39,18 +39,21 @@ public class Bug {
 	private Component component;
 	private String title;
 	private Date creation;
+	private Date lastChange;
 	private Priority priority;
 	private Severity severity;
 	private Integer identifier;
 	private Resolution resolution;
 
 	public Bug (Integer id, Integer identifier, Identity identity, Component component,
-			String title, Date creation, Priority priority, Severity severity, Resolution resolution) {
+			String title, Date creation, Date lastChange, Priority priority, Severity severity,
+			Resolution resolution) {
 		assert (component != null);
 		assert (title != null);
 		assert (creation != null);
 		assert (priority != null);
 		assert (resolution != null);
+		assert (lastChange != null);
 		//assert (category != null);
 
 		this.id = id;
@@ -62,6 +65,7 @@ public class Bug {
 		this.priority = priority;
 		this.severity = severity;
 		this.resolution = resolution;
+		this.lastChange = lastChange;
 	}
 
 	public Integer getIdentifier () {
@@ -114,6 +118,16 @@ public class Bug {
 		this.creation = creation;
 	}
 
+	public Date getLastChange () {
+		return lastChange;
+	}
+
+	public void setLastChange (Date lastChange) {
+		assert (lastChange != null);
+
+		this.lastChange = lastChange;
+	}
+	
 	public Priority getPriority () {
 		return priority;
 	}

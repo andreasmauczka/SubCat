@@ -122,4 +122,7 @@ public interface ModelModificationListener {
 
 	public void resolutionHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Resolution resolution);
+
+	public void confiremdHistoryAdded (Bug bug, Identity addedBy, Date date,
+			boolean removed);
 }

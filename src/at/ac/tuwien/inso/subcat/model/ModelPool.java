@@ -433,5 +433,12 @@ public class ModelPool {
 			listener.resolutionHistoryAdded (bug, addedBy, date, resolution);
 		}
 	}
+
+	public void emitConfirmedHistoryAdded (Bug bug, Identity addedBy,
+			Date date, boolean removed) {
+		for (ModelModificationListener listener : listeners) {
+			listener.confiremdHistoryAdded (bug, addedBy, date, removed);
+		}
+	}
 }
 

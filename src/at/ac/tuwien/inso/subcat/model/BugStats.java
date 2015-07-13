@@ -16,9 +16,11 @@ public class BugStats {
 	private int priorityCnt;
 	private int statusCnt;
 	private int resolutionCnt;
+	private int confirmedCnt;
 
 
-	public BugStats (int id, int cmntCnt, int histCnt, int attCnt, int ccCnt, int blocksCnt, int aliasCnt, int severityHistoryCnt, int priorityCnt, int statusCnt, int resolutionCnt, Map<Integer, BugAttachmentStats> attStats) {
+	public BugStats (int id, int cmntCnt, int histCnt, int attCnt, int ccCnt, int blocksCnt, int aliasCnt, int severityHistoryCnt, 
+			int priorityCnt, int statusCnt, int resolutionCnt, int confirmedCnt, Map<Integer, BugAttachmentStats> attStats) {
 		this.id = id;
 		this.cmntCnt = cmntCnt;
 		this.histCnt = histCnt;
@@ -31,6 +33,7 @@ public class BugStats {
 		this.priorityCnt = priorityCnt;
 		this.statusCnt = statusCnt;
 		this.resolutionCnt = resolutionCnt;
+		this.confirmedCnt = confirmedCnt;
 	}
 	
 	public Map<Integer, BugAttachmentStats> getAttachmentStatsByIdentifier () {
@@ -79,5 +82,9 @@ public class BugStats {
 
 	public int getResolutionHistoryCount () {
 		return resolutionCnt;
+	}
+
+	public int getConfirmedHistoryCount () {
+		return confirmedCnt;
 	}
 }

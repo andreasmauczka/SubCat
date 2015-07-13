@@ -218,6 +218,18 @@ public class Model {
 		+ "FOREIGN KEY(severity) REFERENCES Severity (id)"
 		+ ")";
 
+	private static final String STATUS_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS StatusHistory ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "bug			INT									NOT NULL,"
+		+ "addedBy		INT									NOT NULL,"
+		+ "date			TEXT								NOT NULL,"
+		+ "status		INT									NOT NULL,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(status) REFERENCES Status (id)"
+		+ ")";
+
 	private static final String BUG_ALIASES =
 		"CREATE TABLE IF NOT EXISTS BugAliases ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -560,7 +572,8 @@ public class Model {
 		+ " (SELECT COUNT() FROM BugBlocks WHERE BugBlocks.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugAliases WHERE BugAliases.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM SeverityHistory WHERE SeverityHistory.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM PriorityHistory WHERE PriorityHistory.bug = Bugs.id)"
+		+ " (SELECT COUNT() FROM PriorityHistory WHERE PriorityHistory.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM StatusHistory WHERE StatusHistory.bug = Bugs.id)"
 		+ "FROM "
 		+ " Bugs, Components "
 		+ "WHERE "
@@ -1073,6 +1086,11 @@ public class Model {
 	private static final String SEVERITY_HISTORY_INSERTION =
 		"INSERT INTO SeverityHistory"
 		+ "(bug, addedBy, date, severity)"
+		+ "VALUES (?, ?, ?, ?)";
+
+	private static final String STATUS_HISTORY_INSERTION =
+		"INSERT INTO StatusHistory"
+		+ "(bug, addedBy, date, status)"
 		+ "VALUES (?, ?, ?, ?)";
 	
 	private static final String ATTACHMENT_INSERTION =
@@ -2027,6 +2045,27 @@ public class Model {
 		pool.emitSeverityHistoryAdded (bug, addedBy, date, severity);
 	}
 
+	public void addStatusHistory (Bug bug, Identity addedBy, Date date, Status status) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (addedBy != null);
+		assert (addedBy.getId () != null);
+		assert (date != null);
+		assert (status != null);
+		assert (status.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (STATUS_HISTORY_INSERTION);
+		stmt.setInt (1, bug.getId ());
+		stmt.setInt (2, addedBy.getId ());
+		resSetDate (stmt, 3, date);
+		stmt.setInt (4, status.getId ());
+
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitStatusHistoryAdded (bug, addedBy, date, status);
+	}
+
 	public Dictionary addDictionary (String name, String context, Project project) throws SQLException {
 		Dictionary dict = new Dictionary (null, name, context, project);
 		add (dict);
@@ -2741,6 +2780,7 @@ public class Model {
 		int aliasCnt = res.getInt (7);
 		int severityHistoryCnt = res.getInt (8);
 		int priorityCnt = res.getInt (9);
+		int statusCnt = res.getInt (10);
 
 		
 		// Statement:
@@ -2758,7 +2798,7 @@ public class Model {
 			attStats.put (attIdentifier, new BugAttachmentStats (attId, attIdentifier, attObsCnt, attHistCnt));
 		}
 
-		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt, attStats);
+		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt, statusCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -3788,6 +3828,7 @@ public class Model {
 		stmt.executeUpdate (COMMENT_TABLE);
 		stmt.executeUpdate (STATUS_TABLE);
 		stmt.executeUpdate (BUG_HISTORY_TABLE);
+		stmt.executeUpdate (STATUS_HISTORY_TABLE);
 		stmt.executeUpdate (CC_TABLE);
 		stmt.executeUpdate (BUG_BLOCKS_TABLE);
 		stmt.executeUpdate (CATEGORY_TABLE);

@@ -413,5 +413,12 @@ public class ModelPool {
 			listener.priorityHistoryAdded (bug, addedBy, date, priority);
 		}
 	}
+
+	public void emitStatusHistoryAdded (Bug bug, Identity addedBy, Date date,
+			Status status) {
+		for (ModelModificationListener listener : listeners) {
+			listener.statusHistoryAdded (bug, addedBy, date, status);
+		}
+	}
 }
 

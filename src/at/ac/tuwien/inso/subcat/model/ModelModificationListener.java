@@ -114,4 +114,7 @@ public interface ModelModificationListener {
 
 	public void priorityHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Priority priority);
+
+	public void statusHistoryAdded (Bug bug, Identity addedBy, Date date,
+			Status status);
 }

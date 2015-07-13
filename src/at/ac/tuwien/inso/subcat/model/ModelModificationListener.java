@@ -99,4 +99,7 @@ public interface ModelModificationListener {
 
 	public void attachmentIsObsoleteAdded (Attachment attachment,
 			Identity identity, Date date, boolean value);
+
+	public void bugCcAdded (Bug bug, Date date, Identity addedBy,
+			Identity cc, String ccMail, boolean removed);
 }

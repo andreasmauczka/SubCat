@@ -381,6 +381,12 @@ public class ModelPool {
 			listener.attachmentIsObsoleteAdded (attachment, identity, date, value);
 		}
 	}
+
+	public void emitBugCcAdded (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugCcAdded (bug, date, addedBy, cc, ccMail, removed);
+		}
+	}
 }
 
 

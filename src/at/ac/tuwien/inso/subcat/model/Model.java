@@ -211,15 +211,15 @@ public class Model {
 		+ ")";
 
 	private static final String ATTACHMENT_ISOBSOLETE_TABLE =
-			"CREATE TABLE IF NOT EXISTS ObsoleteAttachments ("
-			+ "id			INTEGER PRIMARY KEY AUTOINCREMENT	NOT NULL,"
-			+ "attachment	INTEGER								NOT NULL,"
-			+ "identity		INTEGER								NOT NULL,"
-			+ "date			TEXT								NOT NULL,"
-			+ "isObsolete	INTEGER								NOT NULL,"
-			+ "FOREIGN KEY(attachment) REFERENCES Attachments (id),"
-			+ "FOREIGN KEY(identity) REFERENCES Identities (id)"
-			+ ")";
+		"CREATE TABLE IF NOT EXISTS ObsoleteAttachments ("
+		+ "id			INTEGER PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "attachment	INTEGER								NOT NULL,"
+		+ "identity		INTEGER								NOT NULL,"
+		+ "date			TEXT								NOT NULL,"
+		+ "isObsolete	INTEGER								NOT NULL,"
+		+ "FOREIGN KEY(attachment) REFERENCES Attachments (id),"
+		+ "FOREIGN KEY(identity) REFERENCES Identities (id)"
+		+ ")";
 
 	private static final String ATTACHMENT_STATUS_TABLE =
 		"CREATE TABLE IF NOT EXISTS AttachmentStatus ("
@@ -272,6 +272,20 @@ public class Model {
 		+ "date			TEXT								NOT NULL,"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(status) REFERENCES Status (id),"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id)"
+		+ ")";
+
+	private static final String CC_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugCc ("
+		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+		+ "date			TEXT								NOT NULL,"
+		+ "bug			INT									NOT NULL,"
+		+ "addedBy		INT									NOT NULL,"
+		+ "cc			INT									        ,"
+		+ "ccMail		String								NOT NULL,"
+		+ "removed		BOOLEAN								NOT NULL,"
+		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(cc) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id)"
 		+ ")";
 
@@ -492,7 +506,8 @@ public class Model {
 		+ " Bugs.id,"
 		+ " (SELECT COUNT() FROM Comments WHERE Comments.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugHistories WHERE BugHistories.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM Attachments, Comments WHERE Attachments.comment = Comments.id AND Comments.bug = Bugs.id) "
+		+ " (SELECT COUNT() FROM Attachments, Comments WHERE Attachments.comment = Comments.id AND Comments.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM BugCc WHERE BugCc.bug = Bugs.id) "
 		+ "FROM "
 		+ " Bugs, Components "
 		+ "WHERE "
@@ -1035,6 +1050,20 @@ public class Model {
 		"INSERT INTO BugHistories"
 		+ "(bug, status, identity, date)"
 		+ "VALUES (?,?,?,?)";
+
+	private static final String BUG_CC_INSERTION =
+		"INSERT INTO BugCc"
+		+ "(bug, date, addedBy, cc, ccMail, removed)"
+		+ "VALUES (?,?,?,?,?,?)";
+
+	private static final String BUG_CC_RESOLVE_IDENTITIES =
+		"UPDATE "
+		+ " BugCc "
+		+ "SET "
+		+ " cc = (SELECT Identities.id FROM Identities, Users WHERE Identities.context = 'bug' AND Identities.user = Users.id AND mail = ccMail AND Users.project = ?) "
+		+ "WHERE "
+		+ " cc IS NULL "
+		+ "AND bug IN (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
 	private static final String COMMIT_INSERTION =
 		"INSERT INTO Commits"
@@ -1911,6 +1940,46 @@ public class Model {
 		pool.emitBugHistoryAdded (history);
 	}
 
+	public void addBugCc (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (date != null);
+		assert (addedBy != null);
+		assert (addedBy.getId () != null);
+		assert (cc == null || cc.getId () != null);
+		assert (ccMail != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_CC_INSERTION);
+		stmt.setInt (1, bug.getId ());
+		resSetDate (stmt, 2, date);
+		stmt.setInt (3, addedBy.getId ());
+		if (cc != null) {
+			stmt.setInt (4, cc.getId ());
+		} else {
+			stmt.setNull (4, Types.INTEGER);
+		}
+		stmt.setString (5, ccMail);
+		stmt.setBoolean (6, removed);
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitBugCcAdded (bug, date, addedBy, cc, ccMail, removed);
+	}
+	
+	public void resolveCcIdentities (Project project) throws SQLException {
+		assert (conn != null);
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_CC_RESOLVE_IDENTITIES);
+		stmt.setInt (1, project.getId ());
+		stmt.setInt (2, project.getId ());
+
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+	
 	public Comment addComment (int index, Bug bug, Date creation, Identity identity, String content) throws SQLException {
 		Comment cmnt = new Comment(null, index, bug, creation, identity, content);
 		add (cmnt);
@@ -2483,6 +2552,7 @@ public class Model {
 		int cmntCnt = res.getInt (2);
 		int histCnt = res.getInt (3);
 		int attCnt  = res.getInt (4);
+		int ccCnt  = res.getInt (5);
 
 		
 		// Statement:
@@ -2500,7 +2570,7 @@ public class Model {
 			attStats.put (attIdentifier, new BugAttachmentStats (attId, attIdentifier, attObsCnt, attHistCnt));
 		}
 
-		return new BugStats (bugId, cmntCnt, histCnt, attCnt, attStats);
+		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -3527,6 +3597,7 @@ public class Model {
 		stmt.executeUpdate (COMMENT_TABLE);
 		stmt.executeUpdate (STATUS_TABLE);
 		stmt.executeUpdate (BUG_HISTORY_TABLE);
+		stmt.executeUpdate (CC_TABLE);
 		stmt.executeUpdate (CATEGORY_TABLE);
 		stmt.executeUpdate (COMMIT_TABLE);
 		stmt.executeUpdate (BUGFIX_COMMIT_TABLE);

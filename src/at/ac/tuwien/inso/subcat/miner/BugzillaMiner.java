@@ -37,7 +37,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -380,6 +379,7 @@ public class BugzillaMiner extends Miner {
 
 				
 			int bugHistoryCnt = 0;
+			int ccCnt = 0;
 
 			for (BugzillaHistory entry : history) {
 				BugzillaChange[] changes = entry.getChanges ();
@@ -388,8 +388,19 @@ public class BugzillaMiner extends Miner {
 						return ;
 					}
 
-					// TODO: resolution
-					if ("bug_status".equals (change.getFieldName ())) {
+					if ("cc".equals (change.getFieldName ())) {
+						if (bugStats == null || ccCnt >= bugStats.getCcCount ()) {
+							Identity addedBy = resolveIdentity (entry.getWho ());
+
+							if (change.getAdded () != null) {
+								model.addBugCc (bug, entry.getWhen (), addedBy, null, change.getAdded (), false);
+							}
+							if (change.getRemoved () != null) {
+								model.addBugCc (bug, entry.getWhen (), addedBy, null, change.getRemoved (), true);
+							}
+						}
+						ccCnt++;
+					} else if ("bug_status".equals (change.getFieldName ())) {
 						if (bugStats == null || bugHistoryCnt >= bugStats.getHistoryCount ()) {
 							Identity identity = resolveIdentity (entry.getWho ());
 							Status bugStat = resolveStatus (change.getAdded ());
@@ -400,7 +411,7 @@ public class BugzillaMiner extends Miner {
 						bugHistoryCnt++;
 					}
 
-					// TODO: Store fieldName=blocks, fieldName==depends_on, CC					
+					// TODO: Store fieldName=blocks, fieldName==depends_on
 					if (change.getAttachmentId () != null) {
 						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
 
@@ -509,9 +520,11 @@ public class BugzillaMiner extends Miner {
 			}
 		}
 
-		// Update server time *after* mining to make sure we don't
-		// miss updates in case anything goes wrong.
 		try {
+			model.resolveCcIdentities (project);
+
+			// Update server time *after* mining to make sure we don't
+			// miss updates in case anything goes wrong.
 			if (startServerTime != null && model != null && storedException == null) {
 				project.setLastBugMiningDate (startServerTime);
 				model.updateProject (project);

@@ -406,5 +406,12 @@ public class ModelPool {
 			listener.severityHistoryAdded (bug, addedBy, date, severity);
 		}
 	}
+
+	public void emitPriorityHistoryAdded (Bug bug, Identity addedBy, Date date,
+			Priority priority) {
+		for (ModelModificationListener listener : listeners) {
+			listener.priorityHistoryAdded (bug, addedBy, date, priority);
+		}
+	}
 }
 

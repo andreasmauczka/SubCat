@@ -379,6 +379,7 @@ public class BugzillaMiner extends Miner {
 
 				
 			int bugHistoryCnt = 0;
+			int priorityCnt = 0;
 			int severityCnt = 0;
 			int blocksCnt = 0;
 			int aliasCnt = 0;
@@ -412,6 +413,16 @@ public class BugzillaMiner extends Miner {
 								model.addSeverityHistory (bug, addedBy, entry.getWhen (), severity);
 							}
 							severityCnt++;
+						}
+					} else if ("priority".equals (change.getFieldName ())) {
+
+						if (change.getAdded () != null) {
+							if (bugStats == null || priorityCnt >= bugStats.getPriorityHistoryCount ()) {
+								Identity addedBy = resolveIdentity (entry.getWho ());
+								Priority priority = resolvePriority (change.getAdded ());
+								model.addPriorityHistory (bug, addedBy, entry.getWhen (), priority);
+							}
+							priorityCnt++;
 						}
 					} else if ("alias".equals (change.getFieldName ())) {
 

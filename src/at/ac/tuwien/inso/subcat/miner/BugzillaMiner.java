@@ -380,6 +380,7 @@ public class BugzillaMiner extends Miner {
 				
 			int bugHistoryCnt = 0;
 			int blocksCnt = 0;
+			int aliasCnt = 0;
 			int ccCnt = 0;
 
 			for (BugzillaHistory entry : history) {
@@ -401,6 +402,15 @@ public class BugzillaMiner extends Miner {
 							}
 						}
 						ccCnt += (change.getAdded () != null && change.getRemoved () != null)? 2 : 1;
+					} else if ("alias".equals (change.getFieldName ())) {
+						Identity addedBy = resolveIdentity (entry.getWho ());
+
+						if (change.getAdded () != null && !"".equals (change.getAdded ())) {
+							if (bugStats == null || aliasCnt >= bugStats.getAliasCount ()) {
+								model.addBugAlias (bug, addedBy, entry.getWhen (), change.getAdded ());
+							}
+							aliasCnt++;
+						}
 					} else if ("blocks".equals (change.getFieldName ())) {
 						if (bugStats == null || blocksCnt >= bugStats.getBlocksCount ()) {
 							Identity addedBy = resolveIdentity (entry.getWho ());

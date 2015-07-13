@@ -376,22 +376,28 @@ public class ModelPool {
 		return this.printTemplates;
 	}
 
-	public void emitAttachmentIsObsoleteAdded (Attachment attachment, Identity identity, Date date, boolean value) {
+	public synchronized void emitAttachmentIsObsoleteAdded (Attachment attachment, Identity identity, Date date, boolean value) {
 		for (ModelModificationListener listener : listeners) {
 			listener.attachmentIsObsoleteAdded (attachment, identity, date, value);
 		}
 	}
 
-	public void emitBugCcAdded (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) {
+	public synchronized void emitBugCcAdded (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugCcAdded (bug, date, addedBy, cc, ccMail, removed);
 		}
 	}
 
-	public void emitBugBlocksAdded (Bug bug, Date date, Identity addedBy,
+	public synchronized void emitBugBlocksAdded (Bug bug, Date date, Identity addedBy,
 			boolean removed) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugBlocksAdded (bug, date, addedBy, removed);
+		}
+	}
+
+	public synchronized void emitBugAliasAdded (Bug bug, String alias) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugAliasAdded (bug, alias);
 		}
 	}
 }

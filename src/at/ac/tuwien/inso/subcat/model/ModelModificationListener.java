@@ -105,4 +105,6 @@ public interface ModelModificationListener {
 
 	public void bugBlocksAdded (Bug bug, Date date, Identity addedBy,
 			boolean removed);
+
+	public void bugAliasAdded (Bug bug, String alias);
 }

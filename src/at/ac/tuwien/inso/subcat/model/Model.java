@@ -194,6 +194,17 @@ public class Model {
 		+ "FOREIGN KEY(curStat) REFERENCES Status (id)"
 		+ ")";
 
+	private static final String BUG_ALIASES =
+		"CREATE TABLE IF NOT EXISTS BugAliases ("
+		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+		+ "bug			INT									NOT NULL,"
+		+ "addedBy		INT									NOT NULL,"
+		+ "date			TEXT								NOT NULL,"
+		+ "alias		TEXT								NOT NULL,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id)"
+		+ ")";
+
 	private static final String BUG_CATEGORIES_TABLE =
 		"CREATE TABLE IF NOT EXISTS BugCategories ("
 		+ "bug			INT									NOT NULL,"
@@ -522,7 +533,8 @@ public class Model {
 		+ " (SELECT COUNT() FROM BugHistories WHERE BugHistories.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM Attachments, Comments WHERE Attachments.comment = Comments.id AND Comments.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugCc WHERE BugCc.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM BugBlocks WHERE BugBlocks.bug = Bugs.id) "
+		+ " (SELECT COUNT() FROM BugBlocks WHERE BugBlocks.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM BugAliases WHERE BugAliases.bug = Bugs.id)"
 		+ "FROM "
 		+ " Bugs, Components "
 		+ "WHERE "
@@ -1021,6 +1033,11 @@ public class Model {
 		+ " curStat = ?"
 		+ "WHERE"
 		+ " id = ?";
+
+	private static final String BUG_ALIAS_INSERTION =
+		"INSERT INTO BugAliases"
+		+ "(bug, addedBy, date, alias)"
+		+ "VALUES (?, ?, ?, ?)";
 
 	private static final String ATTACHMENT_INSERTION =
 		"INSERT INTO Attachments"
@@ -1843,7 +1860,7 @@ public class Model {
 
 		return bug;
 	}
-	
+
 	public void add (Bug bug) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
@@ -1912,6 +1929,26 @@ public class Model {
 		pool.emitBugUpdated (bug);
 	}
 
+	public void addBugAlias (Bug bug, Identity addedBy, Date date, String alias) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (addedBy != null);
+		assert (addedBy.getId () != null);
+		assert (date != null);
+		assert (alias != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_ALIAS_INSERTION);
+		stmt.setInt (1, bug.getId ());
+		stmt.setInt (2, addedBy.getId ());
+		resSetDate (stmt, 3, date);
+		stmt.setString (4, alias);
+
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitBugAlias (bug, alias);
+	}
+	
 	public Dictionary addDictionary (String name, String context, Project project) throws SQLException {
 		Dictionary dict = new Dictionary (null, name, context, project);
 		add (dict);
@@ -2623,6 +2660,7 @@ public class Model {
 		int attCnt  = res.getInt (4);
 		int ccCnt  = res.getInt (5);
 		int blocksCnt  = res.getInt (6);
+		int aliasCnt = res.getInt (7);
 
 		
 		// Statement:
@@ -2640,7 +2678,7 @@ public class Model {
 			attStats.put (attIdentifier, new BugAttachmentStats (attId, attIdentifier, attObsCnt, attHistCnt));
 		}
 
-		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, attStats);
+		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -3664,6 +3702,7 @@ public class Model {
 		stmt.executeUpdate (PRIORITY_TABLE);
 		stmt.executeUpdate (SEVERITY_TABLE);
 		stmt.executeUpdate (BUG_TABLE);
+		stmt.executeUpdate (BUG_ALIASES);
 		stmt.executeUpdate (COMMENT_TABLE);
 		stmt.executeUpdate (STATUS_TABLE);
 		stmt.executeUpdate (BUG_HISTORY_TABLE);

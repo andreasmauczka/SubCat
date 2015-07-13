@@ -102,4 +102,7 @@ public interface ModelModificationListener {
 
 	public void bugCcAdded (Bug bug, Date date, Identity addedBy,
 			Identity cc, String ccMail, boolean removed);
+
+	public void bugBlocksAdded (Bug bug, Date date, Identity addedBy,
+			boolean removed);
 }

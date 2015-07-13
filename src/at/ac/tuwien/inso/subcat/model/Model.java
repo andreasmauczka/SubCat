@@ -289,6 +289,20 @@ public class Model {
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id)"
 		+ ")";
 
+	private static final String BUG_BLOCKS_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugBlocks ("
+		+ "id				INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+		+ "date				TEXT								NOT NULL,"
+		+ "bug				INT									NOT NULL,"
+		+ "blocks			INT									        ,"
+		+ "blocksIdentifier	INT									NOT NULL,"
+		+ "addedBy			INT									NOT NULL,"
+		+ "removed			BOOLEAN								NOT NULL,"
+		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(blocks) REFERENCES Bugs (id)"
+		+ ")";
+
 	private static final String CATEGORY_TABLE =
 		"CREATE TABLE IF NOT EXISTS Categories ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -507,7 +521,8 @@ public class Model {
 		+ " (SELECT COUNT() FROM Comments WHERE Comments.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugHistories WHERE BugHistories.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM Attachments, Comments WHERE Attachments.comment = Comments.id AND Comments.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM BugCc WHERE BugCc.bug = Bugs.id) "
+		+ " (SELECT COUNT() FROM BugCc WHERE BugCc.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM BugBlocks WHERE BugBlocks.bug = Bugs.id) "
 		+ "FROM "
 		+ " Bugs, Components "
 		+ "WHERE "
@@ -1064,6 +1079,20 @@ public class Model {
 		+ "WHERE "
 		+ " cc IS NULL "
 		+ "AND bug IN (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
+
+	private static final String BUG_BLOCKS_INSERTION =
+		"INSERT INTO BugBlocks"
+		+ "(bug, date, addedBy, blocks, blocksIdentifier, removed)"
+		+ "VALUES (?,?,?,?,?,?)";
+
+	private static final String BUG_BLOCKS_RESOLVE_BUGS =
+		"UPDATE"
+		+ " BugBlocks "
+		+ "SET "
+		+ " blocks = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugBlocks.blocksIdentifier AND Components.project = ?) "
+		+ "WHERE"
+		+ " blocks IS NULL"
+		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
 	private static final String COMMIT_INSERTION =
 		"INSERT INTO Commits"
@@ -1966,7 +1995,34 @@ public class Model {
 
 		pool.emitBugCcAdded (bug, date, addedBy, cc, ccMail, removed);
 	}
-	
+
+	public void addBugBlocks (Bug bug, Date date, Identity addedBy, Bug blocks, int bugIdentifier, boolean removed) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (date != null);
+		assert (addedBy != null);
+		assert (addedBy.getId () != null);
+		assert (blocks == null || blocks.getId () != null);
+		assert (bugIdentifier > 0);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_INSERTION);
+		stmt.setInt (1, bug.getId ());
+		resSetDate (stmt, 2, date);
+		stmt.setInt (3, addedBy.getId ());
+		if (blocks != null) {
+			stmt.setInt (4, blocks.getId ());
+		} else {
+			stmt.setNull (4, Types.INTEGER);
+		}
+		stmt.setInt (5, bugIdentifier);
+		stmt.setBoolean (6, removed);
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitBugBlocksAdded (bug, date, addedBy, removed);
+	}
+
 	public void resolveCcIdentities (Project project) throws SQLException {
 		assert (conn != null);
 		assert (project != null);
@@ -1979,7 +2035,20 @@ public class Model {
 		stmt.executeUpdate();
 		stmt.close ();
 	}
-	
+
+	public void resolveBugBlocksBugs (Project project) throws SQLException {
+		assert (conn != null);
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_RESOLVE_BUGS);
+		stmt.setInt (1, project.getId ());
+		stmt.setInt (2, project.getId ());
+
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
 	public Comment addComment (int index, Bug bug, Date creation, Identity identity, String content) throws SQLException {
 		Comment cmnt = new Comment(null, index, bug, creation, identity, content);
 		add (cmnt);
@@ -2553,6 +2622,7 @@ public class Model {
 		int histCnt = res.getInt (3);
 		int attCnt  = res.getInt (4);
 		int ccCnt  = res.getInt (5);
+		int blocksCnt  = res.getInt (6);
 
 		
 		// Statement:
@@ -2570,7 +2640,7 @@ public class Model {
 			attStats.put (attIdentifier, new BugAttachmentStats (attId, attIdentifier, attObsCnt, attHistCnt));
 		}
 
-		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, attStats);
+		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -3598,6 +3668,7 @@ public class Model {
 		stmt.executeUpdate (STATUS_TABLE);
 		stmt.executeUpdate (BUG_HISTORY_TABLE);
 		stmt.executeUpdate (CC_TABLE);
+		stmt.executeUpdate (BUG_BLOCKS_TABLE);
 		stmt.executeUpdate (CATEGORY_TABLE);
 		stmt.executeUpdate (COMMIT_TABLE);
 		stmt.executeUpdate (BUGFIX_COMMIT_TABLE);

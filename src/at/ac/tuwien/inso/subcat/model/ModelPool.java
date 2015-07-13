@@ -387,6 +387,13 @@ public class ModelPool {
 			listener.bugCcAdded (bug, date, addedBy, cc, ccMail, removed);
 		}
 	}
+
+	public void emitBugBlocksAdded (Bug bug, Date date, Identity addedBy,
+			boolean removed) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugBlocksAdded (bug, date, addedBy, removed);
+		}
+	}
 }
 
 

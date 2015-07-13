@@ -91,7 +91,7 @@ public class BugzillaMiner extends Miner {
 	private Settings settings;
 	private ModelPool pool;
 	private Model model;
-
+	
 	private Map<String, AttachmentStatus> attachmentStatus = new HashMap<String, AttachmentStatus> ();
 	private Map<String, Component> components = new HashMap<String, Component> ();
 	private Map<String, Priority> priorities = new HashMap<String, Priority> ();
@@ -379,6 +379,7 @@ public class BugzillaMiner extends Miner {
 
 				
 			int bugHistoryCnt = 0;
+			int blocksCnt = 0;
 			int ccCnt = 0;
 
 			for (BugzillaHistory entry : history) {
@@ -400,6 +401,19 @@ public class BugzillaMiner extends Miner {
 							}
 						}
 						ccCnt++;
+					} else if ("blocks".equals (change.getFieldName ())) {
+						if (bugStats == null || blocksCnt >= bugStats.getBlocksCount ()) {
+							Identity addedBy = resolveIdentity (entry.getWho ());
+							if (change.getAdded () != null && !"".equals (change.getAdded ())) {
+								int bugIdentifier = Integer.parseInt (change.getAdded ());
+								model.addBugBlocks (bug, entry.getWhen (), addedBy, null, bugIdentifier, false);
+							}
+							if (change.getRemoved () != null && !"".equals (change.getRemoved ())) {
+								int bugIdentifier = Integer.parseInt (change.getRemoved ());
+								model.addBugBlocks (bug, entry.getWhen (), addedBy, null, bugIdentifier, true);
+							}
+						}
+						blocksCnt++;
 					} else if ("bug_status".equals (change.getFieldName ())) {
 						if (bugStats == null || bugHistoryCnt >= bugStats.getHistoryCount ()) {
 							Identity identity = resolveIdentity (entry.getWho ());
@@ -411,7 +425,7 @@ public class BugzillaMiner extends Miner {
 						bugHistoryCnt++;
 					}
 
-					// TODO: Store fieldName=blocks, fieldName==depends_on
+					// TODO: Store fieldName==depends_on
 					if (change.getAttachmentId () != null) {
 						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
 
@@ -522,6 +536,7 @@ public class BugzillaMiner extends Miner {
 
 		try {
 			model.resolveCcIdentities (project);
+			model.resolveBugBlocksBugs (project);
 
 			// Update server time *after* mining to make sure we don't
 			// miss updates in case anything goes wrong.
@@ -530,7 +545,7 @@ public class BugzillaMiner extends Miner {
 				model.updateProject (project);
 			}
 		} catch (SQLException e) {
-			new MinerException ("SQL-Error: " + e.getMessage (), e);
+			abortRun (new MinerException ("SQL-Error: " + e.getMessage (), e));
 		}
 
 		if (model != null) {

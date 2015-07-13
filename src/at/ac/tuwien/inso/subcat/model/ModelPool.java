@@ -395,11 +395,16 @@ public class ModelPool {
 		}
 	}
 
-	public synchronized void emitBugAliasAdded (Bug bug, String alias) {
+	public synchronized void emitBugAliasAdded (Bug bug, Identity addedBy, Date date, String alias) {
 		for (ModelModificationListener listener : listeners) {
-			listener.bugAliasAdded (bug, alias);
+			listener.bugAliasAdded (bug, addedBy, date, alias);
+		}
+	}
+
+	public void emitSeverityHistoryAdded (Bug bug, Identity addedBy, Date date, Severity severity) {
+		for (ModelModificationListener listener : listeners) {
+			listener.severityHistoryAdded (bug, addedBy, date, severity);
 		}
 	}
 }
-
 

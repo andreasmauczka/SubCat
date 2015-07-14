@@ -217,7 +217,7 @@ public class Model {
 		+ "operatingSystem	INT									NOT NULL,"
 		+ "version			INT									NOT NULL,"
 		+ "comments			INT									NOT NULL DEFAULT 0,"
-		+ "curStat			INT									NOT NULL,"
+		+ "status			INT									NOT NULL,"
 		+ "FOREIGN KEY(priority) REFERENCES Priorities (id),"
 		+ "FOREIGN KEY(severity) REFERENCES Severity (id),"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
@@ -225,7 +225,7 @@ public class Model {
 		+ "FOREIGN KEY(resolution) REFERENCES Resolutions (id),"
 		+ "FOREIGN KEY(version) REFERENCES Versions (id),"
 		+ "FOREIGN KEY(operatingSystem) REFERENCES OperatingSystems (id),"
-		+ "FOREIGN KEY(curStat) REFERENCES Status (id)"
+		+ "FOREIGN KEY(status) REFERENCES Status (id)"
 		+ ")";
 
 	private static final String VERSION_HISTORY_TABLE =
@@ -397,11 +397,12 @@ public class Model {
 		"CREATE TABLE IF NOT EXISTS BugHistories ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
 		+ "bug			INT									NOT NULL,"
-		+ "status		INT									NOT NULL,"
 		+ "identity		INT									NOT NULL,"
 		+ "date			TEXT								NOT NULL,"
+		+ "field		TEXT								NOT NULL,"
+		+ "oldValue		TEXT										,"
+		+ "newValue		TEXT										,"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
-		+ "FOREIGN KEY(status) REFERENCES Status (id),"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id)"
 		+ ")";
 
@@ -626,17 +627,6 @@ public class Model {
 	// Triggers:
 	//
 
-	private static final String BUG_STATUS_UPDATE_TRIGGER =
-		"CREATE TRIGGER IF NOT EXISTS update_curStat AFTER INSERT ON BugHistories "
-		+ "BEGIN "
-		+ "  UPDATE Bugs "
-		+ "  SET curStat = (SELECT status FROM BugHistories "
-		+ "					WHERE BugHistories.bug = NEW.bug "
-		+ "					ORDER BY strftime('%s', BugHistories.date), BugHistories.id DESC "
-		+ "					LIMIT 1)"
-		+ "  WHERE Bugs.id = NEW.bug;"
-		+ "END ";
-
 	private static final String BUG_COMMENT_COUNT_UPDATE_TRIGGER =
 		"CREATE TRIGGER IF NOT EXISTS update_comments AFTER INSERT ON Comments "
 		+ "BEGIN "
@@ -745,7 +735,7 @@ public class Model {
 		+ " Bugs.priority,"
 		+ " Bugs.severity,"
 		+ " Bugs.comments,"
-		+ " Bugs.curStat, "
+		+ " Bugs.status, "
 		+ " Identity.context		AS aiContext, "
 		+ " Identity.identifier,"
 		+ " Bugs.resolution,"
@@ -789,7 +779,9 @@ public class Model {
 		+ " Versions.version,"
 		+ " Versions.name,"
 		+ " OperatingSystem.version,"
-		+ " OperatingSystem.name "
+		+ " OperatingSystem.name,"
+		+ " Bugs.status, "
+		+ " Status.name "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -802,6 +794,8 @@ public class Model {
 		+ " ON Priorities.id = Bugs.priority "
 		+ "JOIN Severity"
 		+ " ON Severity.id = Bugs.severity "
+		+ "JOIN Status"
+		+ " ON Status.id = Bugs.status "
 		+ "JOIN Versions"
 		+ " ON Versions.id = Bugs.version "
 		+ "JOIN Resolutions"
@@ -968,15 +962,16 @@ public class Model {
 	private static final String SELECT_FULL_HISTORY =
 		"SELECT"
 		+ " BugHistories.id,"
-		+ " Status.id,"
-		+ " Status.name,"
-		+ " Identity.id				AS aiId,"
-		+ " Identity.name			AS aiName,"
-		+ " Identity.mail			AS aiMail,"
-		+ " Users.id				AS auId,"
-		+ " Users.name				AS auName,"
-		+ " BugHistories.date, "
-		+ " Identity.context		AS iContext."
+		+ " Identity.id,"
+		+ " Identity.name,"
+		+ " Identity.mail,"
+		+ " Users.id,"
+		+ " Users.name,"
+		+ " BugHistories.date,"
+		+ " BugHistories.field,"
+		+ " BugHistories.oldValue,"
+		+ " BugHistories.newValue,"
+		+ " Identity.context,"
 		+ " Identity.identifier "
 		+ "FROM"
 		+ " BugHistories "
@@ -984,8 +979,6 @@ public class Model {
 		+ " ON BugHistories.identity = Identity.id "
 		+ "LEFT JOIN Users "
 		+ " ON Users.id = Identity.user "
-		+ "LEFT JOIN Status"
-		+ " ON BugHistories.status = Status.id "
 		+ "WHERE"
 		+ " BugHistories.bug = ? "
 		+ "ORDER BY"
@@ -1193,9 +1186,8 @@ public class Model {
 
 	private static final String BUG_INSERTION =
 		"INSERT INTO Bugs "
-		+ "(identifier, identity, component, title, creation, priority, severity, curStat, resolution, lastChange, version, operatingSystem)"
-		+ "SELECT ?, ?, ?, ?, ?, ?, ?, defaultStatusId, ?, ?, ?, ? "
-		+ "FROM Projects WHERE id=?";
+		+ "(identifier, identity, component, title, creation, priority, severity, status, resolution, lastChange, version, operatingSystem)"
+		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 	private static final String BUG_UPDATE =
 		"UPDATE Bugs SET"
@@ -1206,7 +1198,7 @@ public class Model {
 		+ " creation = ?,"
 		+ " priority = ?,"
 		+ " severity = ?,"
-		+ " curStat = ?"
+		+ " status = ?"
 		+ "WHERE"
 		+ " id = ?";
 
@@ -1291,8 +1283,8 @@ public class Model {
 
 	private static final String BUG_HISTORY_INSERTION =
 		"INSERT INTO BugHistories"
-		+ "(bug, status, identity, date)"
-		+ "VALUES (?,?,?,?)";
+		+ "(bug, identity, date, field, oldValue, newValue)"
+		+ "VALUES (?,?,?,?,?,?)";
 
 	private static final String BUG_CC_INSERTION =
 		"INSERT INTO BugCc"
@@ -2154,8 +2146,8 @@ public class Model {
 	}
 
 	public Bug addBug (Integer identifier, Identity identity, Component component,
-			String title, Date creation, Date lastChange, Priority priority, Severity severity, Resolution resolution, Version version, OperatingSystem operatingSystem) throws SQLException {
-		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, resolution, version, operatingSystem);
+			String title, Date creation, Date lastChange, Priority priority, Severity severity, Status status, Resolution resolution, Version version, OperatingSystem operatingSystem) throws SQLException {
+		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, status, resolution, version, operatingSystem);
 		add (bug);
 
 		return bug;
@@ -2172,6 +2164,7 @@ public class Model {
 		assert (bug.getComponent ().getId () != null);
 		assert (bug.getPriority ().getId () != null);
 		assert (bug.getSeverity().getId () != null);
+		assert (bug.getStatus ().getId () != null);
 		assert (bug.getResolution () != null);
 		assert (bug.getResolution ().getId () != null);
 		assert (bug.getVersion () != null);
@@ -2193,11 +2186,11 @@ public class Model {
 		resSetDate (stmt, 5, bug.getCreation ());
 		stmt.setInt (6, bug.getPriority ().getId ());
 		stmt.setInt (7, bug.getSeverity ().getId ());
-		stmt.setInt (8, bug.getResolution ().getId ());
-		resSetDate (stmt, 9, bug.getLastChange ());		
-		stmt.setInt (10, bug.getVersion ().getId ());
-		stmt.setInt (11, bug.getOperatingSystem ().getId ());
-		stmt.setInt (12, bug.getComponent ().getProject ().getId ());
+		stmt.setInt (8, bug.getStatus ().getId ());
+		stmt.setInt (9, bug.getResolution ().getId ());
+		resSetDate (stmt, 10, bug.getLastChange ());		
+		stmt.setInt (11, bug.getVersion ().getId ());
+		stmt.setInt (12, bug.getOperatingSystem ().getId ());		
 		stmt.executeUpdate();
 
 		bug.setId (getLastInsertedId (stmt));
@@ -2434,8 +2427,8 @@ public class Model {
 		pool.emitDictionaryAdded (dict);
 	}
 	
-	public BugHistory addBugHistory (Bug bug, Status status, Identity identity, Date date) throws SQLException {
-		BugHistory history = new BugHistory(null, bug, status, identity, date);
+	public BugHistory addBugHistory (Bug bug, Identity identity, Date date, String fieldName, String oldValue, String newValue) throws SQLException {
+		BugHistory history = new BugHistory (null, bug, identity, date, fieldName, oldValue, newValue);
 		add (history);
 		return history;
 	}
@@ -2445,16 +2438,17 @@ public class Model {
 		assert (history != null);
 		assert (history.getId () == null);
 		assert (history.getBug ().getId () != null);
-		assert (history.getStatus ().getId () != null);
 		assert (history.getIdentity ().getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (BUG_HISTORY_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
 
 		stmt.setInt (1, history.getBug ().getId ());
-		stmt.setInt (2, history.getStatus ().getId ());
-		stmt.setInt (3, history.getIdentity ().getId ());
-		resSetDate (stmt, 4, history.getDate ());
+		stmt.setInt (2, history.getIdentity ().getId ());
+		resSetDate (stmt, 3, history.getDate ());
+		stmt.setString (4, history.getFieldName ());
+		stmt.setString (5, history.getOldValue ());
+		stmt.setString (6, history.getNewValue ());
 		stmt.executeUpdate();
 
 		history.setId (getLastInsertedId (stmt));
@@ -3496,6 +3490,7 @@ public class Model {
 		Map<Integer, Resolution> resolutions = getResolutions (proj);
 		Map<Integer, Version> versions = getVersions (proj);
 		Map<Integer, OperatingSystem> operatingSystems = getOperatingSystems (proj);
+		Map<Integer, Status> statuses = getStatuses (proj);
 
 		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUGS);
 		stmt.setInt (1, proj.getId ());
@@ -3522,9 +3517,10 @@ public class Model {
 			Date lastChange = resGetDate (res, 18);
 			Version version = versions.get (res.getInt (19));
 			OperatingSystem operatingSystem = operatingSystems.get (res.getInt (20));
+			Status status = statuses.get (res.getInt (14));
 
 			Bug bug = new Bug (id, identifier, identity, component,
-				title, creation, lastChange, priority, severity, resolution,
+				title, creation, lastChange, priority, severity, status, resolution,
 				version, operatingSystem);
 
 			do_next = callback.processResult (bug);
@@ -3584,9 +3580,13 @@ public class Model {
 			String osName = res.getString (24);
 			OperatingSystem operatingSystem = new OperatingSystem (osId, proj, osName);
 
+			int statId = res.getInt (25);
+			String statName = res.getString (26);
+			Status status = new Status (statId, proj, statName);
+
 			return new Bug (id, identifier, identity, component,
 				title, creation, lastChange, priority, severity,
-				resolution, version, operatingSystem);
+				status, resolution, version, operatingSystem);
 		}
 
 		return null;
@@ -3960,24 +3960,26 @@ public class Model {
 		// Statement:
 		PreparedStatement stmt = conn.prepareStatement (SELECT_FULL_HISTORY);
 		stmt.setInt (1, bug.getId ());
-	
+
 		// Collect data:
 		LinkedList<BugHistory> history = new LinkedList<BugHistory> ();
 		ResultSet res = stmt.executeQuery ();
 		while (res.next ()) {
 			Integer id = res.getInt (1);
-			Status status = new Status (res.getInt (2), proj, res.getString (3));
-			User user = userFromResult (res, proj, 7, 8);
-			Identity identity = identityFromResult (res, user, 11, 4, 10, 5, 6);
-			Date creation = resGetDate (res, 9);
+			User user = userFromResult (res, proj, 5, 6);
+			Identity identity = identityFromResult (res, user, 12, 2, 11, 3, 4);
+			Date creation = resGetDate (res, 7);
+			String field = res.getString (8);
+			String oldValue = res.getString (9);
+			String newValue = res.getString (10);
 
-			BugHistory entry = new BugHistory (id, bug, status, identity, creation);
+			BugHistory entry = new BugHistory (id, bug, identity, creation, field, oldValue, newValue);
 			history.add (entry);
 		}
 	
 		return history;
 	}
-	
+
 	public List<Comment> getComments (Project proj, Bug bug) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
@@ -4335,7 +4337,6 @@ public class Model {
 		stmt.executeUpdate (FILE_CHANGES_TABLE);
 		stmt.executeUpdate (FILE_DELETION_TABLE);
 		stmt.executeUpdate (FILE_COPY_TABLE);
-		stmt.executeUpdate (BUG_STATUS_UPDATE_TRIGGER);
 		stmt.executeUpdate (BUG_COMMENT_COUNT_UPDATE_TRIGGER);
 		stmt.executeUpdate (PROJECT_FLAG_TABLE);
 		stmt.executeUpdate (ATTACHMENT_TABLE);

@@ -36,22 +36,26 @@ import java.util.Date;
 public class BugHistory {
 	private Integer id;
 	private Bug bug;
-	private Status status;
 	private Identity identity;
 	private Date date;
+	private String field;
+	private String oldValue;
+	private String newValue;
 
-	public BugHistory (Integer id, Bug bug, Status status, Identity identity,
-			Date date) {
+	public BugHistory (Integer id, Bug bug, Identity identity, Date date,
+			String field, String oldValue, String newValue) {
 		assert (bug != null);
-		assert (status != null);
 		assert (identity != null);
 		assert (date != null);
+		assert (field != null);
 
 		this.id = id;
 		this.bug = bug;
-		this.status = status;
 		this.identity = identity;
 		this.date = date;
+		this.field = field;
+		this.oldValue = oldValue;
+		this.newValue = newValue;
 	}
 
 	public Integer getId () {
@@ -70,16 +74,6 @@ public class BugHistory {
 		assert (bug != null);
 
 		this.bug = bug;
-	}
-
-	public Status getStatus () {
-		return status;
-	}
-
-	public void setStatus (Status status) {
-		assert (status != null);
-
-		this.status = status;
 	}
 
 	public Identity getIdentity () {
@@ -102,10 +96,36 @@ public class BugHistory {
 		this.date = date;
 	}
 
+	public String getFieldName () {
+		return field;
+	}
+
+	public void setFieldName (String field) {
+		assert (field != null);
+
+		this.field = field;
+	}
+
+	public String getOldValue () {
+		return oldValue;
+	}
+
+	public void setOldValue (String oldValue) {
+		this.oldValue = oldValue;
+	}
+
+	public String getNewValue () {
+		return newValue;
+	}
+
+	public void setNewValue (String newValue) {
+		this.newValue = newValue;
+	}
+
 	@Override
 	public String toString () {
-		return "BugHistory [id=" + id + ", bug=" + bug + ", status=" + status
-				+ ", identity=" + identity + ", date=" + date + "]";
+		return "BugHistory [id=" + id + ", bug=" + bug
+			+ ", identity=" + identity + ", date=" + date + "]";
 	}
 
 	public boolean equals (BugHistory obj) {

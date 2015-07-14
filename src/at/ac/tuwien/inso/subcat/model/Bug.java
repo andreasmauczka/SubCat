@@ -46,10 +46,11 @@ public class Bug {
 	private Resolution resolution;
 	private Version version;
 	private OperatingSystem os;
+	private Status status;
 
 	public Bug (Integer id, Integer identifier, Identity identity, Component component,
 			String title, Date creation, Date lastChange, Priority priority, Severity severity,
-			Resolution resolution, Version version, OperatingSystem os) {
+			Status status, Resolution resolution, Version version, OperatingSystem os) {
 		assert (component != null);
 		assert (title != null);
 		assert (creation != null);
@@ -58,7 +59,7 @@ public class Bug {
 		assert (lastChange != null);
 		assert (version != null);
 		assert (os != null);
-		//assert (category != null);
+		assert (status != null);
 
 		this.id = id;
 		this.identifier = identifier;
@@ -68,6 +69,7 @@ public class Bug {
 		this.creation = creation;
 		this.priority = priority;
 		this.severity = severity;
+		this.status = status;
 		this.resolution = resolution;
 		this.lastChange = lastChange;
 		this.version = version;
@@ -168,6 +170,14 @@ public class Bug {
 
 	public void setSeverity (Severity severity) {
 		this.severity = severity;
+	}
+
+	public Status getStatus () {
+		return status;
+	}
+
+	public void setStatus (Status status) {
+		this.status = status;
 	}
 
 	public void setResolution (Resolution resolution) {

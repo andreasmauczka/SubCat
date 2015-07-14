@@ -237,6 +237,7 @@ public class BugzillaMiner extends Miner {
 				String title = bzBug.getSummary ();
 				Version version = resolveVersion (bzBug.getVersion ());
 				OperatingSystem operatingSystems = resolveOperatingSystem (bzBug.getOpSys ());
+				Status status = resolveStatus (bzBug.getStatus ());
 
 
 				List<BugzillaAttachment> attachments = new LinkedList<BugzillaAttachment> ();
@@ -244,9 +245,9 @@ public class BugzillaMiner extends Miner {
 				// Add to model:
 				Bug bug;
 				if (bugStats == null) {
-					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, resolution, version, operatingSystems);
+					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, operatingSystems);
 				} else {
-					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, resolution, version, operatingSystems);
+					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, operatingSystems);
 					model.updateBug (bug);
 				}
 
@@ -512,13 +513,12 @@ public class BugzillaMiner extends Miner {
 							}
 						}
 						blocksCnt += (change.getAdded () != null && change.getRemoved () != null)? 2 : 1;
-					} else if ("bug_status".equals (change.getFieldName ())) {
+					} else {
 						if (bugStats == null || bugHistoryCnt >= bugStats.getHistoryCount ()) {
 							Identity identity = resolveIdentity (entry.getWho ());
-							Status bugStat = resolveStatus (change.getAdded ());
 							Date date = entry.getWhen ();
-	
-							model.addBugHistory (bug, bugStat, identity, date);
+
+							model.addBugHistory (bug, identity, date, change.getFieldName (), change.getRemoved (), change.getAdded ());
 						}
 						bugHistoryCnt++;
 					}

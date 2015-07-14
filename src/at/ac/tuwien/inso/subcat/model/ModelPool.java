@@ -453,5 +453,18 @@ public class ModelPool {
 			listener.versionHistoryAdded (bug, addedBy, date, version);
 		}
 	}
+
+	public synchronized void emitOperatingSystemAdded (OperatingSystem os) {
+		for (ModelModificationListener listener : listeners) {
+			listener.operatingSystemAdded (os);
+		}
+	}
+
+	public synchronized void emitOperatingSystemHistoryAdded (Bug bug, Identity addedBy,
+			Date date, OperatingSystem oldOs, OperatingSystem newOs) {
+		for (ModelModificationListener listener : listeners) {
+			listener.operatingSystemHistoryAdded (bug, addedBy, date, oldOs, newOs);
+		}
+	}
 }
 

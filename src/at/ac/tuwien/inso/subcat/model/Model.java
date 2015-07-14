@@ -192,28 +192,39 @@ public class Model {
 		+ "UNIQUE (project, name)"
 		+ ")";
 
+	private static final String OPERATING_SYSTEM_TABLE =
+		"CREATE TABLE IF NOT EXISTS OperatingSystems ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "project		INT									NOT NULL,"
+		+ "name			TEXT								NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
+		+ "UNIQUE (project, name)"
+		+ ")";
+
 	// TODO: Add isObsolete
 	private static final String BUG_TABLE =
 		"CREATE TABLE IF NOT EXISTS Bugs ("
-		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
-		+ "identifier	INTEGER								NOT NULL,"
-		+ "identity		INT											,"
-		+ "component	INT									NOT NULL,"
-		+ "title		TEXT								NOT NULL,"
-		+ "creation		TEXT								NOT NULL,"
-		+ "lastChange	TEXT								NOT NULL,"
-		+ "priority		INT									NOT NULL,"
-		+ "severity		INT									NOT NULL,"
-		+ "resolution	INT									NOT NULL,"
-		+ "version		INT									NOT NULL,"
-		+ "comments		INT									NOT NULL DEFAULT 0,"
-		+ "curStat		INT									NOT NULL,"
+		+ "id				INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+		+ "identifier		INTEGER								NOT NULL,"
+		+ "identity			INT											,"
+		+ "component		INT									NOT NULL,"
+		+ "title			TEXT								NOT NULL,"
+		+ "creation			TEXT								NOT NULL,"
+		+ "lastChange		TEXT								NOT NULL,"
+		+ "priority			INT									NOT NULL,"
+		+ "severity			INT									NOT NULL,"
+		+ "resolution		INT									NOT NULL,"
+		+ "operatingSystem	INT									NOT NULL,"
+		+ "version			INT									NOT NULL,"
+		+ "comments			INT									NOT NULL DEFAULT 0,"
+		+ "curStat			INT									NOT NULL,"
 		+ "FOREIGN KEY(priority) REFERENCES Priorities (id),"
 		+ "FOREIGN KEY(severity) REFERENCES Severity (id),"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(component) REFERENCES Components (id),"
 		+ "FOREIGN KEY(resolution) REFERENCES Resolutions (id),"
 		+ "FOREIGN KEY(version) REFERENCES Versions (id),"
+		+ "FOREIGN KEY(operatingSystem) REFERENCES OperatingSystems (id),"
 		+ "FOREIGN KEY(curStat) REFERENCES Status (id)"
 		+ ")";
 
@@ -241,6 +252,20 @@ public class Model {
 		+ "FOREIGN KEY(resolution) REFERENCES Resolutions (id)"
 		+ ")";
 
+	private static final String OPERATING_SYSTEM_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS OperatingSystemHistory ("
+		+ "id					INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "bug					INT									NOT NULL,"
+		+ "addedBy				INT									NOT NULL,"
+		+ "date					TEXT								NOT NULL,"
+		+ "oldOperatingSystem	INT									NOT NULL,"
+		+ "newOperatingSystem	INT									NOT NULL,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(oldOperatingSystem) REFERENCES OperatingSystems (id)"
+		+ "FOREIGN KEY(newOperatingSystem) REFERENCES OperatingSystems (id)"
+		+ ")";
+
 	private static final String PRIORITY_HISTORY_TABLE =
 		"CREATE TABLE IF NOT EXISTS PriorityHistory ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -252,7 +277,7 @@ public class Model {
 		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(priority) REFERENCES Priorities (id)"
 		+ ")";
-	
+
 	private static final String SEVERITY_HISTORY_TABLE =
 		"CREATE TABLE IF NOT EXISTS SeverityHistory ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -634,7 +659,8 @@ public class Model {
 		+ " (SELECT COUNT() FROM StatusHistory WHERE StatusHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM ResolutionHistory WHERE ResolutionHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM ConfirmedHistory WHERE ConfirmedHistory.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM VersionHistory WHERE VersionHistory.bug = Bugs.id)"
+		+ " (SELECT COUNT() FROM VersionHistory WHERE VersionHistory.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM OperatingSystemHistory WHERE OperatingSystemHistory.bug = Bugs.id)"
 		+ "FROM "
 		+ " Bugs, Components "
 		+ "WHERE "
@@ -724,7 +750,8 @@ public class Model {
 		+ " Identity.identifier,"
 		+ " Bugs.resolution,"
 		+ " Bugs.lastChange,"
-		+ " Bugs.version "
+		+ " Bugs.version,"
+		+ " Bugs.operatingSystem "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -760,7 +787,9 @@ public class Model {
 		+ " Resolutions.name,"
 		+ " Bugs.lastChange,"
 		+ " Versions.version,"
-		+ " Versions.name"
+		+ " Versions.name,"
+		+ " OperatingSystem.version,"
+		+ " OperatingSystem.name "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -777,6 +806,8 @@ public class Model {
 		+ " ON Versions.id = Bugs.version "
 		+ "JOIN Resolutions"
 		+ " ON Resolutions.id = Bugs.resolution "
+		+ "JOIN OperatingSystem"
+		+ " ON OperatingSystem.id = Bugs.operatingSystem "
 		+ "WHERE"
 		+ " Components.project = ?"
 		+ " AND Bugs.identifier = ?";
@@ -799,6 +830,15 @@ public class Model {
 		+ "WHERE"
 		+ " project = ?";
 
+	private static final String SELECT_ALL_OPERATING_SYSTEMS =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " OperatingSystems "
+		+ "WHERE"
+		+ " project = ?";
+	
 	private static final String SELECT_ALL_STATUSES =
 		"SELECT"
 		+ " id,"
@@ -1153,8 +1193,8 @@ public class Model {
 
 	private static final String BUG_INSERTION =
 		"INSERT INTO Bugs "
-		+ "(identifier, identity, component, title, creation, priority, severity, curStat, resolution, lastChange, version)"
-		+ "SELECT ?, ?, ?, ?, ?, ?, ?, defaultStatusId, ?, ?, ? "
+		+ "(identifier, identity, component, title, creation, priority, severity, curStat, resolution, lastChange, version, operatingSystem)"
+		+ "SELECT ?, ?, ?, ?, ?, ?, ?, defaultStatusId, ?, ?, ?, ? "
 		+ "FROM Projects WHERE id=?";
 
 	private static final String BUG_UPDATE =
@@ -1199,6 +1239,11 @@ public class Model {
 		"INSERT INTO SeverityHistory"
 		+ "(bug, addedBy, date, severity)"
 		+ "VALUES (?, ?, ?, ?)";
+
+	private static final String OPERATING_SYSTEM_HISTORY_INSERTION =
+		"INSERT INTO OperatingSystemHistory"
+		+ "(bug, addedBy, date, oldOperatingSystem, newOperatingSystem)"
+		+ "VALUES (?, ?, ?, ?, ?)";
 
 	private static final String STATUS_HISTORY_INSERTION =
 		"INSERT INTO StatusHistory"
@@ -1294,6 +1339,11 @@ public class Model {
 
 	private static final String RESOLUTION_INSERTION =
 		"INSERT INTO Resolutions "
+		+ "(project, name)"
+		+ "VALUES (?, ?)";
+
+	private static final String OPERATING_SYSTEM_INSERTION =
+		"INSERT INTO OperatingSystems "
 		+ "(project, name)"
 		+ "VALUES (?, ?)";
 
@@ -1783,7 +1833,6 @@ public class Model {
 		pool.emitInteraction (relation);
 	}
 
-		
 	public Severity addSeverity (Project project, String name) throws SQLException {
 		Severity sev = new Severity (null, project, name);
 		add (sev);
@@ -1837,7 +1886,34 @@ public class Model {
 
 		pool.emitResolutionAdded (resolution);
 	}
-	
+
+	public OperatingSystem addOperatingSystem (Project project, String name) throws SQLException {
+		OperatingSystem os = new OperatingSystem (null, project, name);
+		add (os);
+		return os;
+	}
+
+	public void add (OperatingSystem os) throws SQLException {
+		assert (conn != null);
+		assert (os != null);
+		Project project = os.getProject ();
+		assert (project.getId () != null);
+		assert (os.getId () == null);
+
+		PreparedStatement stmt = conn.prepareStatement (OPERATING_SYSTEM_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, project.getId ());
+		stmt.setString(2, os.getName ());
+		stmt.executeUpdate();
+
+		os.setId (getLastInsertedId (stmt));
+
+		stmt.close ();		
+
+		pool.emitOperatingSystemAdded (os);
+	}
+
 	public Priority addPriority (Project project, String name) throws SQLException {
 		Priority priority = new Priority (null, project, name);
 		add (priority);
@@ -2076,10 +2152,10 @@ public class Model {
 
 		pool.emitAttachmentHistoryAdded (history);
 	}
-	
+
 	public Bug addBug (Integer identifier, Identity identity, Component component,
-			String title, Date creation, Date lastChange, Priority priority, Severity severity, Resolution resolution, Version version) throws SQLException {
-		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, resolution, version);
+			String title, Date creation, Date lastChange, Priority priority, Severity severity, Resolution resolution, Version version, OperatingSystem operatingSystem) throws SQLException {
+		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, resolution, version, operatingSystem);
 		add (bug);
 
 		return bug;
@@ -2100,6 +2176,8 @@ public class Model {
 		assert (bug.getResolution ().getId () != null);
 		assert (bug.getVersion () != null);
 		assert (bug.getVersion ().getId () != null);
+		assert (bug.getOperatingSystem () != null);
+		assert (bug.getOperatingSystem ().getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (BUG_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
@@ -2118,7 +2196,8 @@ public class Model {
 		stmt.setInt (8, bug.getResolution ().getId ());
 		resSetDate (stmt, 9, bug.getLastChange ());		
 		stmt.setInt (10, bug.getVersion ().getId ());
-		stmt.setInt (11, bug.getComponent ().getProject ().getId ());
+		stmt.setInt (11, bug.getOperatingSystem ().getId ());
+		stmt.setInt (12, bug.getComponent ().getProject ().getId ());
 		stmt.executeUpdate();
 
 		bug.setId (getLastInsertedId (stmt));
@@ -2281,6 +2360,30 @@ public class Model {
 		stmt.close ();
 
 		pool.emitSeverityHistoryAdded (bug, addedBy, date, severity);
+	}
+
+	public void addOperatingSystemHistory (Bug bug, Identity addedBy, Date date, OperatingSystem oldOs, OperatingSystem newOs) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (addedBy != null);
+		assert (addedBy.getId () != null);
+		assert (date != null);
+		assert (oldOs != null);
+		assert (oldOs.getId () != null);
+		assert (newOs != null);
+		assert (newOs.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (OPERATING_SYSTEM_HISTORY_INSERTION);
+		stmt.setInt (1, bug.getId ());
+		stmt.setInt (2, addedBy.getId ());
+		resSetDate (stmt, 3, date);
+		stmt.setInt (4, oldOs.getId ());
+		stmt.setInt (5, newOs.getId ());
+
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitOperatingSystemHistoryAdded (bug, addedBy, date, oldOs, newOs);
 	}
 
 	public void addStatusHistory (Bug bug, Identity addedBy, Date date, Status status) throws SQLException {
@@ -3022,6 +3125,7 @@ public class Model {
 		int resolutionCnt = res.getInt (11);
 		int confirmedCnt = res.getInt (12);
 		int versionHistoCnt = res.getInt (13);
+		int operatingSystemCnt = res.getInt (14);
 
 		
 		// Statement:
@@ -3040,7 +3144,7 @@ public class Model {
 		}
 
 		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt,
-				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, attStats);
+				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, operatingSystemCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -3391,6 +3495,7 @@ public class Model {
 		Map<Integer, Component> components = getComponents (proj);
 		Map<Integer, Resolution> resolutions = getResolutions (proj);
 		Map<Integer, Version> versions = getVersions (proj);
+		Map<Integer, OperatingSystem> operatingSystems = getOperatingSystems (proj);
 
 		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUGS);
 		stmt.setInt (1, proj.getId ());
@@ -3416,10 +3521,11 @@ public class Model {
 			Resolution resolution = resolutions.get (res.getInt (17));
 			Date lastChange = resGetDate (res, 18);
 			Version version = versions.get (res.getInt (19));
+			OperatingSystem operatingSystem = operatingSystems.get (res.getInt (20));
 
 			Bug bug = new Bug (id, identifier, identity, component,
 				title, creation, lastChange, priority, severity, resolution,
-				version);
+				version, operatingSystem);
 
 			do_next = callback.processResult (bug);
 		}
@@ -3474,8 +3580,13 @@ public class Model {
 			String versName = res.getString (22);
 			Version version = new Version (versId, proj, versName);
 
+			int osId = res.getInt (23);
+			String osName = res.getString (24);
+			OperatingSystem operatingSystem = new OperatingSystem (osId, proj, osName);
+
 			return new Bug (id, identifier, identity, component,
-				title, creation, lastChange, priority, severity, resolution, version);
+				title, creation, lastChange, priority, severity,
+				resolution, version, operatingSystem);
 		}
 
 		return null;
@@ -3495,7 +3606,7 @@ public class Model {
 		String context = res.getString (contextCol);
 		return new Identity (id, identifier, context, mail, name, user);
 	}
-	
+
 	public void rawForeach (Query query, Map<String, Object> vars, ResultCallback callback) throws SQLException, Exception {
 		assert (conn != null);
 		assert (query != null);
@@ -3621,6 +3732,26 @@ public class Model {
 		return components;
 	}
 
+	public Map<String, OperatingSystem> getOperatingSystemsByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_OPERATING_SYSTEMS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<String, OperatingSystem> opsys = new HashMap<String, OperatingSystem> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			OperatingSystem os = new OperatingSystem (res.getInt (1), proj, res.getString (2));
+			opsys.put (os.getName (), os);
+		}
+	
+		return opsys;
+	}
+
 	public Map<String, Version> getVersionsByName (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -3681,6 +3812,26 @@ public class Model {
 		return severities;
 	}
 
+	public Map<Integer, OperatingSystem> getOperatingSystems (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_OPERATING_SYSTEMS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<Integer, OperatingSystem> opsys = new HashMap<Integer, OperatingSystem> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			OperatingSystem os = new OperatingSystem (res.getInt (1), proj, res.getString (2));
+			opsys.put (os.getId (), os);
+		}
+	
+		return opsys;
+	}
+	
 	public Map<String, Severity> getSeveritiesByName (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -4161,12 +4312,14 @@ public class Model {
 		stmt.executeUpdate (RESOLUTION_TABLE);
 		stmt.executeUpdate (SEVERITY_TABLE);
 		stmt.executeUpdate (VERSION_TABLE);
+		stmt.executeUpdate (OPERATING_SYSTEM_TABLE);
 		stmt.executeUpdate (BUG_TABLE);
 		stmt.executeUpdate (PRIORITY_HISTORY_TABLE);
 		stmt.executeUpdate (SEVERITY_HISTORY_TABLE);
 		stmt.executeUpdate (RESOLUTION_HISTORY_TABLE);
 		stmt.executeUpdate (CONFIRMED_HISTORY_TABLE);
 		stmt.executeUpdate (VERSION_HISTORY_TABLE);
+		stmt.executeUpdate (OPERATING_SYSTEM_HISTORY_TABLE);
 		stmt.executeUpdate (BUG_ALIASES);
 		stmt.executeUpdate (COMMENT_TABLE);
 		stmt.executeUpdate (STATUS_TABLE);

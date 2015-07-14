@@ -59,6 +59,7 @@ import at.ac.tuwien.inso.subcat.model.Component;
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
+import at.ac.tuwien.inso.subcat.model.OperatingSystem;
 import at.ac.tuwien.inso.subcat.model.Priority;
 import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.model.Resolution;
@@ -95,6 +96,7 @@ public class BugzillaMiner extends Miner {
 	private Model model;
 	
 	private Map<String, AttachmentStatus> attachmentStatus = new HashMap<String, AttachmentStatus> ();
+	private Map<String, OperatingSystem> operatingSystems = new HashMap<String, OperatingSystem> ();
 	private Map<String, Component> components = new HashMap<String, Component> ();
 	private Map<String, Resolution> resolutions = new HashMap<String, Resolution> ();
 	private Map<String, Priority> priorities = new HashMap<String, Priority> ();
@@ -234,6 +236,7 @@ public class BugzillaMiner extends Miner {
 				Date lastChange = bzBug.getLastChangeTime ();
 				String title = bzBug.getSummary ();
 				Version version = resolveVersion (bzBug.getVersion ());
+				OperatingSystem operatingSystems = resolveOperatingSystem (bzBug.getOpSys ());
 
 
 				List<BugzillaAttachment> attachments = new LinkedList<BugzillaAttachment> ();
@@ -241,9 +244,9 @@ public class BugzillaMiner extends Miner {
 				// Add to model:
 				Bug bug;
 				if (bugStats == null) {
-					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, resolution, version);
+					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, resolution, version, operatingSystems);
 				} else {
-					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, resolution, version);
+					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, resolution, version, operatingSystems);
 					model.updateBug (bug);
 				}
 
@@ -394,6 +397,7 @@ public class BugzillaMiner extends Miner {
 			int statusCnt = 0;
 			int blocksCnt = 0;
 			int aliasCnt = 0;
+			int opSysCnt = 0;
 			int ccCnt = 0;
 
 			for (BugzillaHistory entry : history) {
@@ -454,6 +458,17 @@ public class BugzillaMiner extends Miner {
 								model.addVersionHistory (bug, addedBy, entry.getWhen (), version);
 							}
 							versionHistoCnt++;
+						}
+					} else if ("op_sys".equals (change.getFieldName ())) {
+
+						if (change.getAdded () != null) {
+							if (bugStats == null || opSysCnt >= bugStats.getOperatingSystemHistoryCount ()) {
+								Identity addedBy = resolveIdentity (entry.getWho ());
+								OperatingSystem oldOs = resolveOperatingSystem (change.getRemoved ());
+								OperatingSystem newOs = resolveOperatingSystem (change.getAdded ());
+								model.addOperatingSystemHistory (bug, addedBy, entry.getWhen (), oldOs, newOs);
+							}
+							opSysCnt++;
 						}
 					} else if ("status".equals (change.getFieldName ()) || "bug_status".equals (change.getFieldName ())) {
 
@@ -662,6 +677,7 @@ public class BugzillaMiner extends Miner {
 		}
 
 		// Initialise caches based on previously mined data:
+		operatingSystems = model.getOperatingSystemsByName (project);
 		resolutions = model.getResolutionsByName (project);
 		priorities = model.getPrioritiesByName (project);
 		severities = model.getSeveritiesByName (project);
@@ -731,6 +747,18 @@ public class BugzillaMiner extends Miner {
 		}
 		
 		return stat;
+	}
+
+	private synchronized OperatingSystem resolveOperatingSystem (String name) throws SQLException {
+		assert (name != null);
+
+		OperatingSystem os = operatingSystems.get (name);
+		if (os == null) {
+			os = model.addOperatingSystem (project, name);
+			operatingSystems.put (name, os);
+		}
+		
+		return os;		
 	}
 
 	private synchronized Version resolveVersion (String name) throws SQLException {

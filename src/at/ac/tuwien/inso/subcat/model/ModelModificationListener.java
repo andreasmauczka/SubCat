@@ -130,4 +130,9 @@ public interface ModelModificationListener {
 
 	public void versionHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Version version);
+
+	public void operatingSystemAdded (OperatingSystem os);
+
+	public void operatingSystemHistoryAdded (Bug bug, Identity addedBy,
+			Date date, OperatingSystem oldOs, OperatingSystem newOs);
 }

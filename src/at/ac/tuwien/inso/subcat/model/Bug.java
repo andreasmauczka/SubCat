@@ -45,10 +45,11 @@ public class Bug {
 	private Integer identifier;
 	private Resolution resolution;
 	private Version version;
+	private OperatingSystem os;
 
 	public Bug (Integer id, Integer identifier, Identity identity, Component component,
 			String title, Date creation, Date lastChange, Priority priority, Severity severity,
-			Resolution resolution, Version version) {
+			Resolution resolution, Version version, OperatingSystem os) {
 		assert (component != null);
 		assert (title != null);
 		assert (creation != null);
@@ -56,6 +57,7 @@ public class Bug {
 		assert (resolution != null);
 		assert (lastChange != null);
 		assert (version != null);
+		assert (os != null);
 		//assert (category != null);
 
 		this.id = id;
@@ -69,6 +71,7 @@ public class Bug {
 		this.resolution = resolution;
 		this.lastChange = lastChange;
 		this.version = version;
+		this.os = os;
 	}
 
 	public Integer getIdentifier () {
@@ -169,6 +172,16 @@ public class Bug {
 
 	public void setResolution (Resolution resolution) {
 		this.resolution = resolution;
+	}
+
+	public OperatingSystem getOperatingSystem () {
+		return os;
+	}
+
+	public void setOperatingSystem (OperatingSystem os) {
+		assert (os != null);
+
+		this.os = os;
 	}
 
 	public Resolution getResolution () {

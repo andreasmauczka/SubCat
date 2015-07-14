@@ -18,10 +18,11 @@ public class BugStats {
 	private int resolutionCnt;
 	private int confirmedCnt;
 	private int versionHistoCnt;
+	private int operatingSystemCnt;
 
 
 	public BugStats (int id, int cmntCnt, int histCnt, int attCnt, int ccCnt, int blocksCnt, int aliasCnt, int severityHistoryCnt, 
-			int priorityCnt, int statusCnt, int resolutionCnt, int confirmedCnt, int versionHistoCnt,
+			int priorityCnt, int statusCnt, int resolutionCnt, int confirmedCnt, int versionHistoCnt, int operatingSystemCnt,
 			Map<Integer, BugAttachmentStats> attStats) {
 		this.id = id;
 		this.cmntCnt = cmntCnt;
@@ -37,6 +38,7 @@ public class BugStats {
 		this.resolutionCnt = resolutionCnt;
 		this.confirmedCnt = confirmedCnt;
 		this.versionHistoCnt = versionHistoCnt;
+		this.operatingSystemCnt = operatingSystemCnt;
 	}
 	
 	public Map<Integer, BugAttachmentStats> getAttachmentStatsByIdentifier () {
@@ -93,5 +95,9 @@ public class BugStats {
 
 	public int getVersionHistoryCount () {
 		return versionHistoCnt;
+	}
+
+	public int getOperatingSystemHistoryCount () {
+		return operatingSystemCnt;
 	}
 }

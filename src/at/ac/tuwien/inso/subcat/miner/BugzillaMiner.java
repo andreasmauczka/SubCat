@@ -501,18 +501,26 @@ public class BugzillaMiner extends Miner {
 							aliasCnt++;
 						}
 					} else if ("blocks".equals (change.getFieldName ())) {
+						String added = change.getAdded ();
+						String removed = change.getRemoved ();
+
+						String[] addedIdentifiers = (added == null)? new String[0] : added.split (",\\s*");
+						String[] removedIdentifiers = (removed == null)? new String[0] : removed.split (",\\s*");
+
 						if (bugStats == null || blocksCnt >= bugStats.getBlocksCount ()) {
 							Identity addedBy = resolveIdentity (entry.getWho ());
-							if (change.getAdded () != null) {
-								int bugIdentifier = Integer.parseInt (change.getAdded ());
+
+							for (String identifierStr : addedIdentifiers) {
+								int bugIdentifier = Integer.parseInt (identifierStr);
 								model.addBugBlocks (bug, entry.getWhen (), addedBy, null, bugIdentifier, false);
 							}
-							if (change.getRemoved () != null) {
-								int bugIdentifier = Integer.parseInt (change.getRemoved ());
+							for (String identifierStr : removedIdentifiers) {
+								int bugIdentifier = Integer.parseInt (identifierStr);
 								model.addBugBlocks (bug, entry.getWhen (), addedBy, null, bugIdentifier, true);
 							}
 						}
-						blocksCnt += (change.getAdded () != null && change.getRemoved () != null)? 2 : 1;
+						blocksCnt += addedIdentifiers.length;
+						blocksCnt += removedIdentifiers.length;
 					} else {
 						if (bugStats == null || bugHistoryCnt >= bugStats.getHistoryCount ()) {
 							Identity identity = resolveIdentity (entry.getWho ());

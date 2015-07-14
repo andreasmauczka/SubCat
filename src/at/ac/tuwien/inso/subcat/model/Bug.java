@@ -44,16 +44,18 @@ public class Bug {
 	private Severity severity;
 	private Integer identifier;
 	private Resolution resolution;
+	private Version version;
 
 	public Bug (Integer id, Integer identifier, Identity identity, Component component,
 			String title, Date creation, Date lastChange, Priority priority, Severity severity,
-			Resolution resolution) {
+			Resolution resolution, Version version) {
 		assert (component != null);
 		assert (title != null);
 		assert (creation != null);
 		assert (priority != null);
 		assert (resolution != null);
 		assert (lastChange != null);
+		assert (version != null);
 		//assert (category != null);
 
 		this.id = id;
@@ -66,6 +68,7 @@ public class Bug {
 		this.severity = severity;
 		this.resolution = resolution;
 		this.lastChange = lastChange;
+		this.version = version;
 	}
 
 	public Integer getIdentifier () {
@@ -136,6 +139,16 @@ public class Bug {
 		assert (priority != null);
 		
 		this.priority = priority;
+	}
+	
+	public Version getVersion () {
+		return version;
+	}
+
+	public void setVersion (Version version) {
+		assert (version != null);
+		
+		this.version = version;
 	}
 
 	public boolean equals (Bug obj) {

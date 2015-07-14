@@ -155,6 +155,15 @@ public class Model {
 		+ "UNIQUE (project, name)"
 		+ ")";
 
+	private static final String VERSION_TABLE =
+		"CREATE TABLE IF NOT EXISTS Versions ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "project		INT									NOT NULL,"
+		+ "name			TEXT								NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
+		+ "UNIQUE (project, name)"
+		+ ")";
+
 	private static final String PRIORITY_TABLE =
 		"CREATE TABLE IF NOT EXISTS Priorities ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -196,6 +205,7 @@ public class Model {
 		+ "priority		INT									NOT NULL,"
 		+ "severity		INT									NOT NULL,"
 		+ "resolution	INT									NOT NULL,"
+		+ "version		INT									NOT NULL,"
 		+ "comments		INT									NOT NULL DEFAULT 0,"
 		+ "curStat		INT									NOT NULL,"
 		+ "FOREIGN KEY(priority) REFERENCES Priorities (id),"
@@ -203,7 +213,20 @@ public class Model {
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(component) REFERENCES Components (id),"
 		+ "FOREIGN KEY(resolution) REFERENCES Resolutions (id),"
+		+ "FOREIGN KEY(version) REFERENCES Versions (id),"
 		+ "FOREIGN KEY(curStat) REFERENCES Status (id)"
+		+ ")";
+
+	private static final String VERSION_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS VersionHistory ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "bug			INT									NOT NULL,"
+		+ "addedBy		INT									NOT NULL,"
+		+ "date			TEXT								NOT NULL,"
+		+ "version		INT									NOT NULL,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(version) REFERENCES Versions (id)"
 		+ ")";
 
 	private static final String RESOLUTION_HISTORY_TABLE =
@@ -610,7 +633,8 @@ public class Model {
 		+ " (SELECT COUNT() FROM PriorityHistory WHERE PriorityHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM StatusHistory WHERE StatusHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM ResolutionHistory WHERE ResolutionHistory.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM ConfirmedHistory WHERE ConfirmedHistory.bug = Bugs.id)"
+		+ " (SELECT COUNT() FROM ConfirmedHistory WHERE ConfirmedHistory.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM VersionHistory WHERE VersionHistory.bug = Bugs.id)"
 		+ "FROM "
 		+ " Bugs, Components "
 		+ "WHERE "
@@ -699,7 +723,8 @@ public class Model {
 		+ " Identity.context		AS aiContext, "
 		+ " Identity.identifier,"
 		+ " Bugs.resolution,"
-		+ " Bugs.lastChange "
+		+ " Bugs.lastChange,"
+		+ " Bugs.version "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -733,7 +758,9 @@ public class Model {
 		+ " Identity.identifier,"
 		+ " Resolutions.id, "
 		+ " Resolutions.name,"
-		+ " Bugs.lastChange "
+		+ " Bugs.lastChange,"
+		+ " Versions.version,"
+		+ " Versions.name"
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -746,6 +773,8 @@ public class Model {
 		+ " ON Priorities.id = Bugs.priority "
 		+ "JOIN Severity"
 		+ " ON Severity.id = Bugs.severity "
+		+ "JOIN Versions"
+		+ " ON Versions.id = Bugs.version "
 		+ "JOIN Resolutions"
 		+ " ON Resolutions.id = Bugs.resolution "
 		+ "WHERE"
@@ -806,7 +835,16 @@ public class Model {
 		+ " Components "
 		+ "WHERE"
 		+ " project = ?";
-	
+
+	private static final String SELECT_ALL_VERSIONS =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " Versions "
+		+ "WHERE"
+		+ " project = ?";
+
 	private static final String SELECT_ALL_PROJECTS =
 		"SELECT"
 		+ " id,"
@@ -1103,6 +1141,11 @@ public class Model {
 		+ "(project, name)"
 		+ "VALUES (?,?)";
 
+	private static final String VERSION_INSERTION =
+		"INSERT INTO Versions"
+		+ "(project, name)"
+		+ "VALUES (?,?)";
+
 	private static final String CATEGORY_INSERTION =
 		"INSERT INTO Categories"
 		+ "(name, dictionary)"
@@ -1110,8 +1153,8 @@ public class Model {
 
 	private static final String BUG_INSERTION =
 		"INSERT INTO Bugs "
-		+ "(identifier, identity, component, title, creation, priority, severity, curStat, resolution, lastChange)"
-		+ "SELECT ?, ?, ?, ?, ?, ?, ?, defaultStatusId, ?, ? "
+		+ "(identifier, identity, component, title, creation, priority, severity, curStat, resolution, lastChange, version)"
+		+ "SELECT ?, ?, ?, ?, ?, ?, ?, defaultStatusId, ?, ?, ? "
 		+ "FROM Projects WHERE id=?";
 
 	private static final String BUG_UPDATE =
@@ -1135,6 +1178,11 @@ public class Model {
 	private static final String PRIORITY_HISTORY_INSERTION =
 		"INSERT INTO PriorityHistory"
 		+ "(bug, addedBy, date, priority)"
+		+ "VALUES (?, ?, ?, ?)";
+
+	private static final String VERSION_HISTORY_INSERTION =
+		"INSERT INTO VersionHistory"
+		+ "(bug, addedBy, date, version)"
 		+ "VALUES (?, ?, ?, ?)";
 
 	private static final String RESOLUTION_HISTORY_INSERTION =
@@ -1906,6 +1954,33 @@ public class Model {
 		pool.emitComponentAdded (component);
 	}
 
+	public Version addVersion (Project project, String name) throws SQLException {
+		Version version = new Version (null, project, name);
+		add (version);
+		return version;
+	}
+
+	public void add (Version version) throws SQLException {
+		assert (conn != null);
+		assert (version != null);
+		Project project = version.getProject ();
+		assert (project.getId () != null);
+		assert (version.getId () == null);
+
+		PreparedStatement stmt = conn.prepareStatement (VERSION_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, project.getId ());
+		stmt.setString(2, version.getName ());
+		stmt.executeUpdate();
+
+		version.setId (getLastInsertedId (stmt));
+
+		stmt.close ();
+
+		pool.emitVersionAdded (version);
+	}
+	
 	public Attachment addAttachment (Integer identifier, Comment comment) throws SQLException {
 		Attachment att = new Attachment (null, identifier, comment);
 		add (att);
@@ -2003,8 +2078,8 @@ public class Model {
 	}
 	
 	public Bug addBug (Integer identifier, Identity identity, Component component,
-			String title, Date creation, Date lastChange, Priority priority, Severity severity, Resolution resolution) throws SQLException {
-		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, resolution);
+			String title, Date creation, Date lastChange, Priority priority, Severity severity, Resolution resolution, Version version) throws SQLException {
+		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, resolution, version);
 		add (bug);
 
 		return bug;
@@ -2023,6 +2098,8 @@ public class Model {
 		assert (bug.getSeverity().getId () != null);
 		assert (bug.getResolution () != null);
 		assert (bug.getResolution ().getId () != null);
+		assert (bug.getVersion () != null);
+		assert (bug.getVersion ().getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (BUG_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
@@ -2040,7 +2117,8 @@ public class Model {
 		stmt.setInt (7, bug.getSeverity ().getId ());
 		stmt.setInt (8, bug.getResolution ().getId ());
 		resSetDate (stmt, 9, bug.getLastChange ());		
-		stmt.setInt (10, bug.getComponent ().getProject ().getId ());
+		stmt.setInt (10, bug.getVersion ().getId ());
+		stmt.setInt (11, bug.getComponent ().getProject ().getId ());
 		stmt.executeUpdate();
 
 		bug.setId (getLastInsertedId (stmt));
@@ -2121,6 +2199,27 @@ public class Model {
 		stmt.close ();
 
 		pool.emitPriorityHistoryAdded (bug, addedBy, date, priority);
+	}
+
+	public void addVersionHistory (Bug bug, Identity addedBy, Date date, Version version) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (addedBy != null);
+		assert (addedBy.getId () != null);
+		assert (date != null);
+		assert (version != null);
+		assert (version.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (VERSION_HISTORY_INSERTION);
+		stmt.setInt (1, bug.getId ());
+		stmt.setInt (2, addedBy.getId ());
+		resSetDate (stmt, 3, date);
+		stmt.setInt (4, version.getId ());
+
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitVersionHistoryAdded (bug, addedBy, date, version);
 	}
 
 	public void addResolutionHistory (Bug bug, Identity addedBy, Date date, Resolution resolution) throws SQLException {
@@ -2922,6 +3021,7 @@ public class Model {
 		int statusCnt = res.getInt (10);
 		int resolutionCnt = res.getInt (11);
 		int confirmedCnt = res.getInt (12);
+		int versionHistoCnt = res.getInt (13);
 
 		
 		// Statement:
@@ -2939,7 +3039,8 @@ public class Model {
 			attStats.put (attIdentifier, new BugAttachmentStats (attId, attIdentifier, attObsCnt, attHistCnt));
 		}
 
-		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt, statusCnt, resolutionCnt, confirmedCnt, attStats);
+		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt,
+				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -3289,6 +3390,7 @@ public class Model {
 		Map<Integer, Priority> priorities = getPriorities (proj);
 		Map<Integer, Component> components = getComponents (proj);
 		Map<Integer, Resolution> resolutions = getResolutions (proj);
+		Map<Integer, Version> versions = getVersions (proj);
 
 		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUGS);
 		stmt.setInt (1, proj.getId ());
@@ -3313,9 +3415,11 @@ public class Model {
 			Severity severity = severities.get (res.getInt (12));
 			Resolution resolution = resolutions.get (res.getInt (17));
 			Date lastChange = resGetDate (res, 18);
+			Version version = versions.get (res.getInt (19));
 
 			Bug bug = new Bug (id, identifier, identity, component,
-				title, creation, lastChange, priority, severity, resolution);
+				title, creation, lastChange, priority, severity, resolution,
+				version);
 
 			do_next = callback.processResult (bug);
 		}
@@ -3365,9 +3469,13 @@ public class Model {
 			Resolution resolution = new Resolution (resId, proj, resName);
 
 			Date lastChange = resGetDate (res, 20);
-			
+
+			int versId = res.getInt (21);
+			String versName = res.getString (22);
+			Version version = new Version (versId, proj, versName);
+
 			return new Bug (id, identifier, identity, component,
-				title, creation, lastChange, priority, severity, resolution);
+				title, creation, lastChange, priority, severity, resolution, version);
 		}
 
 		return null;
@@ -3472,6 +3580,26 @@ public class Model {
 	
 		return resolutions;		
 	}
+
+	public Map<Integer, Version> getVersions (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_VERSIONS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<Integer, Version> versions = new HashMap<Integer, Version> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Version version = new Version (res.getInt (1), proj, res.getString (2));
+			versions.put (version.getId (), version);
+		}
+	
+		return versions;		
+	}
 	
 	public Map<String, Component> getComponentsByName (Project proj) throws SQLException {
 		assert (conn != null);
@@ -3491,6 +3619,26 @@ public class Model {
 		}
 	
 		return components;
+	}
+
+	public Map<String, Version> getVersionsByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_VERSIONS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<String, Version> versions = new HashMap<String, Version> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Version version = new Version (res.getInt (1), proj, res.getString (2));
+			versions.put (version.getName (), version);
+		}
+	
+		return versions;
 	}
 
 	public Map<String, AttachmentStatus> getAttachmentStatusByName (Project proj) throws SQLException {
@@ -4012,11 +4160,13 @@ public class Model {
 		stmt.executeUpdate (PRIORITY_TABLE);
 		stmt.executeUpdate (RESOLUTION_TABLE);
 		stmt.executeUpdate (SEVERITY_TABLE);
+		stmt.executeUpdate (VERSION_TABLE);
 		stmt.executeUpdate (BUG_TABLE);
 		stmt.executeUpdate (PRIORITY_HISTORY_TABLE);
 		stmt.executeUpdate (SEVERITY_HISTORY_TABLE);
 		stmt.executeUpdate (RESOLUTION_HISTORY_TABLE);
 		stmt.executeUpdate (CONFIRMED_HISTORY_TABLE);
+		stmt.executeUpdate (VERSION_HISTORY_TABLE);
 		stmt.executeUpdate (BUG_ALIASES);
 		stmt.executeUpdate (COMMENT_TABLE);
 		stmt.executeUpdate (STATUS_TABLE);

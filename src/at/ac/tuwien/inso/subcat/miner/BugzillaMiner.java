@@ -65,6 +65,7 @@ import at.ac.tuwien.inso.subcat.model.Resolution;
 import at.ac.tuwien.inso.subcat.model.Severity;
 import at.ac.tuwien.inso.subcat.model.Status;
 import at.ac.tuwien.inso.subcat.model.User;
+import at.ac.tuwien.inso.subcat.model.Version;
 import at.ac.tuwien.inso.subcat.utility.Reporter;
 
 
@@ -99,6 +100,7 @@ public class BugzillaMiner extends Miner {
 	private Map<String, Priority> priorities = new HashMap<String, Priority> ();
 	private Map<String, Severity> severities = new HashMap<String, Severity> ();
 	private Map<String, Identity> identities = new HashMap<String, Identity> ();
+	private Map<String, Version> versions = new HashMap<String, Version> ();
 	private Map<String, Status> status = new HashMap<String, Status> ();
 	private Project project;
 
@@ -231,6 +233,7 @@ public class BugzillaMiner extends Miner {
 				Date creation = bzBug.getCreationTime ();
 				Date lastChange = bzBug.getLastChangeTime ();
 				String title = bzBug.getSummary ();
+				Version version = resolveVersion (bzBug.getVersion ());
 
 
 				List<BugzillaAttachment> attachments = new LinkedList<BugzillaAttachment> ();
@@ -238,9 +241,9 @@ public class BugzillaMiner extends Miner {
 				// Add to model:
 				Bug bug;
 				if (bugStats == null) {
-					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, resolution);
+					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, resolution, version);
 				} else {
-					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, resolution);
+					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, resolution, version);
 					model.updateBug (bug);
 				}
 
@@ -382,6 +385,7 @@ public class BugzillaMiner extends Miner {
 			}
 
 
+			int versionHistoCnt = 0;
 			int bugHistoryCnt = 0;
 			int resolutionCnt = 0;
 			int confirmedCnt = 0;
@@ -440,6 +444,16 @@ public class BugzillaMiner extends Miner {
 								model.addConfirmedHistory (bug, addedBy, entry.getWhen (), removed);
 							}
 							confirmedCnt++;
+						}
+					} else if ("version".equals (change.getFieldName ())) {
+
+						if (change.getAdded () != null) {
+							if (bugStats == null || versionHistoCnt >= bugStats.getVersionHistoryCount ()) {
+								Identity addedBy = resolveIdentity (entry.getWho ());
+								Version version = resolveVersion (change.getAdded ());
+								model.addVersionHistory (bug, addedBy, entry.getWhen (), version);
+							}
+							versionHistoCnt++;
 						}
 					} else if ("status".equals (change.getFieldName ()) || "bug_status".equals (change.getFieldName ())) {
 
@@ -653,6 +667,7 @@ public class BugzillaMiner extends Miner {
 		severities = model.getSeveritiesByName (project);
 		status = model.getStatusesByName (project);
 		components = model.getComponentsByName (project);
+		versions = model.getVersionsByName (project);
 		attachmentStatus = model.getAttachmentStatusByName (project);
 
 		model.setDefaultStatus (resolveStatus ("UNCO"));
@@ -716,6 +731,18 @@ public class BugzillaMiner extends Miner {
 		}
 		
 		return stat;
+	}
+
+	private synchronized Version resolveVersion (String name) throws SQLException {
+		assert (name != null);
+
+		Version version = versions.get (name);
+		if (version == null) {
+			version = model.addVersion (project, name);
+			versions.put (name, version);
+		}
+		
+		return version;
 	}
 
 	private synchronized Component resolveComponent (String name) throws SQLException {

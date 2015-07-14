@@ -125,4 +125,9 @@ public interface ModelModificationListener {
 
 	public void confiremdHistoryAdded (Bug bug, Identity addedBy, Date date,
 			boolean removed);
+
+	public void versionAdded (Version version);
+
+	public void versionHistoryAdded (Bug bug, Identity addedBy, Date date,
+			Version version);
 }

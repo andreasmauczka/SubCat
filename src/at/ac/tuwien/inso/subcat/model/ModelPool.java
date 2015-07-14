@@ -401,43 +401,56 @@ public class ModelPool {
 		}
 	}
 
-	public void emitSeverityHistoryAdded (Bug bug, Identity addedBy, Date date, Severity severity) {
+	public synchronized void emitSeverityHistoryAdded (Bug bug, Identity addedBy, Date date, Severity severity) {
 		for (ModelModificationListener listener : listeners) {
 			listener.severityHistoryAdded (bug, addedBy, date, severity);
 		}
 	}
 
-	public void emitPriorityHistoryAdded (Bug bug, Identity addedBy, Date date,
+	public synchronized void emitPriorityHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Priority priority) {
 		for (ModelModificationListener listener : listeners) {
 			listener.priorityHistoryAdded (bug, addedBy, date, priority);
 		}
 	}
 
-	public void emitStatusHistoryAdded (Bug bug, Identity addedBy, Date date,
+	public synchronized void emitStatusHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Status status) {
 		for (ModelModificationListener listener : listeners) {
 			listener.statusHistoryAdded (bug, addedBy, date, status);
 		}
 	}
 
-	public void emitResolutionAdded (Resolution resolution) {
+	public synchronized void emitResolutionAdded (Resolution resolution) {
 		for (ModelModificationListener listener : listeners) {
 			listener.resolutionAdded (resolution);
 		}
 	}
 
-	public void emitResolutionHistoryAdded (Bug bug, Identity addedBy,
+	public synchronized void emitResolutionHistoryAdded (Bug bug, Identity addedBy,
 			Date date, Resolution resolution) {
 		for (ModelModificationListener listener : listeners) {
 			listener.resolutionHistoryAdded (bug, addedBy, date, resolution);
 		}
 	}
 
-	public void emitConfirmedHistoryAdded (Bug bug, Identity addedBy,
+	public synchronized void emitConfirmedHistoryAdded (Bug bug, Identity addedBy,
 			Date date, boolean removed) {
 		for (ModelModificationListener listener : listeners) {
 			listener.confiremdHistoryAdded (bug, addedBy, date, removed);
+		}
+	}
+
+	public synchronized void emitVersionAdded (Version version) {
+		for (ModelModificationListener listener : listeners) {
+			listener.versionAdded (version);
+		}
+	}
+
+	public synchronized void emitVersionHistoryAdded (Bug bug, Identity addedBy, Date date,
+			Version version) {
+		for (ModelModificationListener listener : listeners) {
+			listener.versionHistoryAdded (bug, addedBy, date, version);
 		}
 	}
 }

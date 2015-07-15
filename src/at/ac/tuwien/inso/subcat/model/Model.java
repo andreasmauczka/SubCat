@@ -274,10 +274,12 @@ public class Model {
 		+ "bug			INT									NOT NULL,"
 		+ "addedBy		INT									NOT NULL,"
 		+ "date			TEXT								NOT NULL,"
-		+ "priority		INT									NOT NULL,"
+		+ "oldPriority	INT									NOT NULL,"
+		+ "newPriority	INT									NOT NULL,"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
 		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
-		+ "FOREIGN KEY(priority) REFERENCES Priorities (id)"
+		+ "FOREIGN KEY(oldPriority) REFERENCES Priorities (id),"
+		+ "FOREIGN KEY(newPriority) REFERENCES Priorities (id)"
 		+ ")";
 
 	private static final String SEVERITY_HISTORY_TABLE =
@@ -1215,8 +1217,8 @@ public class Model {
 
 	private static final String PRIORITY_HISTORY_INSERTION =
 		"INSERT INTO PriorityHistory"
-		+ "(bug, addedBy, date, priority)"
-		+ "VALUES (?, ?, ?, ?)";
+		+ "(bug, addedBy, date, oldPriority, newPriority)"
+		+ "VALUES (?, ?, ?, ?, ?)";
 
 	private static final String VERSION_HISTORY_INSERTION =
 		"INSERT INTO VersionHistory"
@@ -2258,25 +2260,28 @@ public class Model {
 		pool.emitBugAliasAdded (bug, addedBy, date, alias);
 	}
 
-	public void addPriorityHistory (Bug bug, Identity addedBy, Date date, Priority priority) throws SQLException {
+	public void addPriorityHistory (Bug bug, Identity addedBy, Date date, Priority oldPriority, Priority newPriority) throws SQLException {
 		assert (bug != null);
 		assert (bug.getId () != null);
 		assert (addedBy != null);
 		assert (addedBy.getId () != null);
 		assert (date != null);
-		assert (priority != null);
-		assert (priority.getId () != null);
+		assert (oldPriority != null);
+		assert (oldPriority.getId () != null);
+		assert (newPriority != null);
+		assert (newPriority.getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (PRIORITY_HISTORY_INSERTION);
 		stmt.setInt (1, bug.getId ());
 		stmt.setInt (2, addedBy.getId ());
 		resSetDate (stmt, 3, date);
-		stmt.setInt (4, priority.getId ());
+		stmt.setInt (4, oldPriority.getId ());
+		stmt.setInt (5, newPriority.getId ());
 
 		stmt.executeUpdate();
 		stmt.close ();
 
-		pool.emitPriorityHistoryAdded (bug, addedBy, date, priority);
+		pool.emitPriorityHistoryAdded (bug, addedBy, date, oldPriority, newPriority);
 	}
 
 	public void addVersionHistory (Bug bug, Identity addedBy, Date date, Version oldVersion, Version newVersion) throws SQLException {

@@ -408,9 +408,9 @@ public class ModelPool {
 	}
 
 	public synchronized void emitPriorityHistoryAdded (Bug bug, Identity addedBy, Date date,
-			Priority priority) {
+			Priority oldPriority, Priority newPriority) {
 		for (ModelModificationListener listener : listeners) {
-			listener.priorityHistoryAdded (bug, addedBy, date, priority);
+			listener.priorityHistoryAdded (bug, addedBy, date, oldPriority, newPriority);
 		}
 	}
 

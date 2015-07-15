@@ -436,8 +436,9 @@ public class BugzillaMiner extends Miner {
 						if (change.getAdded () != null) {
 							if (bugStats == null || priorityCnt >= bugStats.getPriorityHistoryCount ()) {
 								Identity addedBy = resolveIdentity (entry.getWho ());
-								Priority priority = resolvePriority (change.getAdded ());
-								model.addPriorityHistory (bug, addedBy, entry.getWhen (), priority);
+								Priority oldPriority = resolvePriority (change.getRemoved ());
+								Priority newPriority = resolvePriority (change.getAdded ());
+								model.addPriorityHistory (bug, addedBy, entry.getWhen (), oldPriority, newPriority);
 							}
 							priorityCnt++;
 						}

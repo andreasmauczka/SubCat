@@ -113,7 +113,7 @@ public interface ModelModificationListener {
 			Severity oldSeverity, Severity newSeverity);
 
 	public void priorityHistoryAdded (Bug bug, Identity addedBy, Date date,
-			Priority priority);
+			Priority oldPriority, Priority newPriority);
 
 	public void statusHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Status oldStatus, Status newStatus);

@@ -234,10 +234,12 @@ public class Model {
 		+ "bug			INT									NOT NULL,"
 		+ "addedBy		INT									NOT NULL,"
 		+ "date			TEXT								NOT NULL,"
-		+ "version		INT									NOT NULL,"
+		+ "oldVersion	INT									NOT NULL,"
+		+ "newVersion	INT									NOT NULL,"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
 		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
-		+ "FOREIGN KEY(version) REFERENCES Versions (id)"
+		+ "FOREIGN KEY(oldVersion) REFERENCES Versions (id),"
+		+ "FOREIGN KEY(newVersion) REFERENCES Versions (id)"
 		+ ")";
 
 	private static final String RESOLUTION_HISTORY_TABLE =
@@ -1216,8 +1218,8 @@ public class Model {
 
 	private static final String VERSION_HISTORY_INSERTION =
 		"INSERT INTO VersionHistory"
-		+ "(bug, addedBy, date, version)"
-		+ "VALUES (?, ?, ?, ?)";
+		+ "(bug, addedBy, date, oldVersion, newVersion)"
+		+ "VALUES (?, ?, ?, ?, ?)";
 
 	private static final String RESOLUTION_HISTORY_INSERTION =
 		"INSERT INTO ResolutionHistory"
@@ -2275,25 +2277,28 @@ public class Model {
 		pool.emitPriorityHistoryAdded (bug, addedBy, date, priority);
 	}
 
-	public void addVersionHistory (Bug bug, Identity addedBy, Date date, Version version) throws SQLException {
+	public void addVersionHistory (Bug bug, Identity addedBy, Date date, Version oldVersion, Version newVersion) throws SQLException {
 		assert (bug != null);
 		assert (bug.getId () != null);
 		assert (addedBy != null);
 		assert (addedBy.getId () != null);
 		assert (date != null);
-		assert (version != null);
-		assert (version.getId () != null);
+		assert (oldVersion != null);
+		assert (oldVersion.getId () != null);
+		assert (newVersion != null);
+		assert (newVersion.getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (VERSION_HISTORY_INSERTION);
 		stmt.setInt (1, bug.getId ());
 		stmt.setInt (2, addedBy.getId ());
 		resSetDate (stmt, 3, date);
-		stmt.setInt (4, version.getId ());
+		stmt.setInt (4, oldVersion.getId ());
+		stmt.setInt (5, newVersion.getId ());
 
 		stmt.executeUpdate();
 		stmt.close ();
 
-		pool.emitVersionHistoryAdded (bug, addedBy, date, version);
+		pool.emitVersionHistoryAdded (bug, addedBy, date, oldVersion, newVersion);
 	}
 
 	public void addResolutionHistory (Bug bug, Identity addedBy, Date date, Resolution resolution) throws SQLException {

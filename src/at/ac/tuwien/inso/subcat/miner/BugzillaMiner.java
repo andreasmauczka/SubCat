@@ -456,8 +456,9 @@ public class BugzillaMiner extends Miner {
 						if (change.getAdded () != null) {
 							if (bugStats == null || versionHistoCnt >= bugStats.getVersionHistoryCount ()) {
 								Identity addedBy = resolveIdentity (entry.getWho ());
-								Version version = resolveVersion (change.getAdded ());
-								model.addVersionHistory (bug, addedBy, entry.getWhen (), version);
+								Version oldVersion = resolveVersion (change.getRemoved ());
+								Version newVersion = resolveVersion (change.getAdded ());
+								model.addVersionHistory (bug, addedBy, entry.getWhen (), oldVersion, newVersion);
 							}
 							versionHistoCnt++;
 						}

@@ -448,9 +448,9 @@ public class ModelPool {
 	}
 
 	public synchronized void emitVersionHistoryAdded (Bug bug, Identity addedBy, Date date,
-			Version version) {
+			Version oldVersion, Version newVersion) {
 		for (ModelModificationListener listener : listeners) {
-			listener.versionHistoryAdded (bug, addedBy, date, version);
+			listener.versionHistoryAdded (bug, addedBy, date, oldVersion, newVersion);
 		}
 	}
 

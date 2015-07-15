@@ -425,8 +425,9 @@ public class BugzillaMiner extends Miner {
 						if (change.getAdded () != null) {
 							if (bugStats == null || severityCnt >= bugStats.getSeverityHistoryCount ()) {
 								Identity addedBy = resolveIdentity (entry.getWho ());
-								Severity severity = resolveSeverity (change.getAdded ());
-								model.addSeverityHistory (bug, addedBy, entry.getWhen (), severity);
+								Severity oldSeverity = resolveSeverity (change.getRemoved ());
+								Severity newSeverity = resolveSeverity (change.getAdded ());
+								model.addSeverityHistory (bug, addedBy, entry.getWhen (), oldSeverity, newSeverity);
 							}
 							severityCnt++;
 						}

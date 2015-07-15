@@ -284,10 +284,12 @@ public class Model {
 		+ "bug			INT									NOT NULL,"
 		+ "addedBy		INT									NOT NULL,"
 		+ "date			TEXT								NOT NULL,"
-		+ "severity		INT									NOT NULL,"
+		+ "oldSeverity	INT									NOT NULL,"
+		+ "newSeverity	INT									NOT NULL,"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
 		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
-		+ "FOREIGN KEY(severity) REFERENCES Severity (id)"
+		+ "FOREIGN KEY(oldSeverity) REFERENCES Severity (id),"
+		+ "FOREIGN KEY(newSeverity) REFERENCES Severity (id)"
 		+ ")";
 
 	private static final String STATUS_HISTORY_TABLE =
@@ -1229,8 +1231,8 @@ public class Model {
 
 	private static final String SEVERITY_HISTORY_INSERTION =
 		"INSERT INTO SeverityHistory"
-		+ "(bug, addedBy, date, severity)"
-		+ "VALUES (?, ?, ?, ?)";
+		+ "(bug, addedBy, date, oldSeverity, newSeverity)"
+		+ "VALUES (?, ?, ?, ?, ?)";
 
 	private static final String OPERATING_SYSTEM_HISTORY_INSERTION =
 		"INSERT INTO OperatingSystemHistory"
@@ -2334,25 +2336,28 @@ public class Model {
 		pool.emitConfirmedHistoryAdded (bug, addedBy, date, removed);
 	}
 
-	public void addSeverityHistory (Bug bug, Identity addedBy, Date date, Severity severity) throws SQLException {
+	public void addSeverityHistory (Bug bug, Identity addedBy, Date date, Severity oldSeverity, Severity newSeverity) throws SQLException {
 		assert (bug != null);
 		assert (bug.getId () != null);
 		assert (addedBy != null);
 		assert (addedBy.getId () != null);
 		assert (date != null);
-		assert (severity != null);
-		assert (severity.getId () != null);
+		assert (oldSeverity != null);
+		assert (oldSeverity.getId () != null);
+		assert (newSeverity != null);
+		assert (newSeverity.getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (SEVERITY_HISTORY_INSERTION);
 		stmt.setInt (1, bug.getId ());
 		stmt.setInt (2, addedBy.getId ());
 		resSetDate (stmt, 3, date);
-		stmt.setInt (4, severity.getId ());
+		stmt.setInt (4, oldSeverity.getId ());
+		stmt.setInt (5, newSeverity.getId ());
 
 		stmt.executeUpdate();
 		stmt.close ();
 
-		pool.emitSeverityHistoryAdded (bug, addedBy, date, severity);
+		pool.emitSeverityHistoryAdded (bug, addedBy, date, oldSeverity, newSeverity);
 	}
 
 	public void addOperatingSystemHistory (Bug bug, Identity addedBy, Date date, OperatingSystem oldOs, OperatingSystem newOs) throws SQLException {

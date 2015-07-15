@@ -110,7 +110,7 @@ public interface ModelModificationListener {
 			String alias);
 
 	public void severityHistoryAdded (Bug bug, Identity addedBy, Date date,
-			Severity severity);
+			Severity oldSeverity, Severity newSeverity);
 
 	public void priorityHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Priority priority);

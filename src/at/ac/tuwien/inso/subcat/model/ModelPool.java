@@ -401,9 +401,9 @@ public class ModelPool {
 		}
 	}
 
-	public synchronized void emitSeverityHistoryAdded (Bug bug, Identity addedBy, Date date, Severity severity) {
+	public synchronized void emitSeverityHistoryAdded (Bug bug, Identity addedBy, Date date, Severity oldSeverity, Severity newSeverity) {
 		for (ModelModificationListener listener : listeners) {
-			listener.severityHistoryAdded (bug, addedBy, date, severity);
+			listener.severityHistoryAdded (bug, addedBy, date, oldSeverity, newSeverity);
 		}
 	}
 

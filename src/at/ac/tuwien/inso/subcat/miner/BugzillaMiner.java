@@ -478,8 +478,9 @@ public class BugzillaMiner extends Miner {
 						if (change.getAdded () != null) {
 							if (bugStats == null || statusCnt >= bugStats.getStatusHistoryCount ()) {
 								Identity addedBy = resolveIdentity (entry.getWho ());
-								Status status = resolveStatus (change.getAdded ());
-								model.addStatusHistory (bug, addedBy, entry.getWhen (), status);
+								Status oldStatus = resolveStatus (change.getRemoved ());
+								Status newStatus = resolveStatus (change.getAdded ());
+								model.addStatusHistory (bug, addedBy, entry.getWhen (), oldStatus, newStatus);
 							}
 							statusCnt++;
 						}

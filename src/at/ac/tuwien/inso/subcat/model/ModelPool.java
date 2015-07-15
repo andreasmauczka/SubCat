@@ -415,9 +415,9 @@ public class ModelPool {
 	}
 
 	public synchronized void emitStatusHistoryAdded (Bug bug, Identity addedBy, Date date,
-			Status status) {
+			Status oldStatus, Status newStatus) {
 		for (ModelModificationListener listener : listeners) {
-			listener.statusHistoryAdded (bug, addedBy, date, status);
+			listener.statusHistoryAdded (bug, addedBy, date, oldStatus, newStatus);
 		}
 	}
 

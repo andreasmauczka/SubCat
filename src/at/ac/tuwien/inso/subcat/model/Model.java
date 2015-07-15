@@ -300,10 +300,12 @@ public class Model {
 		+ "bug			INT									NOT NULL,"
 		+ "addedBy		INT									NOT NULL,"
 		+ "date			TEXT								NOT NULL,"
-		+ "status		INT									NOT NULL,"
+		+ "oldStatus	INT									NOT NULL,"
+		+ "newStatus	INT									NOT NULL,"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
 		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
-		+ "FOREIGN KEY(status) REFERENCES Status (id)"
+		+ "FOREIGN KEY(oldStatus) REFERENCES Status (id),"
+		+ "FOREIGN KEY(newStatus) REFERENCES Status (id)"
 		+ ")";
 
 	private static final String CONFIRMED_HISTORY_TABLE =
@@ -1243,8 +1245,8 @@ public class Model {
 
 	private static final String STATUS_HISTORY_INSERTION =
 		"INSERT INTO StatusHistory"
-		+ "(bug, addedBy, date, status)"
-		+ "VALUES (?, ?, ?, ?)";
+		+ "(bug, addedBy, date, oldStatus, newStatus)"
+		+ "VALUES (?, ?, ?, ?, ?)";
 	
 	private static final String ATTACHMENT_INSERTION =
 		"INSERT INTO Attachments"
@@ -2389,25 +2391,28 @@ public class Model {
 		pool.emitOperatingSystemHistoryAdded (bug, addedBy, date, oldOs, newOs);
 	}
 
-	public void addStatusHistory (Bug bug, Identity addedBy, Date date, Status status) throws SQLException {
+	public void addStatusHistory (Bug bug, Identity addedBy, Date date, Status oldStatus, Status newStatus) throws SQLException {
 		assert (bug != null);
 		assert (bug.getId () != null);
 		assert (addedBy != null);
 		assert (addedBy.getId () != null);
 		assert (date != null);
-		assert (status != null);
-		assert (status.getId () != null);
+		assert (oldStatus != null);
+		assert (oldStatus.getId () != null);
+		assert (newStatus != null);
+		assert (newStatus.getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (STATUS_HISTORY_INSERTION);
 		stmt.setInt (1, bug.getId ());
 		stmt.setInt (2, addedBy.getId ());
 		resSetDate (stmt, 3, date);
-		stmt.setInt (4, status.getId ());
+		stmt.setInt (4, oldStatus.getId ());
+		stmt.setInt (5, newStatus.getId ());
 
 		stmt.executeUpdate();
 		stmt.close ();
 
-		pool.emitStatusHistoryAdded (bug, addedBy, date, status);
+		pool.emitStatusHistoryAdded (bug, addedBy, date, oldStatus, newStatus);
 	}
 
 	public Dictionary addDictionary (String name, String context, Project project) throws SQLException {

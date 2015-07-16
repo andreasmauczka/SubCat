@@ -458,6 +458,20 @@ public class Model {
 		+ "FOREIGN KEY(blocks) REFERENCES Bugs (id)"
 		+ ")";
 
+	private static final String BUG_DEPENDENCIES_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugDependencies ("
+		+ "id					INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+		+ "date					TEXT								NOT NULL,"
+		+ "bug					INT									NOT NULL,"
+		+ "depends				INT									        ,"
+		+ "dependsIdentifier	INT									NOT NULL,"
+		+ "addedBy				INT									NOT NULL,"
+		+ "removed				BOOLEAN								NOT NULL,"
+		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(depends) REFERENCES Bugs (id)"
+		+ ")";
+
 	private static final String CATEGORY_TABLE =
 		"CREATE TABLE IF NOT EXISTS Categories ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -674,7 +688,8 @@ public class Model {
 		+ " (SELECT COUNT() FROM ResolutionHistory WHERE ResolutionHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM ConfirmedHistory WHERE ConfirmedHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM VersionHistory WHERE VersionHistory.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM OperatingSystemHistory WHERE OperatingSystemHistory.bug = Bugs.id)"
+		+ " (SELECT COUNT() FROM OperatingSystemHistory WHERE OperatingSystemHistory.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM BugDependencies WHERE BugDependencies.bug = Bugs.id)"
 		+ "FROM "
 		+ " Bugs, Components "
 		+ "WHERE "
@@ -1340,6 +1355,20 @@ public class Model {
 		+ " blocks = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugBlocks.blocksIdentifier AND Components.project = ?) "
 		+ "WHERE"
 		+ " blocks IS NULL"
+		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
+
+	private static final String BUG_DEPENDENCY_INSERTION =
+		"INSERT INTO BugDependencies"
+		+ "(bug, date, addedBy, depends, dependsIdentifier, removed)"
+		+ "VALUES (?,?,?,?,?,?)";
+
+	private static final String BUG_DEPENDENCY_RESOLVE_BUGS =
+		"UPDATE"
+		+ " BugDependencies "
+		+ "SET "
+		+ " depends = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugDependencies.dependsIdentifier AND Components.project = ?) "
+		+ "WHERE"
+		+ " depends IS NULL"
 		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
 	private static final String COMMIT_INSERTION =
@@ -2581,6 +2610,33 @@ public class Model {
 		pool.emitBugBlocksAdded (bug, date, addedBy, removed);
 	}
 
+	public void addBugDependency (Bug bug, Date date, Identity addedBy, Bug blocks, int bugIdentifier, boolean removed) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (date != null);
+		assert (addedBy != null);
+		assert (addedBy.getId () != null);
+		assert (blocks == null || blocks.getId () != null);
+		assert (bugIdentifier > 0);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDENCY_INSERTION);
+		stmt.setInt (1, bug.getId ());
+		resSetDate (stmt, 2, date);
+		stmt.setInt (3, addedBy.getId ());
+		if (blocks != null) {
+			stmt.setInt (4, blocks.getId ());
+		} else {
+			stmt.setNull (4, Types.INTEGER);
+		}
+		stmt.setInt (5, bugIdentifier);
+		stmt.setBoolean (6, removed);
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitBugBlocksAdded (bug, date, addedBy, removed);
+	}
+
 	public void resolveCcIdentities (Project project) throws SQLException {
 		assert (conn != null);
 		assert (project != null);
@@ -2600,6 +2656,19 @@ public class Model {
 		assert (project.getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_RESOLVE_BUGS);
+		stmt.setInt (1, project.getId ());
+		stmt.setInt (2, project.getId ());
+
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
+	public void resolveBugDependencies (Project project) throws SQLException {
+		assert (conn != null);
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDENCY_RESOLVE_BUGS);
 		stmt.setInt (1, project.getId ());
 		stmt.setInt (2, project.getId ());
 
@@ -3189,8 +3258,9 @@ public class Model {
 		int confirmedCnt = res.getInt (12);
 		int versionHistoCnt = res.getInt (13);
 		int operatingSystemCnt = res.getInt (14);
+		int dependsCnt = res.getInt (15);
 
-		
+
 		// Statement:
 		stmt = conn.prepareStatement (SELECT_ATTACHMENT_STATS);
 		stmt.setInt (1, bugId);
@@ -3219,7 +3289,7 @@ public class Model {
 		}
 
 		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt,
-				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, operatingSystemCnt, attStats);
+				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, operatingSystemCnt, dependsCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -4410,6 +4480,7 @@ public class Model {
 		stmt.executeUpdate (STATUS_HISTORY_TABLE);
 		stmt.executeUpdate (CC_TABLE);
 		stmt.executeUpdate (BUG_BLOCKS_TABLE);
+		stmt.executeUpdate (BUG_DEPENDENCIES_TABLE);
 		stmt.executeUpdate (CATEGORY_TABLE);
 		stmt.executeUpdate (COMMIT_TABLE);
 		stmt.executeUpdate (BUGFIX_COMMIT_TABLE);

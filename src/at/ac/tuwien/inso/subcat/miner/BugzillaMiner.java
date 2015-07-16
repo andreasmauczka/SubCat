@@ -277,7 +277,7 @@ public class BugzillaMiner extends Miner {
 					int histObsCnt = 0;
 					int histCnt = 0;
 					for (BugzillaAttachmentHistoryEntry histo : att.history) {
-						if ("attachments.gnome_attachment_status".equals (histo.fieldName)) {
+						if ("attachments.gnome_attachment_status".equals (histo.fieldName) || "flagtypes.name".equals (histo.fieldName)) {
 							if (attStats == null || attStatCnt >= attStats.getStatusHistoryCount ()) {
 								AttachmentStatus oldAttStatus = resolveAttachmentStatus (histo.oldValue);
 								AttachmentStatus newAttStatus = resolveAttachmentStatus (histo.newValue);
@@ -404,6 +404,7 @@ public class BugzillaMiner extends Miner {
 			int confirmedCnt = 0;
 			int priorityCnt = 0;
 			int severityCnt = 0;
+			int dependsCnt = 0;
 			int statusCnt = 0;
 			int blocksCnt = 0;
 			int aliasCnt = 0;
@@ -534,6 +535,27 @@ public class BugzillaMiner extends Miner {
 						}
 						blocksCnt += addedIdentifiers.length;
 						blocksCnt += removedIdentifiers.length;
+					} else if ("depends_on".equals (change.getFieldName ())) {
+						String added = change.getAdded ();
+						String removed = change.getRemoved ();
+
+						String[] addedIdentifiers = (added == null)? new String[0] : added.split (",\\s*");
+						String[] removedIdentifiers = (removed == null)? new String[0] : removed.split (",\\s*");
+
+						if (bugStats == null || dependsCnt >= bugStats.getDependsCount ()) {
+							Identity addedBy = resolveIdentity (entry.getWho ());
+
+							for (String identifierStr : addedIdentifiers) {
+								int bugIdentifier = Integer.parseInt (identifierStr);
+								model.addBugDependency (bug, entry.getWhen (), addedBy, null, bugIdentifier, false);
+							}
+							for (String identifierStr : removedIdentifiers) {
+								int bugIdentifier = Integer.parseInt (identifierStr);
+								model.addBugDependency (bug, entry.getWhen (), addedBy, null, bugIdentifier, true);
+							}
+						}
+						dependsCnt += addedIdentifiers.length;
+						dependsCnt += removedIdentifiers.length;
 					} else if (change.getAttachmentId () != null) {
 						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
 						attHisto.identity = resolveIdentity (entry.getWho ());
@@ -640,6 +662,7 @@ public class BugzillaMiner extends Miner {
 		try {
 			model.resolveCcIdentities (project);
 			model.resolveBugBlocksBugs (project);
+			model.resolveBugDependencies (project);
 
 			// Update server time *after* mining to make sure we don't
 			// miss updates in case anything goes wrong.

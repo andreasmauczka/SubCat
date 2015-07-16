@@ -30,6 +30,7 @@
 
 package at.ac.tuwien.inso.subcat.utility;
 
+import java.io.IOException;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -40,7 +41,12 @@ public class Reporter {
 	private int errors = 0;
 	private int warnings = 0;
 	private long startTime = -1;
+	private boolean notify;
 
+
+	public Reporter (boolean notify) {
+		this.notify = notify;
+	}
 	
 	public void error (String context, String msg) {
 		System.out.println ("error: " + context + ": " + msg);
@@ -66,9 +72,9 @@ public class Reporter {
 
 	public void printSummary () {
 		if (errors > 0) {
-			System.out.println ("Mining failed - " + warnings + " warning(s), " + errors + " error(s).");
+			notify ("Mining failed - " + warnings + " warning(s), " + errors + " error(s).");
 		} else {
-			System.out.println ("Mining succeeded - " + warnings + " warning(s)");			
+			notify ("Mining succeeded - " + warnings + " warning(s)");			
 		}
 	}
 
@@ -107,5 +113,17 @@ public class Reporter {
 
 	public void startTimer() {
 		startTime = System.currentTimeMillis ();
+	}
+
+	private void notify (String message) {
+		System.out.println (message);
+		if (notify) {
+			try {
+				ProcessBuilder builder = new ProcessBuilder ("notify-send", "--app-name", "SubCat", message);
+				builder.start();
+			} catch (IOException e) {
+				// Ignore
+			}
+		}
 	}
 }

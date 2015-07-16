@@ -276,7 +276,7 @@ public class PostProcessor {
 		options.addOption ("m", "smart-matching", true, "Smart user matching configuration. Syntax: <method>:<distance>");
 		options.addOption ("M", "list-matching-methods", false, "List smart matching methods");
 
-		final Reporter reporter = new Reporter ();
+		final Reporter reporter = new Reporter (true);
 		reporter.startTimer ();
 
 		Settings settings = new Settings ();

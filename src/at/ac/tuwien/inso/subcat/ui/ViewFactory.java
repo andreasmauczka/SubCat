@@ -331,7 +331,7 @@ public class ViewFactory {
 		options.addOption ("e", "db-extension", true, "Sqlite extension");
 		options.addOption ("v", "verbose", false, "Show details");
 
-		Reporter reporter = new Reporter ();
+		Reporter reporter = new Reporter (false);
 		String[] extensions = new String[0];
 		ModelPool pool = null;
 		Model model = null;

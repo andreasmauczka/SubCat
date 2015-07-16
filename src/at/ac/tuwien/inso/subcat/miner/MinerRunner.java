@@ -209,7 +209,7 @@ public class MinerRunner {
 		options.addOption (null, "src-miner-option", true, "Source miner specific option. Format: <option-name>:value");
 		options.getOption ("src-miner-option").setArgs(Option.UNLIMITED_VALUES);
 
-		final Reporter reporter = new Reporter ();
+		final Reporter reporter = new Reporter (true);
 		reporter.startTimer ();
 
 		boolean printTraces = false;

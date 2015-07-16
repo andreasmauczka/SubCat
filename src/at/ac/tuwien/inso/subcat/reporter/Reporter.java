@@ -241,7 +241,7 @@ public class Reporter {
 		options.addOption ("v", "verbose", false, "Show details");
 
 		
-		at.ac.tuwien.inso.subcat.utility.Reporter errReporter = new at.ac.tuwien.inso.subcat.utility.Reporter ();
+		at.ac.tuwien.inso.subcat.utility.Reporter errReporter = new at.ac.tuwien.inso.subcat.utility.Reporter (false);
 		Settings settings = new Settings ();
 		boolean verbose = false;
 		ModelPool pool = null;

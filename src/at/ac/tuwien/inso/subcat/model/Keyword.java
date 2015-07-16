@@ -1,12 +1,12 @@
 package at.ac.tuwien.inso.subcat.model;
 
 
-public class OperatingSystem implements NamedContainer, Comparable<OperatingSystem> {
+public class Keyword implements NamedContainer, Comparable<Keyword> {
 	private Integer id;
 	private Project project;
 	private String name;
 
-	public OperatingSystem (Integer id, Project project, String name) {
+	public Keyword (Integer id, Project project, String name) {
 		assert (project != null);
 		assert (name != null);
 
@@ -47,11 +47,11 @@ public class OperatingSystem implements NamedContainer, Comparable<OperatingSyst
 
 	@Override
 	public String toString () {
-		return "OperatingSystem [id=" + id + ", name=" + name
+		return "Keyword [id=" + id + ", name=" + name
 				+ "]";
 	}
 
-	public boolean equals (OperatingSystem obj) {
+	public boolean equals (Keyword obj) {
 		if (id == null || obj.id == null) {
 			return obj == this;
 		}
@@ -61,15 +61,15 @@ public class OperatingSystem implements NamedContainer, Comparable<OperatingSyst
 
 	@Override
 	public boolean equals (Object obj) {
-		if (obj instanceof OperatingSystem) {
-			return equals ((OperatingSystem) obj);
+		if (obj instanceof Keyword) {
+			return equals ((Keyword) obj);
 		}
 		
 		return super.equals (obj);
 	}
 
 	@Override
-	public int compareTo (OperatingSystem os) {
+	public int compareTo (Keyword os) {
 		if (id == os.id) {
 			return 0;
 		}

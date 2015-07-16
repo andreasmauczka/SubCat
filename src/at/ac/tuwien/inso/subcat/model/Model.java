@@ -201,6 +201,29 @@ public class Model {
 		+ "UNIQUE (project, name)"
 		+ ")";
 
+	private static final String KEYWORD_TABLE =
+		"CREATE TABLE IF NOT EXISTS Keywords ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "project		INT									NOT NULL,"
+		+ "name			TEXT								NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
+		+ "UNIQUE (name)"
+		+ ")";
+
+
+	private static final String KEYWORD_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS KeywordHistory ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "bug			INT									NOT NULL,"
+		+ "addedBy		INT									NOT NULL,"
+		+ "date			TEXT								NOT NULL,"
+		+ "keyword		INT									NOT NULL,"
+		+ "removed		BOOL									NOT NULL,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(keyword) REFERENCES Keywords (id)"
+		+ ")";
+
 	// TODO: Add isObsolete
 	private static final String BUG_TABLE =
 		"CREATE TABLE IF NOT EXISTS Bugs ("
@@ -264,7 +287,7 @@ public class Model {
 		+ "newOperatingSystem	INT									NOT NULL,"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
 		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
-		+ "FOREIGN KEY(oldOperatingSystem) REFERENCES OperatingSystems (id)"
+		+ "FOREIGN KEY(oldOperatingSystem) REFERENCES OperatingSystems (id),"
 		+ "FOREIGN KEY(newOperatingSystem) REFERENCES OperatingSystems (id)"
 		+ ")";
 
@@ -689,7 +712,8 @@ public class Model {
 		+ " (SELECT COUNT() FROM ConfirmedHistory WHERE ConfirmedHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM VersionHistory WHERE VersionHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM OperatingSystemHistory WHERE OperatingSystemHistory.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM BugDependencies WHERE BugDependencies.bug = Bugs.id)"
+		+ " (SELECT COUNT() FROM BugDependencies WHERE BugDependencies.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM KeywordHistory WHERE KeywordHistory.bug = Bugs.id)"
 		+ "FROM "
 		+ " Bugs, Components "
 		+ "WHERE "
@@ -871,6 +895,16 @@ public class Model {
 		+ "WHERE"
 		+ " project = ?";
 	
+
+	private static final String SELECT_ALL_KEYWORDS =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " Keywords "
+		+ "WHERE"
+		+ " project = ?";
+
 	private static final String SELECT_ALL_STATUSES =
 		"SELECT"
 		+ " id,"
@@ -1275,6 +1309,11 @@ public class Model {
 		+ "(bug, addedBy, date, oldOperatingSystem, newOperatingSystem)"
 		+ "VALUES (?, ?, ?, ?, ?)";
 
+	private static final String KEYWORD_HISTORY_INSERTION =
+		"INSERT INTO KeywordHistory"
+		+ "(bug, addedBy, date, keyword, removed)"
+		+ "VALUES (?, ?, ?, ?, ?)";
+
 	private static final String STATUS_HISTORY_INSERTION =
 		"INSERT INTO StatusHistory"
 		+ "(bug, addedBy, date, oldStatus, newStatus)"
@@ -1292,13 +1331,6 @@ public class Model {
 		+ "WHERE"
 		+ " id = ?";
 
-	/*
-	private static final String ATTACHMENT_REPLACEMENT_INSERTION =
-		"INSERT INTO AttachmentReplacements"
-		+ "(old, new)"
-		+ "VALUES (?, ?)";
-	*/
-	
 	private static final String ATTACHMENT_STATUS_INSERTION
 		= "INSERT INTO AttachmentStatus"
 		+ "(project, name)"
@@ -1393,6 +1425,11 @@ public class Model {
 
 	private static final String OPERATING_SYSTEM_INSERTION =
 		"INSERT INTO OperatingSystems "
+		+ "(project, name)"
+		+ "VALUES (?, ?)";
+
+	private static final String KEYWORD_INSERTION =
+		"INSERT INTO Keywords "
 		+ "(project, name)"
 		+ "VALUES (?, ?)";
 
@@ -1964,6 +2001,33 @@ public class Model {
 		pool.emitOperatingSystemAdded (os);
 	}
 
+	public Keyword addKeyword (Project project, String name) throws SQLException {
+		Keyword kw = new Keyword (null, project, name);
+		add (kw);
+		return kw;
+	}
+
+	public void add (Keyword keyword) throws SQLException {
+		assert (conn != null);
+		assert (keyword != null);
+		Project project = keyword.getProject ();
+		assert (project.getId () != null);
+		assert (keyword.getId () == null);
+
+		PreparedStatement stmt = conn.prepareStatement (KEYWORD_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, project.getId ());
+		stmt.setString(2, keyword.getName ());
+		stmt.executeUpdate();
+
+		keyword.setId (getLastInsertedId (stmt));
+
+		stmt.close ();		
+
+		pool.emitKeywordAdded (keyword);
+	}
+
 	public Priority addPriority (Project project, String name) throws SQLException {
 		Priority priority = new Priority (null, project, name);
 		add (priority);
@@ -2153,24 +2217,6 @@ public class Model {
 		pool.emitAttachmentUpdated (attachment);
 	}
 	
-	/*
-	public void addAttachmentReplacement (Attachment oldAtt, Attachment newAtt) throws SQLException {
-		assert (oldAtt != null);
-		assert (newAtt != null);
-		assert (oldAtt.getId () != null);
-		assert (newAtt.getId () != null);
-
-		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_REPLACEMENT_INSERTION);
-		stmt.setInt (1, oldAtt.getId ());
-		stmt.setInt (2, newAtt.getId ());
-		stmt.executeUpdate();
-
-		stmt.close ();
-
-		pool.emitAttachmentReplacementAdded (oldAtt, newAtt);
-	}
-	*/
-
 	public AttachmentStatusHistory addAttachmentStatusHistory (Attachment attachment, Identity identity, Date date, AttachmentStatus oldStatus, AttachmentStatus newStatus) throws SQLException {
 		AttachmentStatusHistory histo = new AttachmentStatusHistory (null, attachment, identity, date, oldStatus, newStatus);
 		add (histo);
@@ -2447,6 +2493,28 @@ public class Model {
 		stmt.close ();
 
 		pool.emitOperatingSystemHistoryAdded (bug, addedBy, date, oldOs, newOs);
+	}
+
+	public void addKeywordHistory (Bug bug, Identity addedBy, Date date, Keyword keyword, boolean removed) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (addedBy != null);
+		assert (addedBy.getId () != null);
+		assert (date != null);
+		assert (keyword != null);
+		assert (keyword.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (KEYWORD_HISTORY_INSERTION);
+		stmt.setInt (1, bug.getId ());
+		stmt.setInt (2, addedBy.getId ());
+		resSetDate (stmt, 3, date);
+		stmt.setInt (4, keyword.getId ());
+		stmt.setBoolean (5, removed);
+
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitKeywordHistoryAdded (bug, addedBy, date, keyword, removed);
 	}
 
 	public void addStatusHistory (Bug bug, Identity addedBy, Date date, Status oldStatus, Status newStatus) throws SQLException {
@@ -3259,6 +3327,7 @@ public class Model {
 		int versionHistoCnt = res.getInt (13);
 		int operatingSystemCnt = res.getInt (14);
 		int dependsCnt = res.getInt (15);
+		int keywordCnt = res.getInt (16);
 
 
 		// Statement:
@@ -3289,7 +3358,7 @@ public class Model {
 		}
 
 		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt,
-				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, operatingSystemCnt, dependsCnt, attStats);
+				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, operatingSystemCnt, dependsCnt, keywordCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -3903,6 +3972,26 @@ public class Model {
 		return opsys;
 	}
 
+	public Map<String, Keyword> getKeywordsByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_KEYWORDS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<String, Keyword> kwds = new HashMap<String, Keyword> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Keyword kw = new Keyword (res.getInt (1), proj, res.getString (2));
+			kwds.put (kw.getName (), kw);
+		}
+	
+		return kwds;
+	}
+
 	public Map<String, Version> getVersionsByName (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -3982,7 +4071,27 @@ public class Model {
 	
 		return opsys;
 	}
+
+	public Map<Integer, Keyword> getKeywords (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_KEYWORDS);
+		stmt.setInt (1, proj.getId ());
 	
+		// Collect data:
+		HashMap<Integer, Keyword> kwds = new HashMap<Integer, Keyword> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Keyword kw = new Keyword (res.getInt (1), proj, res.getString (2));
+			kwds.put (kw.getId (), kw);
+		}
+	
+		return kwds;
+	}
+
 	public Map<String, Severity> getSeveritiesByName (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -4466,6 +4575,7 @@ public class Model {
 		stmt.executeUpdate (SEVERITY_TABLE);
 		stmt.executeUpdate (VERSION_TABLE);
 		stmt.executeUpdate (OPERATING_SYSTEM_TABLE);
+		stmt.executeUpdate (KEYWORD_TABLE);
 		stmt.executeUpdate (BUG_TABLE);
 		stmt.executeUpdate (PRIORITY_HISTORY_TABLE);
 		stmt.executeUpdate (SEVERITY_HISTORY_TABLE);
@@ -4473,6 +4583,7 @@ public class Model {
 		stmt.executeUpdate (CONFIRMED_HISTORY_TABLE);
 		stmt.executeUpdate (VERSION_HISTORY_TABLE);
 		stmt.executeUpdate (OPERATING_SYSTEM_HISTORY_TABLE);
+		stmt.executeUpdate (KEYWORD_HISTORY_TABLE);
 		stmt.executeUpdate (BUG_ALIASES);
 		stmt.executeUpdate (COMMENT_TABLE);
 		stmt.executeUpdate (STATUS_TABLE);
@@ -4498,7 +4609,6 @@ public class Model {
 		stmt.executeUpdate (BUG_CATEGORIES_TABLE);
 		stmt.executeUpdate (COMMIT_CATEGORIES_TABLE);
 		stmt.executeUpdate (DICTIONARY_TABLE);
-		//stmt.executeUpdate (ATTACHMENT_REPLACEMENT_TABLE);
 		stmt.executeUpdate (SENTENCE_SENTIMENT_TABLE);
 		stmt.executeUpdate (BLOCK_SENTIMENT_TABLE);
 		stmt.executeUpdate (SENTIMENT_TABLE);

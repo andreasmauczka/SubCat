@@ -57,6 +57,7 @@ import at.ac.tuwien.inso.subcat.model.BugStats;
 import at.ac.tuwien.inso.subcat.model.Comment;
 import at.ac.tuwien.inso.subcat.model.Component;
 import at.ac.tuwien.inso.subcat.model.Identity;
+import at.ac.tuwien.inso.subcat.model.Keyword;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.OperatingSystem;
@@ -103,6 +104,7 @@ public class BugzillaMiner extends Miner {
 	private Map<String, Severity> severities = new HashMap<String, Severity> ();
 	private Map<String, Identity> identities = new HashMap<String, Identity> ();
 	private Map<String, Version> versions = new HashMap<String, Version> ();
+	private Map<String, Keyword> keywords = new HashMap<String, Keyword> ();
 	private Map<String, Status> status = new HashMap<String, Status> ();
 	private Project project;
 
@@ -404,6 +406,7 @@ public class BugzillaMiner extends Miner {
 			int confirmedCnt = 0;
 			int priorityCnt = 0;
 			int severityCnt = 0;
+			int keywordCnt = 0;
 			int dependsCnt = 0;
 			int statusCnt = 0;
 			int blocksCnt = 0;
@@ -556,6 +559,28 @@ public class BugzillaMiner extends Miner {
 						}
 						dependsCnt += addedIdentifiers.length;
 						dependsCnt += removedIdentifiers.length;
+					} else if ("keywords".equals (change.getFieldName ())) {
+						String added = change.getAdded ();
+						String removed = change.getRemoved ();
+
+						String[] addedKeywords = (added == null)? new String[0] : added.split ("[,\\s*|\\s+]+");
+						String[] removedKeywords = (removed == null)? new String[0] : removed.split ("[,\\s*|\\s+]+");
+
+
+						if (bugStats == null || keywordCnt >= bugStats.getKeywordCount ()) {
+							Identity addedBy = resolveIdentity (entry.getWho ());
+
+							for (String kw : addedKeywords) {
+								Keyword keyword = resolveKeyword (kw);
+								model.addKeywordHistory (bug, addedBy, entry.getWhen (), keyword, false);
+							}
+							for (String kw : removedKeywords) {
+								Keyword keyword = resolveKeyword (kw);
+								model.addKeywordHistory (bug, addedBy, entry.getWhen (), keyword, true);
+							}
+						}
+						keywordCnt += addedKeywords.length;
+						keywordCnt += removedKeywords.length;					
 					} else if (change.getAttachmentId () != null) {
 						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
 						attHisto.identity = resolveIdentity (entry.getWho ());
@@ -713,6 +738,7 @@ public class BugzillaMiner extends Miner {
 		components = model.getComponentsByName (project);
 		versions = model.getVersionsByName (project);
 		attachmentStatus = model.getAttachmentStatusByName (project);
+		keywords = model.getKeywordsByName (project);
 
 		model.setDefaultStatus (resolveStatus ("UNCO"));
 
@@ -787,6 +813,18 @@ public class BugzillaMiner extends Miner {
 		}
 		
 		return os;		
+	}
+
+	private synchronized Keyword resolveKeyword (String name) throws SQLException {
+		assert (name != null);
+
+		Keyword kw = keywords.get (name);
+		if (kw == null) {
+			kw = model.addKeyword (project, name);
+			keywords.put (name, kw);
+		}
+		
+		return kw;		
 	}
 
 	private synchronized Version resolveVersion (String name) throws SQLException {

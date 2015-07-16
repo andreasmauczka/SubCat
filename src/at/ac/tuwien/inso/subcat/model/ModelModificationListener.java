@@ -139,4 +139,9 @@ public interface ModelModificationListener {
 	public void attachmentHistoryAdded (Attachment attachment,
 			Identity addedBy, Date date, String fieldName, String oldValue,
 			String newValue);
+
+	public void keywordAdded (Keyword keyword);
+
+	public void keywordHistoryAdded (Bug bug, Identity addedBy, Date date,
+			Keyword keyword, boolean removed);
 }

@@ -19,11 +19,13 @@ public class BugStats {
 	private int confirmedCnt;
 	private int versionHistoCnt;
 	private int operatingSystemCnt;
+	private int dependsCnt;
+	private int keywordCnt;
 
 
 	public BugStats (int id, int cmntCnt, int histCnt, int attCnt, int ccCnt, int blocksCnt, int aliasCnt, int severityHistoryCnt, 
 			int priorityCnt, int statusCnt, int resolutionCnt, int confirmedCnt, int versionHistoCnt, int operatingSystemCnt,
-			Map<Integer, BugAttachmentStats> attStats) {
+			int dependsCnt, int keywordCnt, Map<Integer, BugAttachmentStats> attStats) {
 		this.id = id;
 		this.cmntCnt = cmntCnt;
 		this.histCnt = histCnt;
@@ -39,6 +41,8 @@ public class BugStats {
 		this.confirmedCnt = confirmedCnt;
 		this.versionHistoCnt = versionHistoCnt;
 		this.operatingSystemCnt = operatingSystemCnt;
+		this.dependsCnt = dependsCnt;
+		this.keywordCnt = keywordCnt;
 	}
 	
 	public Map<Integer, BugAttachmentStats> getAttachmentStatsByIdentifier () {
@@ -99,5 +103,13 @@ public class BugStats {
 
 	public int getOperatingSystemHistoryCount () {
 		return operatingSystemCnt;
+	}
+
+	public int getDependsCount () {
+		return dependsCnt;
+	}
+
+	public int getKeywordCount () {
+		return keywordCnt;
 	}
 }

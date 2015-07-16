@@ -467,11 +467,24 @@ public class ModelPool {
 		}
 	}
 
-	public void emitAttachmentHistoryAdded (Attachment attachment,
+	public synchronized void emitAttachmentHistoryAdded (Attachment attachment,
 			Identity addedBy, Date date, String fieldName, String oldValue,
 			String newValue) {
 		for (ModelModificationListener listener : listeners) {
 			listener.attachmentHistoryAdded (attachment, addedBy, date, fieldName, oldValue, newValue);
+		}
+	}
+
+	public synchronized void emitKeywordAdded (Keyword keyword) {
+		for (ModelModificationListener listener : listeners) {
+			listener.keywordAdded (keyword);
+		}
+	}
+
+	public synchronized void emitKeywordHistoryAdded (Bug bug, Identity addedBy, Date date,
+			Keyword keyword, boolean removed) {
+		for (ModelModificationListener listener : listeners) {
+			listener.keywordHistoryAdded (bug, addedBy, date, keyword, removed);
 		}
 	}
 }

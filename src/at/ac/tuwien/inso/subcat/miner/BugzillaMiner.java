@@ -120,9 +120,10 @@ public class BugzillaMiner extends Miner {
 	
 	private class BugzillaAttachmentHistoryEntry {
 		public Identity identity;
-		public String status;
 		public Date date;
-		public Boolean isObsolete;
+		public String fieldName;
+		public String oldValue;
+		public String newValue;
 	}
 	
 	private class Worker extends Thread {
@@ -274,19 +275,27 @@ public class BugzillaMiner extends Miner {
 
 					int attStatCnt = 0;
 					int histObsCnt = 0;
+					int histCnt = 0;
 					for (BugzillaAttachmentHistoryEntry histo : att.history) {
-						if (histo.status != null) {
-							if (attStats == null || attStatCnt >= attStats.getHistoryCount ()) {
-								AttachmentStatus attStatus = resolveAttachmentStatus (histo.status);
-								model.addAttachmentHistory (histo.identity, attStatus, attachment, histo.date);
+						if ("attachments.gnome_attachment_status".equals (histo.fieldName)) {
+							if (attStats == null || attStatCnt >= attStats.getStatusHistoryCount ()) {
+								AttachmentStatus oldAttStatus = resolveAttachmentStatus (histo.oldValue);
+								AttachmentStatus newAttStatus = resolveAttachmentStatus (histo.newValue);
+								model.addAttachmentStatusHistory (attachment, histo.identity, histo.date, oldAttStatus, newAttStatus);
 							}
 							attStatCnt++;
-						}
-						if (histo.isObsolete != null) {
+						} else if ("attachments.isobsolete".equals (histo.fieldName)) {
 							if (attStats == null || histObsCnt >= attStats.getObsoleteCount ()) {
-								model.setAttachmentIsObsolete (attachment, histo.identity, histo.date, histo.isObsolete);
+								boolean oldValue = "1".equals (histo.oldValue);
+								boolean newValue = "1".equals (histo.newValue);
+								model.setAttachmentIsObsolete (attachment, histo.identity, histo.date, oldValue, newValue);
 							}
 							histObsCnt++;
+						} else {
+							if (attStats == null || histCnt >= attStats.getHistoryCount ()) {
+								model.addAttachmentHistory (attachment, histo.identity, histo.date, histo.fieldName, histo.oldValue, histo.newValue);
+							}
+							histCnt++;
 						}
 					}
 				}
@@ -525,6 +534,16 @@ public class BugzillaMiner extends Miner {
 						}
 						blocksCnt += addedIdentifiers.length;
 						blocksCnt += removedIdentifiers.length;
+					} else if (change.getAttachmentId () != null) {
+						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
+						attHisto.identity = resolveIdentity (entry.getWho ());
+						attHisto.date = entry.getWhen ();
+						attHisto.fieldName = change.getFieldName ();
+						attHisto.oldValue = change.getRemoved ();
+						attHisto.newValue = change.getAdded ();
+
+						BugzillaAttachment bugzillaAttachment = getAttachment (attachments, change.getAttachmentId ());
+						bugzillaAttachment.history.add (attHisto);
 					} else {
 						if (bugStats == null || bugHistoryCnt >= bugStats.getHistoryCount ()) {
 							Identity identity = resolveIdentity (entry.getWho ());
@@ -533,32 +552,6 @@ public class BugzillaMiner extends Miner {
 							model.addBugHistory (bug, identity, date, change.getFieldName (), change.getRemoved (), change.getAdded ());
 						}
 						bugHistoryCnt++;
-					}
-
-					// TODO: Store fieldName==depends_on
-					if (change.getAttachmentId () != null) {
-						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
-
-						String status = change.getFieldName ();
-						if (status.equals ("attachments.isobsolete")) {
-							if (change.getAdded ().equals ("1")) {
-								attHisto.isObsolete = true;
-							} else {
-								attHisto.isObsolete = false;
-							}
-						} else if (status.equals ("attachments.gnome_attachment_status") || status.equals ("flagtypes.name")) {
-							attHisto.status = change.getAdded ();
-						} else {
-							continue;
-						}
-
-
-						attHisto.date = entry.getWhen ();
-						Identity identity = resolveIdentity (entry.getWho ());
-						attHisto.identity = identity;
-
-						BugzillaAttachment bugzillaAttachment = getAttachment (attachments, change.getAttachmentId ());
-						bugzillaAttachment.history.add (attHisto);
 					}
 				}
 			}

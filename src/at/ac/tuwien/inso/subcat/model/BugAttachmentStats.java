@@ -6,12 +6,14 @@ public class BugAttachmentStats {
 	private int attIdentifier;
 	private int attObsCnt;
 	private int attHistCnt;
+	private int attStatHistCnt;
 
-	public BugAttachmentStats (int attId, int attIdentifier, int attObsCnt, int attHistCnt) {
+	public BugAttachmentStats (int attId, int attIdentifier, int attObsCnt, int attStatHistCnt, int attHistCnt) {
 		this.attId = attId;
 		this.attIdentifier = attIdentifier;
 		this.attObsCnt = attObsCnt;
 		this.attHistCnt = attHistCnt;
+		this.attStatHistCnt = attStatHistCnt;
 	}
 
 	public int getId () {
@@ -28,5 +30,9 @@ public class BugAttachmentStats {
 
 	public int getHistoryCount () {
 		return attHistCnt;
+	}
+
+	public int getStatusHistoryCount () {
+		return attStatHistCnt;
 	}
 }

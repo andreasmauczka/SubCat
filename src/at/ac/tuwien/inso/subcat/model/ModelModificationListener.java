@@ -84,7 +84,7 @@ public interface ModelModificationListener {
 
 	public void attachmentStatusAdded (AttachmentStatus status);
 
-	public void attachmentHistoryAdded (AttachmentHistory history);
+	public void attachmentStatusHistoryAdded (AttachmentStatusHistory history);
 
 	public void bugCategoryAdded (Bug bug, Category category);
 
@@ -98,7 +98,7 @@ public interface ModelModificationListener {
 	public void sentimentAdded (Comment comment, Sentiment<Identity> sentiment);
 
 	public void attachmentIsObsoleteAdded (Attachment attachment,
-			Identity identity, Date date, boolean value);
+			Identity identity, Date date, boolean oldValue, boolean newValue);
 
 	public void bugCcAdded (Bug bug, Date date, Identity addedBy,
 			Identity cc, String ccMail, boolean removed);
@@ -135,4 +135,8 @@ public interface ModelModificationListener {
 
 	public void operatingSystemHistoryAdded (Bug bug, Identity addedBy,
 			Date date, OperatingSystem oldOs, OperatingSystem newOs);
+
+	public void attachmentHistoryAdded (Attachment attachment,
+			Identity addedBy, Date date, String fieldName, String oldValue,
+			String newValue);
 }

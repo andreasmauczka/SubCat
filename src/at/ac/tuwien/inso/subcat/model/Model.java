@@ -354,7 +354,8 @@ public class Model {
 		+ "attachment	INTEGER								NOT NULL,"
 		+ "identity		INTEGER								NOT NULL,"
 		+ "date			TEXT								NOT NULL,"
-		+ "isObsolete	INTEGER								NOT NULL,"
+		+ "oldValue		INTEGER								NOT NULL,"
+		+ "newValue		INTEGER								NOT NULL,"
 		+ "FOREIGN KEY(attachment) REFERENCES Attachments (id),"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id)"
 		+ ")";
@@ -367,16 +368,31 @@ public class Model {
 		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
 		+ ")";
 
-	private static final String ATTACHMENT_HISTORY_TABLE =
-		"CREATE TABLE IF NOT EXISTS AttachmentHistory ("
+	private static final String ATTACHMENT_STATUS_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS AttachmentStatusHistory ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
-		+ "date			TEXT								NOT NULL,"
-		+ "identity		INT									NOT NULL,"
 		+ "attachment	INT									NOT NULL,"
-		+ "status		INT									NOT NULL,"
+		+ "identity		INT									NOT NULL,"
+		+ "date			TEXT								NOT NULL,"
+		+ "oldStatus	INT									NOT NULL,"
+		+ "newStatus	INT									NOT NULL,"
 		+ "FOREIGN KEY(attachment) REFERENCES Attachments (id),"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
-		+ "FOREIGN KEY(status) REFERENCES AttachmentStatus (id)"
+		+ "FOREIGN KEY(oldStatus) REFERENCES AttachmentStatus (id),"
+		+ "FOREIGN KEY(newStatus) REFERENCES AttachmentStatus (id)"
+		+ ")";
+
+	private static final String ATTACHMENT_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS AttachmentHistory ("
+		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+		+ "attachment	INT									NOT NULL,"
+		+ "identity		INT									NOT NULL,"
+		+ "date			TEXT								NOT NULL,"
+		+ "field		TEXT								NOT NULL,"
+		+ "oldValue		TEXT										,"
+		+ "newValue		TEXT										,"
+		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(attachment) REFERENCES Attachments (id)"
 		+ ")";
 
 	private static final String COMMENT_TABLE =
@@ -402,7 +418,7 @@ public class Model {
 		+ ")";
 
 	private static final String BUG_HISTORY_TABLE =
-		"CREATE TABLE IF NOT EXISTS BugHistories ("
+		"CREATE TABLE IF NOT EXISTS BugHistory ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
 		+ "bug			INT									NOT NULL,"
 		+ "identity		INT									NOT NULL,"
@@ -647,7 +663,7 @@ public class Model {
 		"SELECT "
 		+ " Bugs.id,"
 		+ " (SELECT COUNT() FROM Comments WHERE Comments.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM BugHistories WHERE BugHistories.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM BugHistory WHERE BugHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM Attachments, Comments WHERE Attachments.comment = Comments.id AND Comments.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugCc WHERE BugCc.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugBlocks WHERE BugBlocks.bug = Bugs.id),"
@@ -671,6 +687,7 @@ public class Model {
 		+ " Attachments.id,"
 		+ " Attachments.identifier,"
 		+ " (SELECT COUNT() FROM ObsoleteAttachments WHERE ObsoleteAttachments.attachment = Attachments.id),"
+		+ " (SELECT COUNT() FROM AttachmentStatusHistory WHERE AttachmentStatusHistory.attachment = Attachments.id),"
 		+ " (SELECT COUNT() FROM AttachmentHistory WHERE AttachmentHistory.attachment = Attachments.id) "
 		+ "FROM "
 		+ " Bugs, Attachments, Comments "
@@ -691,7 +708,6 @@ public class Model {
 		+ "WHERE "
 		+ " project = ?";
 
-	
 	private static final String SELECT_ALL_COMMITS =
 		"SELECT"
 		+ " Commits.id					AS cId,"
@@ -760,7 +776,6 @@ public class Model {
 		+ " ON Components.id = Bugs.component "
 		+ "WHERE"
 		+ " Components.project = ?";
-
 
 	private static final String SELECT_BUG = 
 		"SELECT"
@@ -969,28 +984,28 @@ public class Model {
 
 	private static final String SELECT_FULL_HISTORY =
 		"SELECT"
-		+ " BugHistories.id,"
+		+ " BugHistory.id,"
 		+ " Identity.id,"
 		+ " Identity.name,"
 		+ " Identity.mail,"
 		+ " Users.id,"
 		+ " Users.name,"
-		+ " BugHistories.date,"
-		+ " BugHistories.field,"
-		+ " BugHistories.oldValue,"
-		+ " BugHistories.newValue,"
+		+ " BugHistory.date,"
+		+ " BugHistory.field,"
+		+ " BugHistory.oldValue,"
+		+ " BugHistory.newValue,"
 		+ " Identity.context,"
 		+ " Identity.identifier "
 		+ "FROM"
-		+ " BugHistories "
+		+ " BugHistory "
 		+ "LEFT JOIN Identities Identity"
-		+ " ON BugHistories.identity = Identity.id "
+		+ " ON BugHistory.identity = Identity.id "
 		+ "LEFT JOIN Users "
 		+ " ON Users.id = Identity.user "
 		+ "WHERE"
-		+ " BugHistories.bug = ? "
+		+ " BugHistory.bug = ? "
 		+ "ORDER BY"
-		+ " BugHistories.id";
+		+ " BugHistory.id";
 
 	private static final String SELECT_DICTIONARIES =
 		"SELECT "
@@ -1113,8 +1128,8 @@ public class Model {
 
 	private static final String OBSOLETE_ATTACHMENT_INSERTION =
 		"INSERT INTO ObsoleteAttachments "
-		+ "(attachment, identity, date, isObsolete) "
-		+ "VALUES (?, ?, ?, ?);";
+		+ "(attachment, identity, date, oldValue, newValue) "
+		+ "VALUES (?, ?, ?, ?, ?);";
 
 	private static final String BUG_CATEGORY_INSERTION =
 		"INSERT INTO BugCategories "
@@ -1274,10 +1289,10 @@ public class Model {
 		+ "(project, name)"
 		+ "VALUES (?, ?)";
 
-	private static final String ATTACHMENT_HISTORY_INSERTION =
-		"INSERT INTO AttachmentHistory"
-		+ "(identity, attachment, status, date)"
-		+ "VALUES (?, ?, ?, ?)";
+	private static final String ATTACHMENT_STATUS_HISTORY_INSERTION =
+		"INSERT INTO AttachmentStatusHistory"
+		+ "(attachment, identity, date, oldStatus, newStatus)"
+		+ "VALUES (?, ?, ?, ?, ?)";
 
 	private static final String COMMENT_INSERTION =
 		"INSERT INTO Comments"
@@ -1290,8 +1305,13 @@ public class Model {
 		+ "VALUES (?,?)";
 
 	private static final String BUG_HISTORY_INSERTION =
-		"INSERT INTO BugHistories"
+		"INSERT INTO BugHistory"
 		+ "(bug, identity, date, field, oldValue, newValue)"
+		+ "VALUES (?,?,?,?,?,?)";
+
+	private static final String ATTACHMENT_HISTORY_INSERTION =
+		"INSERT INTO AttachmentHistory"
+		+ "(attachment, identity, date, field, oldValue, newValue)"
 		+ "VALUES (?,?,?,?,?,?)";
 
 	private static final String BUG_CC_INSERTION =
@@ -1598,7 +1618,7 @@ public class Model {
 		return new Stats (commitCount, bugCount);
 	}
 
-	public void setAttachmentIsObsolete (Attachment attachment, Identity identity, Date date, boolean value) throws SQLException {
+	public void setAttachmentIsObsolete (Attachment attachment, Identity identity, Date date, boolean oldValue, boolean newValue) throws SQLException {
 		assert (conn != null);
 		assert (attachment != null);
 		assert (attachment.getId () != null);
@@ -1610,11 +1630,12 @@ public class Model {
 		stmt.setInt (1, attachment.getId ());
 		stmt.setInt (2, identity.getId ());
 		resSetDate (stmt, 3, date);
-		stmt.setBoolean (4, value);
+		stmt.setBoolean (4, oldValue);
+		stmt.setBoolean (5, newValue);
 		stmt.executeUpdate();
 		stmt.close ();
 
-		pool.emitAttachmentIsObsoleteAdded (attachment, identity, date, value);
+		pool.emitAttachmentIsObsoleteAdded (attachment, identity, date, oldValue, newValue);
 	}
 	
 	public void addFlag (Project proj, String flag) throws SQLException {
@@ -2120,37 +2141,40 @@ public class Model {
 		pool.emitAttachmentReplacementAdded (oldAtt, newAtt);
 	}
 	*/
-	
-	public AttachmentHistory addAttachmentHistory (Identity identity, AttachmentStatus status, Attachment attachment, Date date) throws SQLException {
-		AttachmentHistory histo = new AttachmentHistory (null, identity, status, attachment, date);
+
+	public AttachmentStatusHistory addAttachmentStatusHistory (Attachment attachment, Identity identity, Date date, AttachmentStatus oldStatus, AttachmentStatus newStatus) throws SQLException {
+		AttachmentStatusHistory histo = new AttachmentStatusHistory (null, attachment, identity, date, oldStatus, newStatus);
 		add (histo);
 		return histo;
 	}
 
-	public void add (AttachmentHistory history) throws SQLException {
+	public void add (AttachmentStatusHistory history) throws SQLException {
 		assert (conn != null);
 		assert (history != null);
 		assert (history.getAttachment () != null);
-		assert (history.getStatus () != null);
+		assert (history.getOldStatus () != null);
+		assert (history.getNewStatus () != null);
 		assert (history.getIdentity () != null);
 		assert (history.getAttachment ().getId () != null);
-		assert (history.getStatus ().getId () != null);
+		assert (history.getOldStatus ().getId () != null);
+		assert (history.getNewStatus ().getId () != null);
 		assert (history.getIdentity ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_HISTORY_INSERTION,
+		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_STATUS_HISTORY_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
 
-		stmt.setInt (1, history.getIdentity ().getId ());
-		stmt.setInt (2, history.getAttachment ().getId ());
-		stmt.setInt (3, history.getStatus ().getId ());
-		resSetDate (stmt, 4, history.getDate ());
+		stmt.setInt (1, history.getAttachment ().getId ());
+		stmt.setInt (2, history.getIdentity ().getId ());
+		resSetDate (stmt, 3, history.getDate ());
+		stmt.setInt (4, history.getOldStatus ().getId ());
+		stmt.setInt (5, history.getNewStatus ().getId ());
 		stmt.executeUpdate();
 
 		history.setId (getLastInsertedId (stmt));
 
 		stmt.close ();
 
-		pool.emitAttachmentHistoryAdded (history);
+		pool.emitAttachmentStatusHistoryAdded (history);
 	}
 
 	public Bug addBug (Integer identifier, Identity identity, Component component,
@@ -2476,6 +2500,31 @@ public class Model {
 		stmt.close ();
 
 		pool.emitBugHistoryAdded (history);
+	}
+
+	public void addAttachmentHistory (Attachment attachment, Identity identity, Date date, String fieldName, String oldValue, String newValue) throws SQLException {
+		assert (conn != null);
+		assert (attachment != null);
+		assert (attachment.getId () != null);
+		assert (identity != null);
+		assert (identity.getId () != null);
+		assert (date != null);
+		assert (fieldName != null);
+
+		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_HISTORY_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, attachment.getId ());
+		stmt.setInt (2, identity.getId ());
+		resSetDate (stmt, 3, date);
+		stmt.setString (4, fieldName);
+		stmt.setString (5, oldValue);
+		stmt.setString (6, newValue);
+		stmt.executeUpdate();
+
+		stmt.close ();
+
+		pool.emitAttachmentHistoryAdded (attachment, identity, date, fieldName, oldValue, newValue);
 	}
 
 	public void addBugCc (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) throws SQLException {
@@ -3153,8 +3202,20 @@ public class Model {
 			int attId = res.getInt (1);
 			int attIdentifier = res.getInt (2);
 			int attObsCnt = res.getInt (3); 
-			int attHistCnt = res.getInt (4);
-			attStats.put (attIdentifier, new BugAttachmentStats (attId, attIdentifier, attObsCnt, attHistCnt));
+			int attStatHistCnt = res.getInt (4);
+			int attHistCnt = res.getInt (5);
+
+/*			
+1			+ " Attachments.id,"
+2			+ " Attachments.identifier,"
+3			+ " (SELECT COUNT() FROM ObsoleteAttachments WHERE ObsoleteAttachments.attachment = Attachments.id),"
+4			+ " (SELECT COUNT() FROM AttachmentStatusHistory WHERE AttachmentStatusHistory.attachment = Attachments.id),"
+5			+ " (SELECT COUNT() FROM AttachmentHistory WHERE AttachmentHistory.attachment = Attachments.id) "
+*/
+			
+			
+			// BugAttachmentStats (int attId, int attIdentifier, int attObsCnt, int statHistCnt, int attHistCnt)
+			attStats.put (attIdentifier, new BugAttachmentStats (attId, attIdentifier, attObsCnt, attStatHistCnt, attHistCnt));
 		}
 
 		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt,
@@ -4361,6 +4422,7 @@ public class Model {
 		stmt.executeUpdate (PROJECT_FLAG_TABLE);
 		stmt.executeUpdate (ATTACHMENT_TABLE);
 		stmt.executeUpdate (ATTACHMENT_STATUS_TABLE);
+		stmt.executeUpdate (ATTACHMENT_STATUS_HISTORY_TABLE);
 		stmt.executeUpdate (ATTACHMENT_HISTORY_TABLE);
 		stmt.executeUpdate (BUG_CATEGORIES_TABLE);
 		stmt.executeUpdate (COMMIT_CATEGORIES_TABLE);

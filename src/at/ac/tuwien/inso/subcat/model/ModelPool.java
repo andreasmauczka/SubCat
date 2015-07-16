@@ -214,9 +214,9 @@ public class ModelPool {
 		}
 	}
 
-	synchronized void emitAttachmentHistoryAdded (AttachmentHistory history) {	
+	synchronized void emitAttachmentStatusHistoryAdded (AttachmentStatusHistory history) {	
 		for (ModelModificationListener listener : listeners) {
-			listener.attachmentHistoryAdded (history);
+			listener.attachmentStatusHistoryAdded (history);
 		}
 	}
 
@@ -376,9 +376,9 @@ public class ModelPool {
 		return this.printTemplates;
 	}
 
-	public synchronized void emitAttachmentIsObsoleteAdded (Attachment attachment, Identity identity, Date date, boolean value) {
+	public synchronized void emitAttachmentIsObsoleteAdded (Attachment attachment, Identity identity, Date date, boolean oldValue, boolean newValue) {
 		for (ModelModificationListener listener : listeners) {
-			listener.attachmentIsObsoleteAdded (attachment, identity, date, value);
+			listener.attachmentIsObsoleteAdded (attachment, identity, date, oldValue, newValue);
 		}
 	}
 
@@ -464,6 +464,14 @@ public class ModelPool {
 			Date date, OperatingSystem oldOs, OperatingSystem newOs) {
 		for (ModelModificationListener listener : listeners) {
 			listener.operatingSystemHistoryAdded (bug, addedBy, date, oldOs, newOs);
+		}
+	}
+
+	public void emitAttachmentHistoryAdded (Attachment attachment,
+			Identity addedBy, Date date, String fieldName, String oldValue,
+			String newValue) {
+		for (ModelModificationListener listener : listeners) {
+			listener.attachmentHistoryAdded (attachment, addedBy, date, fieldName, oldValue, newValue);
 		}
 	}
 }

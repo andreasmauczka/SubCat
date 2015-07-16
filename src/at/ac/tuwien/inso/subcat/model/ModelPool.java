@@ -487,5 +487,18 @@ public class ModelPool {
 			listener.keywordHistoryAdded (bug, addedBy, date, keyword, removed);
 		}
 	}
+
+	public synchronized void emitMilestoneAdded (Milestone ms) {
+		for (ModelModificationListener listener : listeners) {
+			listener.milestoneAdded (ms);
+		}
+	}
+
+	public synchronized void emitMilestoneHistoryAdded (Bug bug, Identity addedBy,
+			Date date, Milestone oldMilestone, Milestone newMilestone) {
+		for (ModelModificationListener listener : listeners) {
+			listener.milestoneAdded (bug, addedBy, date, oldMilestone, newMilestone);
+		}
+	}
 }
 

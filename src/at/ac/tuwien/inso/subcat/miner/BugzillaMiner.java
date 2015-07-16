@@ -58,6 +58,7 @@ import at.ac.tuwien.inso.subcat.model.Comment;
 import at.ac.tuwien.inso.subcat.model.Component;
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.Keyword;
+import at.ac.tuwien.inso.subcat.model.Milestone;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.OperatingSystem;
@@ -100,6 +101,7 @@ public class BugzillaMiner extends Miner {
 	private Map<String, OperatingSystem> operatingSystems = new HashMap<String, OperatingSystem> ();
 	private Map<String, Component> components = new HashMap<String, Component> ();
 	private Map<String, Resolution> resolutions = new HashMap<String, Resolution> ();
+	private Map<String, Milestone> milestones = new HashMap<String, Milestone> ();
 	private Map<String, Priority> priorities = new HashMap<String, Priority> ();
 	private Map<String, Severity> severities = new HashMap<String, Severity> ();
 	private Map<String, Identity> identities = new HashMap<String, Identity> ();
@@ -403,6 +405,7 @@ public class BugzillaMiner extends Miner {
 			int versionHistoCnt = 0;
 			int bugHistoryCnt = 0;
 			int resolutionCnt = 0;
+			int milestoneCnt = 0;
 			int confirmedCnt = 0;
 			int priorityCnt = 0;
 			int severityCnt = 0;
@@ -581,6 +584,17 @@ public class BugzillaMiner extends Miner {
 						}
 						keywordCnt += addedKeywords.length;
 						keywordCnt += removedKeywords.length;					
+					} else if ("target_milestone".equals (change.getFieldName ())) {
+
+						if (change.getAdded () != null) {
+							if (bugStats == null || milestoneCnt >= bugStats.getMilestoneCount ()) {
+								Identity addedBy = resolveIdentity (entry.getWho ());
+								Milestone oldMs = resolveMilestone (change.getRemoved ());
+								Milestone newMs = resolveMilestone (change.getAdded ());
+								model.addMilestoneHistory (bug, addedBy, entry.getWhen (), oldMs, newMs);
+							}
+							milestoneCnt++;
+						}
 					} else if (change.getAttachmentId () != null) {
 						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
 						attHisto.identity = resolveIdentity (entry.getWho ());
@@ -732,6 +746,7 @@ public class BugzillaMiner extends Miner {
 		// Initialise caches based on previously mined data:
 		operatingSystems = model.getOperatingSystemsByName (project);
 		resolutions = model.getResolutionsByName (project);
+		milestones = model.getMilestonesByName (project);
 		priorities = model.getPrioritiesByName (project);
 		severities = model.getSeveritiesByName (project);
 		status = model.getStatusesByName (project);
@@ -927,7 +942,19 @@ public class BugzillaMiner extends Miner {
 		
 		return resolution;		
 	}
-	
+
+	private synchronized Milestone resolveMilestone (String name) throws SQLException {
+		assert (name != null);
+
+		Milestone ms = milestones.get (name);
+		if (ms == null) {
+			ms = model.addMilestone (project, name);
+			milestones.put (name, ms);
+		}
+		
+		return ms;		
+	}
+
 	private synchronized AttachmentStatus resolveAttachmentStatus (String name) throws SQLException {
 		assert (name != null);
 

@@ -164,6 +164,15 @@ public class Model {
 		+ "UNIQUE (project, name)"
 		+ ")";
 
+	private static final String MILESTONE_TABLE =
+		"CREATE TABLE IF NOT EXISTS Milestones ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "project		INT									NOT NULL,"
+		+ "name			TEXT								NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
+		+ "UNIQUE (project, name)"
+		+ ")";
+
 	private static final String PRIORITY_TABLE =
 		"CREATE TABLE IF NOT EXISTS Priorities ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -263,6 +272,20 @@ public class Model {
 		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(oldVersion) REFERENCES Versions (id),"
 		+ "FOREIGN KEY(newVersion) REFERENCES Versions (id)"
+		+ ")";
+
+	private static final String MILESTONE_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS MilestoneHistory ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "bug			INT									NOT NULL,"
+		+ "addedBy		INT									NOT NULL,"
+		+ "date			TEXT								NOT NULL,"
+		+ "oldMilestone	INT									NOT NULL,"
+		+ "newMilestone	INT									NOT NULL,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(oldMilestone) REFERENCES Milestones (id),"
+		+ "FOREIGN KEY(newMilestone) REFERENCES Milestones (id)"
 		+ ")";
 
 	private static final String RESOLUTION_HISTORY_TABLE =
@@ -713,7 +736,8 @@ public class Model {
 		+ " (SELECT COUNT() FROM VersionHistory WHERE VersionHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM OperatingSystemHistory WHERE OperatingSystemHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugDependencies WHERE BugDependencies.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM KeywordHistory WHERE KeywordHistory.bug = Bugs.id)"
+		+ " (SELECT COUNT() FROM KeywordHistory WHERE KeywordHistory.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM MilestoneHistory WHERE MilestoneHistory.bug = Bugs.id)"
 		+ "FROM "
 		+ " Bugs, Components "
 		+ "WHERE "
@@ -948,6 +972,15 @@ public class Model {
 		+ " name "
 		+ "FROM"
 		+ " Versions "
+		+ "WHERE"
+		+ " project = ?";
+
+	private static final String SELECT_ALL_MILESTONES =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " Milestones "
 		+ "WHERE"
 		+ " project = ?";
 
@@ -1251,6 +1284,11 @@ public class Model {
 		+ "(project, name)"
 		+ "VALUES (?,?)";
 
+	private static final String MILESTONE_INSERTION =
+		"INSERT INTO Milestones"
+		+ "(project, name)"
+		+ "VALUES (?,?)";
+
 	private static final String CATEGORY_INSERTION =
 		"INSERT INTO Categories"
 		+ "(name, dictionary)"
@@ -1287,6 +1325,11 @@ public class Model {
 	private static final String VERSION_HISTORY_INSERTION =
 		"INSERT INTO VersionHistory"
 		+ "(bug, addedBy, date, oldVersion, newVersion)"
+		+ "VALUES (?, ?, ?, ?, ?)";
+
+	private static final String MILESTONE_HISTORY_INSERTION =
+		"INSERT INTO MilestoneHistory"
+		+ "(bug, addedBy, date, oldMilestone, newMilestone)"
 		+ "VALUES (?, ?, ?, ?, ?)";
 
 	private static final String RESOLUTION_HISTORY_INSERTION =
@@ -2170,7 +2213,34 @@ public class Model {
 
 		pool.emitVersionAdded (version);
 	}
-	
+
+	public Milestone addMilestone (Project project, String name) throws SQLException {
+		Milestone ms = new Milestone (null, project, name);
+		add (ms);
+		return ms;
+	}
+
+	public void add (Milestone ms) throws SQLException {
+		assert (conn != null);
+		assert (ms != null);
+		Project project = ms.getProject ();
+		assert (project.getId () != null);
+		assert (ms.getId () == null);
+
+		PreparedStatement stmt = conn.prepareStatement (MILESTONE_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, project.getId ());
+		stmt.setString(2, ms.getName ());
+		stmt.executeUpdate();
+
+		ms.setId (getLastInsertedId (stmt));
+
+		stmt.close ();
+
+		pool.emitMilestoneAdded (ms);
+	}
+
 	public Attachment addAttachment (Integer identifier, Comment comment) throws SQLException {
 		Attachment att = new Attachment (null, identifier, comment);
 		add (att);
@@ -2405,6 +2475,30 @@ public class Model {
 		stmt.close ();
 
 		pool.emitVersionHistoryAdded (bug, addedBy, date, oldVersion, newVersion);
+	}
+
+	public void addMilestoneHistory (Bug bug, Identity addedBy, Date date, Milestone oldMilestone, Milestone newMilestone) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (addedBy != null);
+		assert (addedBy.getId () != null);
+		assert (date != null);
+		assert (oldMilestone != null);
+		assert (oldMilestone.getId () != null);
+		assert (newMilestone != null);
+		assert (newMilestone.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (MILESTONE_HISTORY_INSERTION);
+		stmt.setInt (1, bug.getId ());
+		stmt.setInt (2, addedBy.getId ());
+		resSetDate (stmt, 3, date);
+		stmt.setInt (4, oldMilestone.getId ());
+		stmt.setInt (5, newMilestone.getId ());
+
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitMilestoneHistoryAdded (bug, addedBy, date, oldMilestone, newMilestone);
 	}
 
 	public void addResolutionHistory (Bug bug, Identity addedBy, Date date, Resolution resolution) throws SQLException {
@@ -3328,6 +3422,7 @@ public class Model {
 		int operatingSystemCnt = res.getInt (14);
 		int dependsCnt = res.getInt (15);
 		int keywordCnt = res.getInt (16);
+		int milestoneCnt = res.getInt (17);
 
 
 		// Statement:
@@ -3344,21 +3439,13 @@ public class Model {
 			int attStatHistCnt = res.getInt (4);
 			int attHistCnt = res.getInt (5);
 
-/*			
-1			+ " Attachments.id,"
-2			+ " Attachments.identifier,"
-3			+ " (SELECT COUNT() FROM ObsoleteAttachments WHERE ObsoleteAttachments.attachment = Attachments.id),"
-4			+ " (SELECT COUNT() FROM AttachmentStatusHistory WHERE AttachmentStatusHistory.attachment = Attachments.id),"
-5			+ " (SELECT COUNT() FROM AttachmentHistory WHERE AttachmentHistory.attachment = Attachments.id) "
-*/
-			
-			
 			// BugAttachmentStats (int attId, int attIdentifier, int attObsCnt, int statHistCnt, int attHistCnt)
 			attStats.put (attIdentifier, new BugAttachmentStats (attId, attIdentifier, attObsCnt, attStatHistCnt, attHistCnt));
 		}
 
 		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt,
-				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, operatingSystemCnt, dependsCnt, keywordCnt, attStats);
+				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, operatingSystemCnt, dependsCnt, keywordCnt,
+				milestoneCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -3931,7 +4018,27 @@ public class Model {
 	
 		return versions;		
 	}
+
+	public Map<Integer, Milestone> getMilestones (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_MILESTONES);
+		stmt.setInt (1, proj.getId ());
 	
+		// Collect data:
+		HashMap<Integer, Milestone> milestones = new HashMap<Integer, Milestone> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Milestone ms = new Milestone (res.getInt (1), proj, res.getString (2));
+			milestones.put (ms.getId (), ms);
+		}
+
+		return milestones;		
+	}
+
 	public Map<String, Component> getComponentsByName (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -3951,7 +4058,7 @@ public class Model {
 	
 		return components;
 	}
-
+	
 	public Map<String, OperatingSystem> getOperatingSystemsByName (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -4010,6 +4117,26 @@ public class Model {
 		}
 	
 		return versions;
+	}
+
+	public Map<String, Milestone> getMilestonesByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_MILESTONES);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<String, Milestone> milestones = new HashMap<String, Milestone> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Milestone ms = new Milestone (res.getInt (1), proj, res.getString (2));
+			milestones.put (ms.getName (), ms);
+		}
+	
+		return milestones;
 	}
 
 	public Map<String, AttachmentStatus> getAttachmentStatusByName (Project proj) throws SQLException {
@@ -4574,6 +4701,7 @@ public class Model {
 		stmt.executeUpdate (RESOLUTION_TABLE);
 		stmt.executeUpdate (SEVERITY_TABLE);
 		stmt.executeUpdate (VERSION_TABLE);
+		stmt.executeUpdate (MILESTONE_TABLE);
 		stmt.executeUpdate (OPERATING_SYSTEM_TABLE);
 		stmt.executeUpdate (KEYWORD_TABLE);
 		stmt.executeUpdate (BUG_TABLE);
@@ -4582,6 +4710,7 @@ public class Model {
 		stmt.executeUpdate (RESOLUTION_HISTORY_TABLE);
 		stmt.executeUpdate (CONFIRMED_HISTORY_TABLE);
 		stmt.executeUpdate (VERSION_HISTORY_TABLE);
+		stmt.executeUpdate (MILESTONE_HISTORY_TABLE);
 		stmt.executeUpdate (OPERATING_SYSTEM_HISTORY_TABLE);
 		stmt.executeUpdate (KEYWORD_HISTORY_TABLE);
 		stmt.executeUpdate (BUG_ALIASES);

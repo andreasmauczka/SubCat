@@ -144,4 +144,9 @@ public interface ModelModificationListener {
 
 	public void keywordHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Keyword keyword, boolean removed);
+
+	public void milestoneAdded (Milestone ms);
+
+	public void milestoneAdded (Bug bug, Identity addedBy, Date date,
+			Milestone oldMilestone, Milestone newMilestone);
 }

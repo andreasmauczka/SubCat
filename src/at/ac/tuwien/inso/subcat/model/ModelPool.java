@@ -515,5 +515,14 @@ public class ModelPool {
 		}
 	}
 
+	public synchronized void emitQaContactHistoryAdded (Bug bug, Identity addedBy,
+			Date date, String identifierAdded, BugGroup groupAdded,
+			Identity identityAdded, String identifierRemoved,
+			BugGroup groupRemoved, Identity identityRemoved) {
+		for (ModelModificationListener listener : listeners) {
+			listener.qaContactAdded (bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityRemoved);
+		}
+	}
+
 }
 

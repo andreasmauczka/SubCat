@@ -23,11 +23,13 @@ public class BugStats {
 	private int keywordCnt;
 	private int milestoneCnt;
 	private int assignedToCnt;
+	private int qaContactCnt;
 
 
 	public BugStats (int id, int cmntCnt, int histCnt, int attCnt, int ccCnt, int blocksCnt, int aliasCnt, int severityHistoryCnt, 
 			int priorityCnt, int statusCnt, int resolutionCnt, int confirmedCnt, int versionHistoCnt, int operatingSystemCnt,
-			int dependsCnt, int keywordCnt, int milestoneCnt, int assignedToCnt, Map<Integer, BugAttachmentStats> attStats) {
+			int dependsCnt, int keywordCnt, int milestoneCnt, int assignedToCnt, int qaContactCnt,
+			Map<Integer, BugAttachmentStats> attStats) {
 		this.id = id;
 		this.cmntCnt = cmntCnt;
 		this.histCnt = histCnt;
@@ -122,5 +124,9 @@ public class BugStats {
 
 	public int getAssignedToCount () {
 		return assignedToCnt;
+	}
+
+	public int getQaContactCount () {
+		return qaContactCnt;
 	}
 }

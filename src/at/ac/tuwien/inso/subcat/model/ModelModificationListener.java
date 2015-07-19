@@ -155,4 +155,9 @@ public interface ModelModificationListener {
 	public void assignedToAdded (Bug bug, Identity addedBy, Date date,
 			String identifierAdded, BugGroup groupAdded, Identity identityAdded,
 			String identifierRemoved, BugGroup groupRemoved, Identity identityRemoved);
+
+	public void qaContactAdded (Bug bug, Identity addedBy, Date date,
+			String identifierAdded, BugGroup groupAdded,
+			Identity identityAdded, String identifierRemoved,
+			BugGroup groupRemoved, Identity identityRemoved);
 }

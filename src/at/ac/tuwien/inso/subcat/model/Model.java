@@ -302,6 +302,26 @@ public class Model {
 		+ "FOREIGN KEY(groupRemoved) REFERENCES BugGroups (id)"
 		+ ")";
 
+	private static final String QA_CONTACT_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS QaContactHistory ("
+		+ "id					INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "bug					INT									NOT NULL,"
+		+ "addedBy				INT									NOT NULL,"
+		+ "date					TEXT								NOT NULL,"
+		+ "identifierAdded		TEXT										,"
+		+ "groupAdded			INT											,"
+		+ "identityAdded		INT											,"
+		+ "identifierRemoved	TEXT										,"
+		+ "groupRemoved			INT											,"
+		+ "identityRemoved		INT											,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(identityAdded) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(groupAdded) REFERENCES BugGroups (id),"
+		+ "FOREIGN KEY(identityRemoved) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(groupRemoved) REFERENCES BugGroups (id)"
+		+ ")";
+
 	private static final String MILESTONE_HISTORY_TABLE =
 		"CREATE TABLE IF NOT EXISTS MilestoneHistory ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -766,7 +786,8 @@ public class Model {
 		+ " (SELECT COUNT() FROM BugDependencies WHERE BugDependencies.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM KeywordHistory WHERE KeywordHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM MilestoneHistory WHERE MilestoneHistory.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM AssignedToHistory WHERE AssignedToHistory.bug = Bugs.id)"
+		+ " (SELECT COUNT() FROM AssignedToHistory WHERE AssignedToHistory.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM QaContactHistory WHERE QaContactHistory.bug = Bugs.id)"
 		+ "FROM "
 		+ " Bugs, Components "
 		+ "WHERE "
@@ -1369,7 +1390,12 @@ public class Model {
 		"INSERT INTO AssignedToHistory"
 		+ "(bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityRemoved)"
 		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-	
+
+	private static final String QA_CONTACT_HISTORY_INSERTION =
+		"INSERT INTO QaContactHistory"
+		+ "(bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityRemoved)"
+		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
 	private static final String VERSION_HISTORY_INSERTION =
 		"INSERT INTO VersionHistory"
 		+ "(bug, addedBy, date, oldVersion, newVersion)"
@@ -1456,15 +1482,6 @@ public class Model {
 		"INSERT INTO BugCc"
 		+ "(bug, date, addedBy, cc, ccMail, removed)"
 		+ "VALUES (?,?,?,?,?,?)";
-
-	private static final String BUG_CC_RESOLVE_IDENTITIES =
-		"UPDATE "
-		+ " BugCc "
-		+ "SET "
-		+ " cc = (SELECT Identities.id FROM Identities, Users WHERE Identities.context = 'bug' AND Identities.user = Users.id AND mail = ccMail AND Users.project = ?) "
-		+ "WHERE "
-		+ " cc IS NULL "
-		+ "AND bug IN (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
 	private static final String BUG_BLOCKS_INSERTION =
 		"INSERT INTO BugBlocks"
@@ -2574,6 +2591,52 @@ public class Model {
 		pool.emitAssignedToHistoryAdded (bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityAdded);
 	}	
 
+	public void addQaContactHistory (Bug bug, Identity addedBy, Date date, String identifierAdded, BugGroup groupAdded, Identity identityAdded, String identifierRemoved, BugGroup groupRemoved, Identity identityRemoved) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (addedBy != null);
+		assert (addedBy.getId () != null);
+		assert (date != null);
+		assert (groupAdded == null || groupAdded.getId () != null);
+		assert (identityAdded == null || identityAdded.getId () != null);
+		assert (groupRemoved == null || groupRemoved.getId () != null);
+		assert (identityRemoved == null || identityRemoved.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (QA_CONTACT_HISTORY_INSERTION);
+		stmt.setInt (1, bug.getId ());
+		stmt.setInt (2, addedBy.getId ());
+		resSetDate (stmt, 3, date);
+
+		stmt.setString (4, identifierAdded);
+		if (groupAdded != null) {
+			stmt.setInt (5, groupAdded.getId ());			
+		} else {
+			stmt.setNull (5, Types.INTEGER);
+		}
+		if (identityAdded != null) {
+			stmt.setInt (6, identityAdded.getId ());			
+		} else {
+			stmt.setNull (6, Types.INTEGER);
+		}
+
+		stmt.setString (7, identifierRemoved);
+		if (groupRemoved != null) {
+			stmt.setInt (8, groupRemoved.getId ());			
+		} else {
+			stmt.setNull (8, Types.INTEGER);
+		}
+		if (identityRemoved != null) {
+			stmt.setInt (9, identityRemoved.getId ());			
+		} else {
+			stmt.setNull (9, Types.INTEGER);
+		}
+		
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitQaContactHistoryAdded (bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityAdded);
+	}	
+
 	public void addVersionHistory (Bug bug, Identity addedBy, Date date, Version oldVersion, Version newVersion) throws SQLException {
 		assert (bug != null);
 		assert (bug.getId () != null);
@@ -2918,19 +2981,6 @@ public class Model {
 		stmt.close ();
 
 		pool.emitBugBlocksAdded (bug, date, addedBy, removed);
-	}
-
-	public void resolveCcIdentities (Project project) throws SQLException {
-		assert (conn != null);
-		assert (project != null);
-		assert (project.getId () != null);
-
-		PreparedStatement stmt = conn.prepareStatement (BUG_CC_RESOLVE_IDENTITIES);
-		stmt.setInt (1, project.getId ());
-		stmt.setInt (2, project.getId ());
-
-		stmt.executeUpdate();
-		stmt.close ();
 	}
 
 	public void resolveBugBlocksBugs (Project project) throws SQLException {
@@ -3545,6 +3595,7 @@ public class Model {
 		int keywordCnt = res.getInt (16);
 		int milestoneCnt = res.getInt (17);
 		int assignedToCnt = res.getInt (18);
+		int qaContactCnt = res.getInt (19);
 
 
 		// Statement:
@@ -3567,7 +3618,7 @@ public class Model {
 
 		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt,
 				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, operatingSystemCnt, dependsCnt, keywordCnt,
-				milestoneCnt, assignedToCnt, attStats);
+				milestoneCnt, assignedToCnt, qaContactCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -4869,6 +4920,7 @@ public class Model {
 		stmt.executeUpdate (BUG_GROUP_TABLE);
 		stmt.executeUpdate (BUG_TABLE);
 		stmt.executeUpdate (ASSIGNED_TO_HISTORY_TABLE);
+		stmt.executeUpdate (QA_CONTACT_HISTORY_TABLE);
 		stmt.executeUpdate (PRIORITY_HISTORY_TABLE);
 		stmt.executeUpdate (SEVERITY_HISTORY_TABLE);
 		stmt.executeUpdate (RESOLUTION_HISTORY_TABLE);

@@ -418,6 +418,7 @@ public class BugzillaMiner extends Miner {
 			int blocksCnt = 0;
 			int aliasCnt = 0;
 			int opSysCnt = 0;
+			int qaCnt = 0;
 			int ccCnt = 0;
 
 			for (BugzillaHistory entry : history) {
@@ -432,10 +433,12 @@ public class BugzillaMiner extends Miner {
 							Identity addedBy = resolveIdentity (entry.getWho ());
 
 							if (change.getAdded () != null) {
-								model.addBugCc (bug, entry.getWhen (), addedBy, null, change.getAdded (), false);
+								Identity ccIdentity = resolveIdentity (change.getAdded (), true);
+								model.addBugCc (bug, entry.getWhen (), addedBy, ccIdentity, change.getAdded (), false);
 							}
 							if (change.getRemoved () != null) {
-								model.addBugCc (bug, entry.getWhen (), addedBy, null, change.getRemoved (), true);
+								Identity ccIdentity = resolveIdentity (change.getRemoved (), true);
+								model.addBugCc (bug, entry.getWhen (), addedBy, ccIdentity, change.getRemoved (), true);
 							}
 						}
 						ccCnt += (change.getAdded () != null && change.getRemoved () != null)? 2 : 1;
@@ -602,28 +605,68 @@ public class BugzillaMiner extends Miner {
 						if (bugStats == null || assignedCnt >= bugStats.getAssignedToCount ()) {
 							Identity addedBy = resolveIdentity (entry.getWho ());
 
+							String valueAdded = change.getAdded ();
+							String valueRemoved = change.getRemoved ();
+
 							BugGroup groupAdded = null;
 							Identity identityAdded = null;
 							BugGroup groupRemoved = null;
 							Identity identityRemoved = null;
 
-							if (isGroupIdentifier (change.getAdded ())) {
-								groupAdded = resolveGroup (change.getAdded ());
-							} else {
-								identityAdded = resolveIdentity (change.getAdded (), true);
+							if (valueAdded != null) {
+								if (isGroupIdentifier (valueAdded)) {
+									groupAdded = resolveGroup (valueAdded);
+								} else {
+									identityAdded = resolveIdentity (valueAdded, true);
+								}
 							}
 
-							if (isGroupIdentifier (change.getRemoved ())) {
-								groupRemoved = resolveGroup (change.getRemoved ());
-							} else {
-								identityRemoved = resolveIdentity (change.getRemoved (), true);
+							if (valueRemoved != null) {
+								if (isGroupIdentifier (valueRemoved)) {
+									groupRemoved = resolveGroup (valueRemoved);
+								} else {
+									identityRemoved = resolveIdentity (valueRemoved, true);
+								}
 							}
 
 							model.addAssigendToHistory (bug, addedBy, entry.getWhen (),
-								change.getAdded (), groupAdded, identityAdded,
-								change.getRemoved (), groupRemoved, identityRemoved);
+								valueAdded, groupAdded, identityAdded,
+								valueRemoved, groupRemoved, identityRemoved);
 						}
 						assignedCnt++;
+					} else if ("qa_contact".equals (change.getFieldName ())) {
+						if (bugStats == null || qaCnt >= bugStats.getQaContactCount ()) {
+							Identity addedBy = resolveIdentity (entry.getWho ());
+
+							String valueAdded = change.getAdded ();
+							String valueRemoved = change.getRemoved ();
+
+							BugGroup groupAdded = null;
+							Identity identityAdded = null;
+							BugGroup groupRemoved = null;
+							Identity identityRemoved = null;
+							
+							if (valueAdded != null) {
+								if (isGroupIdentifier (valueAdded)) {
+									groupAdded = resolveGroup (valueAdded);
+								} else {
+									identityAdded = resolveIdentity (valueAdded, true);
+								}
+							}
+
+							if (valueRemoved != null) {
+								if (isGroupIdentifier (valueRemoved)) {
+									groupRemoved = resolveGroup (valueRemoved);
+								} else {
+									identityRemoved = resolveIdentity (valueRemoved, true);
+								}
+							}
+
+							model.addQaContactHistory (bug, addedBy, entry.getWhen (),
+								valueAdded, groupAdded, identityAdded,
+								valueRemoved, groupRemoved, identityRemoved);
+						}
+						qaCnt++;
 					} else if (change.getAttachmentId () != null) {
 						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
 						attHisto.identity = resolveIdentity (entry.getWho ());
@@ -728,7 +771,6 @@ public class BugzillaMiner extends Miner {
 		}
 
 		try {
-			model.resolveCcIdentities (project);
 			model.resolveBugBlocksBugs (project);
 			model.resolveBugDependencies (project);
 
@@ -826,7 +868,7 @@ public class BugzillaMiner extends Miner {
 	//
 
 	private static boolean isGroupIdentifier (String identifier) {
-		return identifier.matches (".*@[a-zA-Z0-9_-]+\\.bug\\z");
+		return identifier.matches (".*@[a-zA-Z0-9_-]+\\.bugs\\z");
 	}
 	
 	private synchronized BugzillaProduct getBugzillaProduct (String productName) throws BugzillaException, MinerException {

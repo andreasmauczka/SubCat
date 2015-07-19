@@ -30,15 +30,29 @@
 
 package at.ac.tuwien.inso.subcat.bugzilla;
 
+import org.apache.xmlrpc.XmlRpcException;
+
 
 public class BugzillaException extends Exception {
 	private static final long serialVersionUID = 1L;
+	public static final int BAD_LOGIN_NAME = 51;
+	private int errorCode;
 
 	public BugzillaException (String msg) {
 		super (msg);
+		errorCode = -1;
 	}
 
 	public BugzillaException (Exception e) {
 		super (e);
+	}
+
+	public BugzillaException (XmlRpcException e) {
+		super (e);
+		errorCode = e.code;
+	}
+
+	public int getErrorCode () {
+		return errorCode;
 	}
 }

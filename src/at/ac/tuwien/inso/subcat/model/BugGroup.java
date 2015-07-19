@@ -1,12 +1,12 @@
 package at.ac.tuwien.inso.subcat.model;
 
 
-public class Version implements NamedContainer, Comparable<Version> {
+public class BugGroup implements NamedContainer, Comparable<BugGroup> {
 	private Integer id;
 	private Project project;
 	private String name;
 
-	public Version (Integer id, Project project, String name) {
+	public BugGroup (Integer id, Project project, String name) {
 		assert (project != null);
 		assert (name != null);
 
@@ -47,11 +47,11 @@ public class Version implements NamedContainer, Comparable<Version> {
 
 	@Override
 	public String toString () {
-		return "Version [id=" + id + ", project=" + project + ", name=" + name
+		return "BugGroup [id=" + id + ", project=" + project + ", name=" + name
 				+ "]";
 	}
 
-	public boolean equals (Version obj) {
+	public boolean equals (BugGroup obj) {
 		if (id == null || obj.id == null) {
 			return obj == this;
 		}
@@ -59,22 +59,21 @@ public class Version implements NamedContainer, Comparable<Version> {
 		return id.equals (obj.id);
 	}
 
-
 	@Override
 	public boolean equals (Object obj) {
-		if (obj instanceof Milestone) {
-			return equals ((Milestone) obj);
+		if (obj instanceof BugGroup) {
+			return equals ((BugGroup) obj);
 		}
 		
 		return super.equals (obj);
 	}
 
 	@Override
-	public int compareTo (Version stat) {
-		if (id == stat.id) {
+	public int compareTo (BugGroup grp) {
+		if (id == grp.id) {
 			return 0;
 		}
 
-		return name.compareTo (stat.name);
+		return name.compareTo(grp.name);
 	}
 }

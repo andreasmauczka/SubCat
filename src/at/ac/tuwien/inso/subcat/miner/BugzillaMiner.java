@@ -53,6 +53,7 @@ import at.ac.tuwien.inso.subcat.model.Attachment;
 import at.ac.tuwien.inso.subcat.model.AttachmentStatus;
 import at.ac.tuwien.inso.subcat.model.Bug;
 import at.ac.tuwien.inso.subcat.model.BugAttachmentStats;
+import at.ac.tuwien.inso.subcat.model.BugGroup;
 import at.ac.tuwien.inso.subcat.model.BugStats;
 import at.ac.tuwien.inso.subcat.model.Comment;
 import at.ac.tuwien.inso.subcat.model.Component;
@@ -107,6 +108,7 @@ public class BugzillaMiner extends Miner {
 	private Map<String, Identity> identities = new HashMap<String, Identity> ();
 	private Map<String, Version> versions = new HashMap<String, Version> ();
 	private Map<String, Keyword> keywords = new HashMap<String, Keyword> ();
+	private Map<String, BugGroup> groups = new HashMap<String, BugGroup> ();
 	private Map<String, Status> status = new HashMap<String, Status> ();
 	private Project project;
 
@@ -407,6 +409,7 @@ public class BugzillaMiner extends Miner {
 			int resolutionCnt = 0;
 			int milestoneCnt = 0;
 			int confirmedCnt = 0;
+			int assignedCnt = 0;
 			int priorityCnt = 0;
 			int severityCnt = 0;
 			int keywordCnt = 0;
@@ -595,6 +598,32 @@ public class BugzillaMiner extends Miner {
 							}
 							milestoneCnt++;
 						}
+					} else if ("assigned_to".equals (change.getFieldName ())) {
+						if (bugStats == null || assignedCnt >= bugStats.getAssignedToCount ()) {
+							Identity addedBy = resolveIdentity (entry.getWho ());
+
+							BugGroup groupAdded = null;
+							Identity identityAdded = null;
+							BugGroup groupRemoved = null;
+							Identity identityRemoved = null;
+
+							if (isGroupIdentifier (change.getAdded ())) {
+								groupAdded = resolveGroup (change.getAdded ());
+							} else {
+								identityAdded = resolveIdentity (change.getAdded (), true);
+							}
+
+							if (isGroupIdentifier (change.getRemoved ())) {
+								groupRemoved = resolveGroup (change.getRemoved ());
+							} else {
+								identityRemoved = resolveIdentity (change.getRemoved (), true);
+							}
+
+							model.addAssigendToHistory (bug, addedBy, entry.getWhen (),
+								change.getAdded (), groupAdded, identityAdded,
+								change.getRemoved (), groupRemoved, identityRemoved);
+						}
+						assignedCnt++;
 					} else if (change.getAttachmentId () != null) {
 						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
 						attHisto.identity = resolveIdentity (entry.getWho ());
@@ -754,6 +783,7 @@ public class BugzillaMiner extends Miner {
 		versions = model.getVersionsByName (project);
 		attachmentStatus = model.getAttachmentStatusByName (project);
 		keywords = model.getKeywordsByName (project);
+		groups = model.getBugGroupsByName (project);
 
 		model.setDefaultStatus (resolveStatus ("UNCO"));
 
@@ -795,14 +825,19 @@ public class BugzillaMiner extends Miner {
 	// Helper:
 	//
 
+	private static boolean isGroupIdentifier (String identifier) {
+		return identifier.matches (".*@[a-zA-Z0-9_-]+\\.bug\\z");
+	}
+	
 	private synchronized BugzillaProduct getBugzillaProduct (String productName) throws BugzillaException, MinerException {
 		assert (productName != null);
 
 		BugzillaProduct product = context.getProduct (productName);
 		if (product == null) {
+			
 			throw new MinerException ("Product '" + productName + "' not found.");
 		}
-		
+
 		return product;
 	}
 
@@ -816,6 +851,18 @@ public class BugzillaMiner extends Miner {
 		}
 		
 		return stat;
+	}
+
+	private synchronized BugGroup resolveGroup (String name) throws SQLException {
+		assert (name != null);
+
+		BugGroup grp = groups.get (name);
+		if (grp == null) {
+			grp = model.addBugGroup (project, name);
+			groups.put (name, grp);
+		}
+		
+		return grp;
 	}
 
 	private synchronized OperatingSystem resolveOperatingSystem (String name) throws SQLException {
@@ -878,12 +925,26 @@ public class BugzillaMiner extends Miner {
 		return severity;
 	}
 
-	private synchronized Identity resolveIdentity (String name) throws SQLException, BugzillaException {
+	private Identity resolveIdentity (String name) throws SQLException, BugzillaException {
+		return resolveIdentity (name, false);
+	}
+
+	private synchronized Identity resolveIdentity (String name, boolean acceptUnknown) throws SQLException, BugzillaException {
 		assert (name != null);
 
 		Identity identity = identities.get (name);
 		if (identity == null) {
-			BugzillaUser[] bugUserList = context.getUsers (name);
+			BugzillaUser[] bugUserList = null;
+			try {
+				bugUserList = context.getUsers (name);
+			} catch (BugzillaException e) {
+				if (acceptUnknown && e.getErrorCode () == BugzillaException.BAD_LOGIN_NAME) {
+					return null;
+				}
+
+				throw e;
+			}
+
 			assert (bugUserList.length == 1);
 			BugzillaUser bugUser = bugUserList[0];
 
@@ -956,7 +1017,9 @@ public class BugzillaMiner extends Miner {
 	}
 
 	private synchronized AttachmentStatus resolveAttachmentStatus (String name) throws SQLException {
-		assert (name != null);
+		if (name == null) {
+			name = "";
+		}
 
 		AttachmentStatus status = attachmentStatus.get (name);
 		if (status == null) {

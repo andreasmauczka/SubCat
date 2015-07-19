@@ -164,6 +164,15 @@ public class Model {
 		+ "UNIQUE (project, name)"
 		+ ")";
 
+	private static final String BUG_GROUP_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugGroups ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "project		INT									NOT NULL,"
+		+ "name			TEXT								NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
+		+ "UNIQUE (project, name)"
+		+ ")";
+
 	private static final String MILESTONE_TABLE =
 		"CREATE TABLE IF NOT EXISTS Milestones ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -219,7 +228,6 @@ public class Model {
 		+ "UNIQUE (name)"
 		+ ")";
 
-
 	private static final String KEYWORD_HISTORY_TABLE =
 		"CREATE TABLE IF NOT EXISTS KeywordHistory ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -272,6 +280,26 @@ public class Model {
 		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(oldVersion) REFERENCES Versions (id),"
 		+ "FOREIGN KEY(newVersion) REFERENCES Versions (id)"
+		+ ")";
+
+	private static final String ASSIGNED_TO_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS AssignedToHistory ("
+		+ "id					INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "bug					INT									NOT NULL,"
+		+ "addedBy				INT									NOT NULL,"
+		+ "date					TEXT								NOT NULL,"
+		+ "identifierAdded		TEXT										,"
+		+ "groupAdded			INT											,"
+		+ "identityAdded		INT											,"
+		+ "identifierRemoved	TEXT										,"
+		+ "groupRemoved			INT											,"
+		+ "identityRemoved		INT											,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(identityAdded) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(groupAdded) REFERENCES BugGroups (id),"
+		+ "FOREIGN KEY(identityRemoved) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(groupRemoved) REFERENCES BugGroups (id)"
 		+ ")";
 
 	private static final String MILESTONE_HISTORY_TABLE =
@@ -737,7 +765,8 @@ public class Model {
 		+ " (SELECT COUNT() FROM OperatingSystemHistory WHERE OperatingSystemHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugDependencies WHERE BugDependencies.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM KeywordHistory WHERE KeywordHistory.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM MilestoneHistory WHERE MilestoneHistory.bug = Bugs.id)"
+		+ " (SELECT COUNT() FROM MilestoneHistory WHERE MilestoneHistory.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM AssignedToHistory WHERE AssignedToHistory.bug = Bugs.id)"
 		+ "FROM "
 		+ " Bugs, Components "
 		+ "WHERE "
@@ -967,6 +996,15 @@ public class Model {
 		+ " project = ?";
 
 	private static final String SELECT_ALL_VERSIONS =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " Versions "
+		+ "WHERE"
+		+ " project = ?";
+
+	private static final String SELECT_ALL_BUG_GROUPS =
 		"SELECT"
 		+ " id,"
 		+ " name "
@@ -1284,6 +1322,11 @@ public class Model {
 		+ "(project, name)"
 		+ "VALUES (?,?)";
 
+	private static final String BUG_GROUP_INSERTION =
+		"INSERT INTO BugGroups"
+		+ "(project, name)"
+		+ "VALUES (?,?)";
+
 	private static final String MILESTONE_INSERTION =
 		"INSERT INTO Milestones"
 		+ "(project, name)"
@@ -1322,6 +1365,11 @@ public class Model {
 		+ "(bug, addedBy, date, oldPriority, newPriority)"
 		+ "VALUES (?, ?, ?, ?, ?)";
 
+	private static final String ASSIGNED_TO_HISTORY_INSERTION =
+		"INSERT INTO AssignedToHistory"
+		+ "(bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityRemoved)"
+		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+	
 	private static final String VERSION_HISTORY_INSERTION =
 		"INSERT INTO VersionHistory"
 		+ "(bug, addedBy, date, oldVersion, newVersion)"
@@ -2214,6 +2262,33 @@ public class Model {
 		pool.emitVersionAdded (version);
 	}
 
+	public BugGroup addBugGroup (Project project, String name) throws SQLException {
+		BugGroup grp = new BugGroup (null, project, name);
+		add (grp);
+		return grp;
+	}
+
+	public void add (BugGroup grp) throws SQLException {
+		assert (conn != null);
+		assert (grp != null);
+		Project project = grp.getProject ();
+		assert (project.getId () != null);
+		assert (grp.getId () == null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_GROUP_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, project.getId ());
+		stmt.setString(2, grp.getName ());
+		stmt.executeUpdate();
+
+		grp.setId (getLastInsertedId (stmt));
+
+		stmt.close ();
+
+		pool.emitBugGroupAdded (grp);
+	}
+
 	public Milestone addMilestone (Project project, String name) throws SQLException {
 		Milestone ms = new Milestone (null, project, name);
 		add (ms);
@@ -2452,6 +2527,52 @@ public class Model {
 
 		pool.emitPriorityHistoryAdded (bug, addedBy, date, oldPriority, newPriority);
 	}
+
+	public void addAssigendToHistory (Bug bug, Identity addedBy, Date date, String identifierAdded, BugGroup groupAdded, Identity identityAdded, String identifierRemoved, BugGroup groupRemoved, Identity identityRemoved) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (addedBy != null);
+		assert (addedBy.getId () != null);
+		assert (date != null);
+		assert (groupAdded == null || groupAdded.getId () != null);
+		assert (identityAdded == null || identityAdded.getId () != null);
+		assert (groupRemoved == null || groupRemoved.getId () != null);
+		assert (identityRemoved == null || identityRemoved.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (ASSIGNED_TO_HISTORY_INSERTION);
+		stmt.setInt (1, bug.getId ());
+		stmt.setInt (2, addedBy.getId ());
+		resSetDate (stmt, 3, date);
+
+		stmt.setString (4, identifierAdded);
+		if (groupAdded != null) {
+			stmt.setInt (5, groupAdded.getId ());			
+		} else {
+			stmt.setNull (5, Types.INTEGER);
+		}
+		if (identityAdded != null) {
+			stmt.setInt (6, identityAdded.getId ());			
+		} else {
+			stmt.setNull (6, Types.INTEGER);
+		}
+
+		stmt.setString (7, identifierRemoved);
+		if (groupRemoved != null) {
+			stmt.setInt (8, groupRemoved.getId ());			
+		} else {
+			stmt.setNull (8, Types.INTEGER);
+		}
+		if (identityRemoved != null) {
+			stmt.setInt (9, identityRemoved.getId ());			
+		} else {
+			stmt.setNull (9, Types.INTEGER);
+		}
+		
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitAssignedToHistoryAdded (bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityAdded);
+	}	
 
 	public void addVersionHistory (Bug bug, Identity addedBy, Date date, Version oldVersion, Version newVersion) throws SQLException {
 		assert (bug != null);
@@ -3423,6 +3544,7 @@ public class Model {
 		int dependsCnt = res.getInt (15);
 		int keywordCnt = res.getInt (16);
 		int milestoneCnt = res.getInt (17);
+		int assignedToCnt = res.getInt (18);
 
 
 		// Statement:
@@ -3445,7 +3567,7 @@ public class Model {
 
 		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt,
 				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, operatingSystemCnt, dependsCnt, keywordCnt,
-				milestoneCnt, attStats);
+				milestoneCnt, assignedToCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -4019,6 +4141,26 @@ public class Model {
 		return versions;		
 	}
 
+	public Map<Integer, BugGroup> getBugGroups (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_GROUPS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<Integer, BugGroup> groups = new HashMap<Integer, BugGroup> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			BugGroup grp = new BugGroup (res.getInt (1), proj, res.getString (2));
+			groups.put (grp.getId (), grp);
+		}
+	
+		return groups;		
+	}
+
 	public Map<Integer, Milestone> getMilestones (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -4117,6 +4259,26 @@ public class Model {
 		}
 	
 		return versions;
+	}
+
+	public Map<String, BugGroup> getBugGroupsByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_GROUPS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<String, BugGroup> groups = new HashMap<String, BugGroup> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			BugGroup grp = new BugGroup (res.getInt (1), proj, res.getString (2));
+			groups.put (grp.getName (), grp);
+		}
+	
+		return groups;
 	}
 
 	public Map<String, Milestone> getMilestonesByName (Project proj) throws SQLException {
@@ -4704,7 +4866,9 @@ public class Model {
 		stmt.executeUpdate (MILESTONE_TABLE);
 		stmt.executeUpdate (OPERATING_SYSTEM_TABLE);
 		stmt.executeUpdate (KEYWORD_TABLE);
+		stmt.executeUpdate (BUG_GROUP_TABLE);
 		stmt.executeUpdate (BUG_TABLE);
+		stmt.executeUpdate (ASSIGNED_TO_HISTORY_TABLE);
 		stmt.executeUpdate (PRIORITY_HISTORY_TABLE);
 		stmt.executeUpdate (SEVERITY_HISTORY_TABLE);
 		stmt.executeUpdate (RESOLUTION_HISTORY_TABLE);

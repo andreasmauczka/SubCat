@@ -500,5 +500,20 @@ public class ModelPool {
 			listener.milestoneAdded (bug, addedBy, date, oldMilestone, newMilestone);
 		}
 	}
+
+	public synchronized void emitBugGroupAdded (BugGroup grp) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugGroupAdded (grp);
+		}
+	}
+
+	public synchronized void emitAssignedToHistoryAdded (Bug bug, Identity addedBy, Date date,
+			String identifierAdded, BugGroup groupAdded, Identity identityAdded,
+			String identifierRemoved, BugGroup groupRemoved, Identity identityRemoved) {
+		for (ModelModificationListener listener : listeners) {
+			listener.assignedToAdded (bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityRemoved);
+		}
+	}
+
 }
 

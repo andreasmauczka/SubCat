@@ -149,4 +149,10 @@ public interface ModelModificationListener {
 
 	public void milestoneAdded (Bug bug, Identity addedBy, Date date,
 			Milestone oldMilestone, Milestone newMilestone);
+
+	public void bugGroupAdded (BugGroup grp);
+
+	public void assignedToAdded (Bug bug, Identity addedBy, Date date,
+			String identifierAdded, BugGroup groupAdded, Identity identityAdded,
+			String identifierRemoved, BugGroup groupRemoved, Identity identityRemoved);
 }

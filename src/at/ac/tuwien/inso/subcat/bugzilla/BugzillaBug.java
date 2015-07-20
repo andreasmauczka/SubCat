@@ -50,6 +50,7 @@ public class BugzillaBug {
 	private Date lastChangeTime;
 	// since ???
 	private String opSys;
+	private String platform;
 	// since 3.4
 	private String priority;
 	// since 3.4
@@ -63,15 +64,16 @@ public class BugzillaBug {
 	private String summary;
 	// since ???
 	private String version;
+	private String targetMilestone;
 
 
 	public BugzillaBug (int id, String alias, String assignedTo,
 			String[] ccs, String component,
 			Date creationTime, Integer dups, boolean isOpen,
-			Date lastChangeTime, String opSys,
+			Date lastChangeTime, String opSys, String platform,
 			String priority, String product,
 			String resolution, String severity, String status, String summary,
-			String version)
+			String version, String targetMilestone)
 	{
 		assert (alias != null);
 		assert (component != null);
@@ -83,6 +85,8 @@ public class BugzillaBug {
 		assert (severity != null);
 		assert (status != null);
 		assert (summary != null);
+		assert (platform != null);
+		assert (targetMilestone != null);
 
 		if (ccs == null) {
 			ccs = new String[0];
@@ -98,6 +102,7 @@ public class BugzillaBug {
 		this.isOpen = isOpen;
 		this.lastChangeTime = lastChangeTime;
 		this.opSys = opSys;
+		this.platform = platform;
 		this.priority = priority;
 		this.product = product;
 		this.resolution = resolution;
@@ -105,6 +110,7 @@ public class BugzillaBug {
 		this.status = status;
 		this.summary = summary;
 		this.version = version;
+		this.targetMilestone = targetMilestone;
 	}
 
 
@@ -148,6 +154,10 @@ public class BugzillaBug {
 		return opSys;
 	}
 
+	public String getPlatform () {
+		return platform;
+	}
+
 	public String getPriority () {
 		return priority;
 	}
@@ -174,6 +184,10 @@ public class BugzillaBug {
 
 	public String getVersion () {
 		return version;
+	}
+
+	public String getTargetMilestone () {
+		return targetMilestone;
 	}
 
 	@Override

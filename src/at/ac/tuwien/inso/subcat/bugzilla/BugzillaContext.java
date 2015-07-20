@@ -539,15 +539,18 @@ public class BugzillaContext {
 			String status = getStringFromResultMap (bugMap, "status");
 			String summary = getStringFromResultMap (bugMap, "summary");
 			String version = getStringFromResultMap (bugMap, "version", true);
+			String platform = getStringFromResultMap (bugMap, "platform");
+			String targetMilestone = getStringFromResultMap (bugMap, "target_milestone");
+
 
 			bugs[i] = new BugzillaBug (id, alias, assignedTo,
 					ccs, component,
 					creationTime,
 					dups, isOpen,
 					lastChangeTime, opSys,
-					priority, product,
+					platform, priority, product,
 					resolution, severity, status, summary,
-					version);
+					version, targetMilestone);
 		}
 
 		return bugs;

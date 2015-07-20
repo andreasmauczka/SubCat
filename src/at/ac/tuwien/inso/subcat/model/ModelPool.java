@@ -524,5 +524,11 @@ public class ModelPool {
 		}
 	}
 
+	public synchronized void emitPlatformAdded (Platform pf) {
+		for (ModelModificationListener listener : listeners) {
+			listener.platformAdded (pf);
+		}
+	}
+
 }
 

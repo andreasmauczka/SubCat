@@ -160,4 +160,6 @@ public interface ModelModificationListener {
 			String identifierAdded, BugGroup groupAdded,
 			Identity identityAdded, String identifierRemoved,
 			BugGroup groupRemoved, Identity identityRemoved);
+
+	public void platformAdded (Platform pf);
 }

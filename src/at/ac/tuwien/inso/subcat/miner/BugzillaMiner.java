@@ -63,6 +63,7 @@ import at.ac.tuwien.inso.subcat.model.Milestone;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
 import at.ac.tuwien.inso.subcat.model.OperatingSystem;
+import at.ac.tuwien.inso.subcat.model.Platform;
 import at.ac.tuwien.inso.subcat.model.Priority;
 import at.ac.tuwien.inso.subcat.model.Project;
 import at.ac.tuwien.inso.subcat.model.Resolution;
@@ -106,6 +107,7 @@ public class BugzillaMiner extends Miner {
 	private Map<String, Priority> priorities = new HashMap<String, Priority> ();
 	private Map<String, Severity> severities = new HashMap<String, Severity> ();
 	private Map<String, Identity> identities = new HashMap<String, Identity> ();
+	private Map<String, Platform> platforms = new HashMap<String, Platform> ();
 	private Map<String, Version> versions = new HashMap<String, Version> ();
 	private Map<String, Keyword> keywords = new HashMap<String, Keyword> ();
 	private Map<String, BugGroup> groups = new HashMap<String, BugGroup> ();
@@ -243,7 +245,9 @@ public class BugzillaMiner extends Miner {
 				Date lastChange = bzBug.getLastChangeTime ();
 				String title = bzBug.getSummary ();
 				Version version = resolveVersion (bzBug.getVersion ());
+				Milestone milestone = resolveMilestone (bzBug.getTargetMilestone ());
 				OperatingSystem operatingSystems = resolveOperatingSystem (bzBug.getOpSys ());
+				Platform platform = resolvePlatform (bzBug.getPlatform ());
 				Status status = resolveStatus (bzBug.getStatus ());
 
 
@@ -252,9 +256,9 @@ public class BugzillaMiner extends Miner {
 				// Add to model:
 				Bug bug;
 				if (bugStats == null) {
-					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, operatingSystems);
+					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
 				} else {
-					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, operatingSystems);
+					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
 					model.updateBug (bug);
 				}
 
@@ -826,6 +830,7 @@ public class BugzillaMiner extends Miner {
 		attachmentStatus = model.getAttachmentStatusByName (project);
 		keywords = model.getKeywordsByName (project);
 		groups = model.getBugGroupsByName (project);
+		platforms = model.getPlatformsByName (project);
 
 		model.setDefaultStatus (resolveStatus ("UNCO"));
 
@@ -1072,6 +1077,18 @@ public class BugzillaMiner extends Miner {
 		return status;		
 	}
 
+	private synchronized Platform resolvePlatform (String name) throws SQLException {
+		assert (name != null);
+
+		Platform ms = platforms.get (name);
+		if (ms == null) {
+			ms = model.addPlatform (project, name);
+			platforms.put (name, ms);
+		}
+		
+		return ms;
+	}
+	
 	@Override
 	public String getName () {
 		return "BugZilla";

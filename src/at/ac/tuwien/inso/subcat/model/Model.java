@@ -219,6 +219,15 @@ public class Model {
 		+ "UNIQUE (project, name)"
 		+ ")";
 
+	private static final String PLATFORMS_TABLE =
+		"CREATE TABLE IF NOT EXISTS Platforms ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "project		INT									NOT NULL,"
+		+ "name			TEXT								NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
+		+ "UNIQUE (project, name)"
+		+ ")";
+
 	private static final String KEYWORD_TABLE =
 		"CREATE TABLE IF NOT EXISTS Keywords ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -255,7 +264,9 @@ public class Model {
 		+ "severity			INT									NOT NULL,"
 		+ "resolution		INT									NOT NULL,"
 		+ "operatingSystem	INT									NOT NULL,"
+		+ "platform			INT									NOT NULL,"
 		+ "version			INT									NOT NULL,"
+		+ "targetMilestone	INT									NOT NULL,"
 		+ "comments			INT									NOT NULL DEFAULT 0,"
 		+ "status			INT									NOT NULL,"
 		+ "FOREIGN KEY(priority) REFERENCES Priorities (id),"
@@ -264,7 +275,9 @@ public class Model {
 		+ "FOREIGN KEY(component) REFERENCES Components (id),"
 		+ "FOREIGN KEY(resolution) REFERENCES Resolutions (id),"
 		+ "FOREIGN KEY(version) REFERENCES Versions (id),"
+		+ "FOREIGN KEY(targetMilestone) REFERENCES Milestones (id),"
 		+ "FOREIGN KEY(operatingSystem) REFERENCES OperatingSystems (id),"
+		+ "FOREIGN KEY(platform) REFERENCES Platforms (id),"
 		+ "FOREIGN KEY(status) REFERENCES Status (id)"
 		+ ")";
 
@@ -878,7 +891,9 @@ public class Model {
 		+ " Bugs.resolution,"
 		+ " Bugs.lastChange,"
 		+ " Bugs.version,"
-		+ " Bugs.operatingSystem "
+		+ " Bugs.operatingSystem,"
+		+ " Bugs.platform,"
+		+ " Bugs.targetMilestone "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -917,7 +932,11 @@ public class Model {
 		+ " OperatingSystem.version,"
 		+ " OperatingSystem.name,"
 		+ " Bugs.status, "
-		+ " Status.name "
+		+ " Status.name,"
+		+ " Bugs.platform,"
+		+ " Platforms.name,"
+		+ " Bugs.targetMilestone,"
+		+ " Milestones.name "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -938,6 +957,10 @@ public class Model {
 		+ " ON Resolutions.id = Bugs.resolution "
 		+ "JOIN OperatingSystem"
 		+ " ON OperatingSystem.id = Bugs.operatingSystem "
+		+ "JOIN Platforms"
+		+ " ON Platforms.id = Bugs.platform "
+		+ "JOIN Milestones"
+		+ " ON Milestones.id = Bugs.targetMilestone "
 		+ "WHERE"
 		+ " Components.project = ?"
 		+ " AND Bugs.identifier = ?";
@@ -968,7 +991,15 @@ public class Model {
 		+ " OperatingSystems "
 		+ "WHERE"
 		+ " project = ?";
-	
+
+	private static final String SELECT_ALL_PLATFORMS =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " Platforms "
+		+ "WHERE"
+		+ " project = ?";
 
 	private static final String SELECT_ALL_KEYWORDS =
 		"SELECT"
@@ -1030,7 +1061,7 @@ public class Model {
 		+ " id,"
 		+ " name "
 		+ "FROM"
-		+ " Versions "
+		+ " BugGroups "
 		+ "WHERE"
 		+ " project = ?";
 
@@ -1360,8 +1391,8 @@ public class Model {
 
 	private static final String BUG_INSERTION =
 		"INSERT INTO Bugs "
-		+ "(identifier, identity, component, title, creation, priority, severity, status, resolution, lastChange, version, operatingSystem)"
-		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+		+ "(identifier, identity, component, title, creation, priority, severity, status, resolution, lastChange, version, operatingSystem, platform, targetMilestone)"
+		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 	private static final String BUG_UPDATE =
 		"UPDATE Bugs SET"
@@ -1372,10 +1403,17 @@ public class Model {
 		+ " creation = ?,"
 		+ " priority = ?,"
 		+ " severity = ?,"
-		+ " status = ?"
+		+ " status = ?,"
+		+ " resolution = ?,"
+		+ " lastChange = ?,"
+		+ " version = ?,"
+		+ " operatingSystem = ?,"
+		+ " platform = ?,"
+		+ " targetMilestone = ? "
 		+ "WHERE"
 		+ " id = ?";
 
+	
 	private static final String BUG_ALIAS_INSERTION =
 		"INSERT INTO BugAliases"
 		+ "(bug, addedBy, date, alias)"
@@ -1533,6 +1571,11 @@ public class Model {
 
 	private static final String OPERATING_SYSTEM_INSERTION =
 		"INSERT INTO OperatingSystems "
+		+ "(project, name)"
+		+ "VALUES (?, ?)";
+
+	private static final String PLATFORM_INSERTION =
+		"INSERT INTO Platforms "
 		+ "(project, name)"
 		+ "VALUES (?, ?)";
 
@@ -2081,7 +2124,34 @@ public class Model {
 
 		pool.emitResolutionAdded (resolution);
 	}
+	
+	public Platform addPlatform (Project project, String name) throws SQLException {
+		Platform pf = new Platform (null, project, name);
+		add (pf);
+		return pf;
+	}
 
+	public void add (Platform pf) throws SQLException {
+		assert (conn != null);
+		assert (pf != null);
+		Project project = pf.getProject ();
+		assert (project.getId () != null);
+		assert (pf.getId () == null);
+
+		PreparedStatement stmt = conn.prepareStatement (PLATFORM_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, project.getId ());
+		stmt.setString(2, pf.getName ());
+		stmt.executeUpdate();
+
+		pf.setId (getLastInsertedId (stmt));
+
+		stmt.close ();		
+
+		pool.emitPlatformAdded (pf);
+	}
+	
 	public OperatingSystem addOperatingSystem (Project project, String name) throws SQLException {
 		OperatingSystem os = new OperatingSystem (null, project, name);
 		add (os);
@@ -2414,9 +2484,12 @@ public class Model {
 		pool.emitAttachmentStatusHistoryAdded (history);
 	}
 
-	public Bug addBug (Integer identifier, Identity identity, Component component,
-			String title, Date creation, Date lastChange, Priority priority, Severity severity, Status status, Resolution resolution, Version version, OperatingSystem operatingSystem) throws SQLException {
-		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, status, resolution, version, operatingSystem);
+	public Bug addBug (Integer identifier, Identity identity, Component component, String title, 
+			Date creation, Date lastChange, Priority priority, Severity severity, Status status, 
+			Resolution resolution, Version version, Milestone targetMilestone, 
+			OperatingSystem operatingSystem, Platform platform) throws SQLException
+	{
+		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, status, resolution, version, targetMilestone, operatingSystem, platform);
 		add (bug);
 
 		return bug;
@@ -2440,6 +2513,10 @@ public class Model {
 		assert (bug.getVersion ().getId () != null);
 		assert (bug.getOperatingSystem () != null);
 		assert (bug.getOperatingSystem ().getId () != null);
+		assert (bug.getPlatform () != null);
+		assert (bug.getPlatform ().getId () != null);
+		assert (bug.getTargetMilestone () != null);
+		assert (bug.getTargetMilestone ().getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (BUG_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
@@ -2457,9 +2534,11 @@ public class Model {
 		stmt.setInt (7, bug.getSeverity ().getId ());
 		stmt.setInt (8, bug.getStatus ().getId ());
 		stmt.setInt (9, bug.getResolution ().getId ());
-		resSetDate (stmt, 10, bug.getLastChange ());		
+		resSetDate (stmt, 10, bug.getLastChange ());
 		stmt.setInt (11, bug.getVersion ().getId ());
-		stmt.setInt (12, bug.getOperatingSystem ().getId ());		
+		stmt.setInt (12, bug.getOperatingSystem ().getId ());
+		stmt.setInt (13, bug.getPlatform ().getId ());
+		stmt.setInt (14, bug.getTargetMilestone ().getId ());
 		stmt.executeUpdate();
 
 		bug.setId (getLastInsertedId (stmt));
@@ -2477,11 +2556,25 @@ public class Model {
 		assert (bug.getComponent () != null);
 		assert (bug.getPriority () != null);
 		assert (bug.getSeverity() != null);
+		assert (bug.getStatus () != null);
+		assert (bug.getResolution () != null);
+		assert (bug.getLastChange () != null);
+		assert (bug.getVersion () != null);
+		assert (bug.getOperatingSystem () != null);
+		assert (bug.getPlatform () != null);
+		assert (bug.getTargetMilestone () != null);
 		assert (bug.getIdentity () == null || bug.getIdentity ().getId () != null);
 		assert (bug.getComponent ().getId () != null);
 		assert (bug.getPriority ().getId () != null);
 		assert (bug.getSeverity().getId () != null);
-	
+		assert (bug.getStatus ().getId () != null);
+		assert (bug.getResolution ().getId () != null);
+		assert (bug.getVersion ().getId () != null);
+		assert (bug.getOperatingSystem ().getId () != null);
+		assert (bug.getPlatform ().getId () != null);
+		assert (bug.getTargetMilestone ().getId () != null);
+
+		
 		PreparedStatement stmt = conn.prepareStatement (BUG_UPDATE);
 		stmt.setInt (1, bug.getIdentifier ());
 		if (bug.getIdentity () != null) {
@@ -2494,7 +2587,14 @@ public class Model {
 		resSetDate (stmt, 5, bug.getCreation ());
 		stmt.setInt (6, bug.getPriority ().getId ());
 		stmt.setInt (7, bug.getSeverity ().getId ());
-		stmt.setInt (8, bug.getId ());
+		stmt.setInt (8, bug.getStatus ().getId ());
+		stmt.setInt (9, bug.getResolution ().getId ());
+		resSetDate (stmt, 10, bug.getLastChange ());
+		stmt.setInt (11, bug.getVersion ().getId ());
+		stmt.setInt (12, bug.getOperatingSystem ().getId ());
+		stmt.setInt (13, bug.getPlatform ().getId ());
+		stmt.setInt (14, bug.getTargetMilestone ().getId ());
+		stmt.setInt (15, bug.getId ());
 		stmt.executeUpdate();
 		stmt.close ();
 
@@ -3969,8 +4069,11 @@ public class Model {
 		Map<Integer, Component> components = getComponents (proj);
 		Map<Integer, Resolution> resolutions = getResolutions (proj);
 		Map<Integer, Version> versions = getVersions (proj);
+		Map<Integer, Milestone> milestones = getMilestones (proj);
+		Map<Integer, Platform> platforms = getPlatforms (proj);
 		Map<Integer, OperatingSystem> operatingSystems = getOperatingSystems (proj);
 		Map<Integer, Status> statuses = getStatuses (proj);
+
 
 		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUGS);
 		stmt.setInt (1, proj.getId ());
@@ -3996,12 +4099,14 @@ public class Model {
 			Resolution resolution = resolutions.get (res.getInt (17));
 			Date lastChange = resGetDate (res, 18);
 			Version version = versions.get (res.getInt (19));
+			Milestone milestone = milestones.get (res.getInt (22));
 			OperatingSystem operatingSystem = operatingSystems.get (res.getInt (20));
+			Platform platform = platforms.get (res.getInt (21));
 			Status status = statuses.get (res.getInt (14));
 
 			Bug bug = new Bug (id, identifier, identity, component,
 				title, creation, lastChange, priority, severity, status, resolution,
-				version, operatingSystem);
+				version, milestone, operatingSystem, platform);
 
 			do_next = callback.processResult (bug);
 		}
@@ -4064,9 +4169,18 @@ public class Model {
 			String statName = res.getString (26);
 			Status status = new Status (statId, proj, statName);
 
+			int platId = res.getInt (27);
+			String platName = res.getString (28);
+			Platform platform = new Platform (platId, proj, platName);
+
+			int mileId = res.getInt (29);
+			String mileName = res.getString (30);
+			Milestone milestone = new Milestone (mileId, proj, mileName);
+			
 			return new Bug (id, identifier, identity, component,
 				title, creation, lastChange, priority, severity,
-				status, resolution, version, operatingSystem);
+				status, resolution, version, milestone, 
+				operatingSystem, platform);
 		}
 
 		return null;
@@ -4272,6 +4386,26 @@ public class Model {
 		return opsys;
 	}
 
+	public Map<String, Platform> getPlatformsByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_PLATFORMS);
+		stmt.setInt (1, proj.getId ());
+
+		// Collect data:
+		HashMap<String, Platform> platforms = new HashMap<String, Platform> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Platform pf = new Platform (res.getInt (1), proj, res.getString (2));
+			platforms.put (pf.getName (), pf);
+		}
+	
+		return platforms;
+	}
+
 	public Map<String, Keyword> getKeywordsByName (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -4410,6 +4544,26 @@ public class Model {
 		}
 	
 		return opsys;
+	}
+
+	public Map<Integer, Platform> getPlatforms (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_PLATFORMS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<Integer, Platform> platforms = new HashMap<Integer, Platform> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Platform pf = new Platform (res.getInt (1), proj, res.getString (2));
+			platforms.put (pf.getId (), pf);
+		}
+	
+		return platforms;
 	}
 
 	public Map<Integer, Keyword> getKeywords (Project proj) throws SQLException {
@@ -4914,6 +5068,7 @@ public class Model {
 		stmt.executeUpdate (RESOLUTION_TABLE);
 		stmt.executeUpdate (SEVERITY_TABLE);
 		stmt.executeUpdate (VERSION_TABLE);
+		stmt.executeUpdate (PLATFORMS_TABLE);
 		stmt.executeUpdate (MILESTONE_TABLE);
 		stmt.executeUpdate (OPERATING_SYSTEM_TABLE);
 		stmt.executeUpdate (KEYWORD_TABLE);

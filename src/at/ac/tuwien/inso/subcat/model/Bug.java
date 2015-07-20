@@ -45,12 +45,15 @@ public class Bug {
 	private Integer identifier;
 	private Resolution resolution;
 	private Version version;
+	private Milestone milestone;
 	private OperatingSystem os;
+	private Platform platform;
 	private Status status;
 
 	public Bug (Integer id, Integer identifier, Identity identity, Component component,
 			String title, Date creation, Date lastChange, Priority priority, Severity severity,
-			Status status, Resolution resolution, Version version, OperatingSystem os) {
+			Status status, Resolution resolution, Version version, Milestone milestone,
+			OperatingSystem os, Platform platform) {
 		assert (component != null);
 		assert (title != null);
 		assert (creation != null);
@@ -59,7 +62,9 @@ public class Bug {
 		assert (lastChange != null);
 		assert (version != null);
 		assert (os != null);
+		assert (platform != null);
 		assert (status != null);
+		assert (milestone != null);
 
 		this.id = id;
 		this.identifier = identifier;
@@ -74,6 +79,8 @@ public class Bug {
 		this.lastChange = lastChange;
 		this.version = version;
 		this.os = os;
+		this.platform = platform;
+		this.milestone = milestone;
 	}
 
 	public Integer getIdentifier () {
@@ -155,6 +162,16 @@ public class Bug {
 		
 		this.version = version;
 	}
+	
+	public Milestone getTargetMilestone () {
+		return milestone;
+	}
+
+	public void setMilestone (Milestone milestone) {
+		assert (milestone != null);
+		
+		this.milestone = milestone;
+	}
 
 	public boolean equals (Bug obj) {
 		if (id == null || obj.id == null) {
@@ -186,6 +203,10 @@ public class Bug {
 
 	public OperatingSystem getOperatingSystem () {
 		return os;
+	}
+	
+	public Platform getPlatform () {
+		return platform;
 	}
 
 	public void setOperatingSystem (OperatingSystem os) {

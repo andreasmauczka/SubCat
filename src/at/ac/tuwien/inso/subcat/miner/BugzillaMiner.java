@@ -252,6 +252,7 @@ public class BugzillaMiner extends Miner {
 				Date deadline = bzBug.getDeadline ();
 				Integer duplication = bzBug.getDup ();
 				Integer[] blocks = bzBug.getBlocks ();
+				Integer[] dependsOn = bzBug.getDependsOn ();
 
 				String  qaContact = bzBug.getQaContact ();
 				Identity qaContactIdentity = null;
@@ -273,6 +274,7 @@ public class BugzillaMiner extends Miner {
 					model.addBugDuplication (bug, duplication);
 					model.addBugQaContact (bug, qaContactIdentity, qaContactGroup);
 					model.addBugBlocks (bug, blocks);
+					model.addBugDependsOn (bug, dependsOn);
 				} else {
 					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
 					model.updateBug (bug);
@@ -280,6 +282,7 @@ public class BugzillaMiner extends Miner {
 					model.updateBugDuplication (bug, duplication);
 					model.updateBugQaContact (bug, qaContactIdentity, qaContactGroup);
 					model.updateBugBlocks (bug, blocks);
+					model.updateBugDependsOn (bug, dependsOn);
 				}
 
 				if (processComments) {
@@ -797,8 +800,9 @@ public class BugzillaMiner extends Miner {
 		try {
 			model.resolveBugBlocksHistoryBugs (project);
 			model.resolveBugBlocksBugs (project);
-			model.resolveBugDependencies (project);
+			model.resolveBugDependencyHistory (project);
 			model.resolveBugDuplicationsBugs (project);
+			model.resolveBugDependsOnBugs (project);
 
 			// Update server time *after* mining to make sure we don't
 			// miss updates in case anything goes wrong.

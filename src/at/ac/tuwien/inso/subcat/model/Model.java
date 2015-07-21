@@ -314,9 +314,19 @@ public class Model {
 		"CREATE TABLE IF NOT EXISTS BugBlocks ("
 		+ "bug			INT				NOT NULL,"
 		+ "identifier	INT				NOT NULL,"
-		+ "blocks		INT										,"
+		+ "blocks		INT						,"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
 		+ "FOREIGN KEY(blocks) REFERENCES Bugs (id),"
+		+ "PRIMARY KEY (bug, identifier)"
+		+ ")";
+
+	private static final String BUG_DEPENDS_ON_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugDependsOn ("
+		+ "bug			INT				NOT NULL,"
+		+ "identifier	INT				NOT NULL,"
+		+ "dependsOn	INT						,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(dependsOn) REFERENCES Bugs (id),"
 		+ "PRIMARY KEY (bug, identifier)"
 		+ ")";
 
@@ -604,8 +614,8 @@ public class Model {
 		+ "FOREIGN KEY(blocks) REFERENCES Bugs (id)"
 		+ ")";
 
-	private static final String BUG_DEPENDENCIES_TABLE =
-		"CREATE TABLE IF NOT EXISTS BugDependencies ("
+	private static final String BUG_DEPENDENCY_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugDependencyHistory ("
 		+ "id					INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
 		+ "date					TEXT								NOT NULL,"
 		+ "bug					INT									NOT NULL,"
@@ -835,7 +845,7 @@ public class Model {
 		+ " (SELECT COUNT() FROM ConfirmedHistory WHERE ConfirmedHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM VersionHistory WHERE VersionHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM OperatingSystemHistory WHERE OperatingSystemHistory.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM BugDependencies WHERE BugDependencies.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM BugDependencyHistory WHERE BugDependencyHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM KeywordHistory WHERE KeywordHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM MilestoneHistory WHERE MilestoneHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM AssignedToHistory WHERE AssignedToHistory.bug = Bugs.id),"
@@ -1584,6 +1594,11 @@ public class Model {
 		+ "(bug, identifier, blocks)"
 		+ "VALUES (?,?,?)";
 
+	private static final String BUG_DEPENDS_ON_INSERTION =
+		"INSERT INTO BugDependsOn"
+		+ "(bug, identifier, dependsOn)"
+		+ "VALUES (?,?,?)";
+	
 	private static final String BUG_BLOCKS_HISTORY_RESOLVE_BUGS =
 		"UPDATE"
 		+ " BugBlocksHistory "
@@ -1602,7 +1617,16 @@ public class Model {
 		+ " blocks IS NULL"
 		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
-	private static final String BUG_DUPLICATIONS_RESOLVE_BUGs =
+	private static final String BUG_DEPENDS_ON_RESOLVE_BUGS =
+		"UPDATE"
+		+ " BugDependsOn "
+		+ "SET "
+		+ " dependsOn = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugDependsOn.identifier AND Components.project = ?) "
+		+ "WHERE"
+		+ " dependsOn IS NULL"
+		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
+
+	private static final String BUG_DUPLICATIONS_RESOLVE_BUGS =
 		"UPDATE"
 		+ " BugDuplications "
 		+ "SET "
@@ -1611,16 +1635,16 @@ public class Model {
 		+ " duplication IS NULL"
 		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
-	private static final String BUG_DEPENDENCY_INSERTION =
-		"INSERT INTO BugDependencies"
+	private static final String BUG_DEPENDENCY_HISTORY_INSERTION =
+		"INSERT INTO BugDependencyHistory"
 		+ "(bug, date, addedBy, depends, dependsIdentifier, removed)"
 		+ "VALUES (?,?,?,?,?,?)";
 
-	private static final String BUG_DEPENDENCY_RESOLVE_BUGS =
+	private static final String BUG_DEPENDENCY_HISTORY_RESOLVE_BUGS =
 		"UPDATE"
-		+ " BugDependencies "
+		+ " BugDependencyHistory "
 		+ "SET "
-		+ " depends = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugDependencies.dependsIdentifier AND Components.project = ?) "
+		+ " depends = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugDependencyHistory.dependsIdentifier AND Components.project = ?) "
 		+ "WHERE"
 		+ " depends IS NULL"
 		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
@@ -1790,6 +1814,9 @@ public class Model {
 	
 	private static final String DELETE_BUG_BLOCKS =
 		"DELETE FROM BugBlocks WHERE bug = ?";
+
+	private static final String DELETE_BUG_DEPENDS_ON =
+		"DELETE FROM BugDependsOn WHERE bug = ?";
 
 	private static final String DELETE_BUG_DUPLICATIONS =
 		"DELETE FROM BugDuplications WHERE bug = ?";
@@ -2660,6 +2687,58 @@ public class Model {
 		stmt.close ();
 	}
 
+	private void _addBugDependsOn (Bug bug, Integer[] dependsOn) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (dependsOn != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDS_ON_INSERTION);
+
+		for (Integer id : dependsOn) {
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, id);
+			stmt.executeUpdate ();
+		}
+
+		stmt.close ();
+	}
+
+	private void _removeBugDependsOn (Bug bug) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_DEPENDS_ON);
+
+		stmt.setInt (1, bug.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
+	public void addBugDependsOn (Bug bug, Integer[] dependsOn) throws SQLException {
+		if (dependsOn == null) {
+			return ;
+		}
+
+		_addBugDependsOn (bug, dependsOn);
+		pool.emitBugDependsOnAdded (bug, dependsOn);
+	}
+
+	public void updateBugDependsOn (Bug bug, Integer[] dependsOn) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (dependsOn != null);
+
+		_removeBugDependsOn (bug);
+		if (dependsOn != null) {
+			_addBugDependsOn (bug, dependsOn);
+		}		
+
+		pool.emitBugDependsOnUpdated (bug, dependsOn);
+	}
+
 	private void _addBugDuplication (Bug bug, Integer duplication) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
@@ -3369,7 +3448,7 @@ public class Model {
 		assert (blocks == null || blocks.getId () != null);
 		assert (bugIdentifier > 0);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDENCY_INSERTION);
+		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDENCY_HISTORY_INSERTION);
 		stmt.setInt (1, bug.getId ());
 		resSetDate (stmt, 2, date);
 		stmt.setInt (3, addedBy.getId ());
@@ -3412,12 +3491,12 @@ public class Model {
 		stmt.close ();
 	}
 
-	public void resolveBugDuplicationsBugs (Project project) throws SQLException {
+	public void resolveBugDependsOnBugs (Project project) throws SQLException {
 		assert (conn != null);
 		assert (project != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DUPLICATIONS_RESOLVE_BUGs);
+		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDS_ON_RESOLVE_BUGS);
 		stmt.setInt (1, project.getId ());
 		stmt.setInt (2, project.getId ());
 
@@ -3425,12 +3504,25 @@ public class Model {
 		stmt.close ();
 	}
 
-	public void resolveBugDependencies (Project project) throws SQLException {
+	public void resolveBugDuplicationsBugs (Project project) throws SQLException {
 		assert (conn != null);
 		assert (project != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDENCY_RESOLVE_BUGS);
+		PreparedStatement stmt = conn.prepareStatement (BUG_DUPLICATIONS_RESOLVE_BUGS);
+		stmt.setInt (1, project.getId ());
+		stmt.setInt (2, project.getId ());
+
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
+	public void resolveBugDependencyHistory (Project project) throws SQLException {
+		assert (conn != null);
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDENCY_HISTORY_RESOLVE_BUGS);
 		stmt.setInt (1, project.getId ());
 		stmt.setInt (2, project.getId ());
 
@@ -5424,7 +5516,8 @@ public class Model {
 		stmt.executeUpdate (CC_TABLE);
 		stmt.executeUpdate (BUG_BLOCKS_HISTORY_TABLE);
 		stmt.executeUpdate (BUG_BLOCKS_TABLE);
-		stmt.executeUpdate (BUG_DEPENDENCIES_TABLE);
+		stmt.executeUpdate (BUG_DEPENDS_ON_TABLE);
+		stmt.executeUpdate (BUG_DEPENDENCY_HISTORY_TABLE);
 		stmt.executeUpdate (CATEGORY_TABLE);
 		stmt.executeUpdate (COMMIT_TABLE);
 		stmt.executeUpdate (BUGFIX_COMMIT_TABLE);

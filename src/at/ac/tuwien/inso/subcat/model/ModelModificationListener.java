@@ -178,4 +178,8 @@ public interface ModelModificationListener {
 	public void bugBlocksAdded (Bug bug, Integer[] blocks);
 
 	public void bugBlocksUpdated (Bug bug, Integer[] blocks);
+
+	public void bugDependsOnAdded (Bug bug, Integer[] dependsOn);
+
+	public void bugDependsOnUpdated (Bug bug, Integer[] dependsOn);
 }

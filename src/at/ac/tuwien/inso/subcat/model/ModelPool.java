@@ -578,5 +578,17 @@ public class ModelPool {
 		}
 	}
 
+	public synchronized void emitBugDependsOnAdded (Bug bug, Integer[] dependsOn) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugDependsOnAdded (bug, dependsOn);
+		}
+	}
+
+	public synchronized void emitBugDependsOnUpdated (Bug bug, Integer[] dependsOn) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugDependsOnUpdated (bug, dependsOn);
+		}
+	}
+
 }
 

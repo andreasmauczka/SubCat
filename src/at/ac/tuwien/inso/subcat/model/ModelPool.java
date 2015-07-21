@@ -566,5 +566,17 @@ public class ModelPool {
 		}
 	}
 
+	public synchronized void emitBugBlocksAdded (Bug bug, Integer[] blocks) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugBlocksAdded (bug, blocks);
+		}
+	}
+
+	public synchronized void emitBugBlocksUpdated (Bug bug, Integer[] blocks) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugBlocksUpdated (bug, blocks);
+		}
+	}
+
 }
 

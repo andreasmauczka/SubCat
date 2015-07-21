@@ -174,4 +174,8 @@ public interface ModelModificationListener {
 	public void bugQaContactAdded (Bug bug, Identity identity, BugGroup group);
 
 	public void bugQaContactUpdated (Bug bug, Identity identity, BugGroup group);
+
+	public void bugBlocksAdded (Bug bug, Integer[] blocks);
+
+	public void bugBlocksUpdated (Bug bug, Integer[] blocks);
 }

@@ -67,6 +67,7 @@ public class BugzillaBug {
 	private String targetMilestone;
 	private Date deadline;
 	private String qaContact;
+	private Integer[] blocks;
 
 
 	public BugzillaBug (int id, String alias, String assignedTo,
@@ -76,7 +77,7 @@ public class BugzillaBug {
 			String priority, String product,
 			String resolution, String severity, String status, String summary,
 			String version, String targetMilestone, Date deadline,
-			String qaContact)
+			String qaContact, Integer[] blocks)
 	{
 		assert (alias != null);
 		assert (component != null);
@@ -93,6 +94,9 @@ public class BugzillaBug {
 
 		if (ccs == null) {
 			ccs = new String[0];
+		}
+		if (blocks == null) {
+			blocks = new Integer[0];
 		}
 
 		this.id = id;
@@ -116,6 +120,7 @@ public class BugzillaBug {
 		this.targetMilestone = targetMilestone;
 		this.deadline = deadline;
 		this.qaContact = qaContact;
+		this.blocks = blocks;
 	}
 
 
@@ -201,6 +206,10 @@ public class BugzillaBug {
 
 	public String getQaContact () {
 		return qaContact;
+	}
+	
+	public Integer[] getBlocks () {
+		return blocks;
 	}
 
 	@Override

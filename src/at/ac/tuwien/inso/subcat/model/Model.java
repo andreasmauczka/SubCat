@@ -292,11 +292,12 @@ public class Model {
 
 	private static final String BUG_DUPLICATION_TABLE =
 		"CREATE TABLE IF NOT EXISTS BugDuplications ("
-		+ "bug						INT PRIMARY KEY	NOT NULL,"
-		+ "duplicationIdentifier	INT				NOT NULL,"
-		+ "duplication				INT						,"
+		+ "bug						INT		NOT NULL,"
+		+ "duplicationIdentifier	INT		NOT NULL,"
+		+ "duplication				INT				,"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
-		+ "FOREIGN KEY(duplication) REFERENCES Bugs (id)"
+		+ "FOREIGN KEY(duplication) REFERENCES Bugs (id),"
+		+ "PRIMARY KEY (bug, duplicationIdentifier)"
 		+ ")";
 
 	private static final String BUG_QA_CONTACT_TABLE =
@@ -307,6 +308,16 @@ public class Model {
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(bugGroup) REFERENCES BugGroups (id)"
+		+ ")";
+
+	private static final String BUG_BLOCKS_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugBlocks ("
+		+ "bug			INT				NOT NULL,"
+		+ "identifier	INT				NOT NULL,"
+		+ "blocks		INT										,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(blocks) REFERENCES Bugs (id),"
+		+ "PRIMARY KEY (bug, identifier)"
 		+ ")";
 
 	private static final String VERSION_HISTORY_TABLE =
@@ -579,8 +590,8 @@ public class Model {
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id)"
 		+ ")";
 
-	private static final String BUG_BLOCKS_TABLE =
-		"CREATE TABLE IF NOT EXISTS BugBlocks ("
+	private static final String BUG_BLOCKS_HISTORY_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugBlocksHistory ("
 		+ "id				INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
 		+ "date				TEXT								NOT NULL,"
 		+ "bug				INT									NOT NULL,"
@@ -815,7 +826,7 @@ public class Model {
 		+ " (SELECT COUNT() FROM BugHistory WHERE BugHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM Attachments, Comments WHERE Attachments.comment = Comments.id AND Comments.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugCc WHERE BugCc.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM BugBlocks WHERE BugBlocks.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM BugBlocksHistory WHERE BugBlocksHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugAliases WHERE BugAliases.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM SeverityHistory WHERE SeverityHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM PriorityHistory WHERE PriorityHistory.bug = Bugs.id),"
@@ -1563,16 +1574,30 @@ public class Model {
 		+ "(bug, date, addedBy, cc, ccMail, removed)"
 		+ "VALUES (?,?,?,?,?,?)";
 
-	private static final String BUG_BLOCKS_INSERTION =
-		"INSERT INTO BugBlocks"
+	private static final String BUG_BLOCKS_HISTORY_INSERTION =
+		"INSERT INTO BugBlocksHistory"
 		+ "(bug, date, addedBy, blocks, blocksIdentifier, removed)"
 		+ "VALUES (?,?,?,?,?,?)";
+
+	private static final String BUG_BLOCKS_INSERTION =
+		"INSERT INTO BugBlocks"
+		+ "(bug, identifier, blocks)"
+		+ "VALUES (?,?,?)";
+
+	private static final String BUG_BLOCKS_HISTORY_RESOLVE_BUGS =
+		"UPDATE"
+		+ " BugBlocksHistory "
+		+ "SET "
+		+ " blocks = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugBlocksHistory.blocksIdentifier AND Components.project = ?) "
+		+ "WHERE"
+		+ " blocks IS NULL"
+		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
 	private static final String BUG_BLOCKS_RESOLVE_BUGS =
 		"UPDATE"
 		+ " BugBlocks "
 		+ "SET "
-		+ " blocks = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugBlocks.blocksIdentifier AND Components.project = ?) "
+		+ " blocks = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugBlocks.identifier AND Components.project = ?) "
 		+ "WHERE"
 		+ " blocks IS NULL"
 		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
@@ -1762,6 +1787,9 @@ public class Model {
 	
 	private static final String DELETE_BUG_DEADLINE =
 		"DELETE FROM BugDeadlines WHERE bug = ?";
+	
+	private static final String DELETE_BUG_BLOCKS =
+		"DELETE FROM BugBlocks WHERE bug = ?";
 
 	private static final String DELETE_BUG_DUPLICATIONS =
 		"DELETE FROM BugDuplications WHERE bug = ?";
@@ -2647,12 +2675,12 @@ public class Model {
 		stmt.close ();
 	}
 
-	private void _removeBugDeadline (Bug bug) throws SQLException {
+	private void _removeBugDuplication (Bug bug) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_DEADLINE,
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_DUPLICATIONS,
 				Statement.RETURN_GENERATED_KEYS);
 
 		stmt.setInt (1, bug.getId ());
@@ -2669,6 +2697,32 @@ public class Model {
 		pool.emitBugDuplicationAdded (bug, duplication);
 	}
 
+	public void updateBugDuplication (Bug bug, Integer duplication) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		_removeBugDuplication (bug);
+		if (duplication != null) {
+			_addBugDuplication (bug, duplication);
+		}		
+
+		pool.emitBugDuplicationUpdated (bug, duplication);
+	}
+
+	private void _removeBugDeadline (Bug bug) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_DEADLINE,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, bug.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
 	public void updateBugDeadline (Bug bug, Date deadline) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
@@ -2681,31 +2735,56 @@ public class Model {
 
 		pool.emitBugDeadlineUpdated (bug, deadline);
 	}
+	
+	private void _addBugBlocks (Bug bug, Integer[] blocks) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (blocks != null);
 
-	private void _removeBugDuplication (Bug bug) throws SQLException {
+		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_INSERTION);
+
+		for (Integer id : blocks) {
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, id);
+			stmt.executeUpdate ();
+		}
+
+		stmt.close ();
+	}
+
+	private void _removeBugBlocks (Bug bug) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_DUPLICATIONS,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_BLOCKS);
 
 		stmt.setInt (1, bug.getId ());
 		stmt.executeUpdate();
 		stmt.close ();
 	}
 
-	public void updateBugDuplication (Bug bug, Integer duplication) throws SQLException {
+	public void addBugBlocks (Bug bug, Integer[] blocks) throws SQLException {
+		if (blocks == null) {
+			return ;
+		}
+
+		_addBugBlocks (bug, blocks);
+		pool.emitBugBlocksAdded (bug, blocks);
+	}
+
+	public void updateBugBlocks (Bug bug, Integer[] blocks) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		_removeBugDuplication (bug);
-		if (duplication != null) {
-			_addBugDuplication (bug, duplication);
+		_removeBugBlocks (bug);
+		if (blocks != null) {
+			_addBugBlocks (bug, blocks);
 		}		
 
-		pool.emitBugDuplicationUpdated (bug, duplication);
+		pool.emitBugBlocksUpdated (bug, blocks);
 	}
 
 	public void updateBug (Bug bug) throws SQLException {
@@ -3263,7 +3342,7 @@ public class Model {
 		assert (blocks == null || blocks.getId () != null);
 		assert (bugIdentifier > 0);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_INSERTION);
+		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_HISTORY_INSERTION);
 		stmt.setInt (1, bug.getId ());
 		resSetDate (stmt, 2, date);
 		stmt.setInt (3, addedBy.getId ());
@@ -3305,6 +3384,19 @@ public class Model {
 		stmt.close ();
 
 		pool.emitBugBlocksAdded (bug, date, addedBy, removed);
+	}
+
+	public void resolveBugBlocksHistoryBugs (Project project) throws SQLException {
+		assert (conn != null);
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_HISTORY_RESOLVE_BUGS);
+		stmt.setInt (1, project.getId ());
+		stmt.setInt (2, project.getId ());
+
+		stmt.executeUpdate();
+		stmt.close ();
 	}
 
 	public void resolveBugBlocksBugs (Project project) throws SQLException {
@@ -5330,6 +5422,7 @@ public class Model {
 		stmt.executeUpdate (BUG_HISTORY_TABLE);
 		stmt.executeUpdate (STATUS_HISTORY_TABLE);
 		stmt.executeUpdate (CC_TABLE);
+		stmt.executeUpdate (BUG_BLOCKS_HISTORY_TABLE);
 		stmt.executeUpdate (BUG_BLOCKS_TABLE);
 		stmt.executeUpdate (BUG_DEPENDENCIES_TABLE);
 		stmt.executeUpdate (CATEGORY_TABLE);

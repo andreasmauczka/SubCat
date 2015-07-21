@@ -254,6 +254,7 @@ public class BugzillaMiner extends Miner {
 				Integer[] blocks = bzBug.getBlocks ();
 				Integer[] dependsOn = bzBug.getDependsOn ();
 				Keyword[] keywords = resolveKeywords (bzBug.getKeywords ());
+				Identity[] ccIdentities = resolveIdentities (bzBug.getCcs (), true);
 
 				String  qaContact = bzBug.getQaContact ();
 				Identity qaContactIdentity = null;
@@ -277,6 +278,7 @@ public class BugzillaMiner extends Miner {
 					model.addBugBlocks (bug, blocks);
 					model.addBugDependsOn (bug, dependsOn);
 					model.addBugKeywords (bug, keywords);
+					model.addBugCc (bug, ccIdentities);
 				} else {
 					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
 					model.updateBug (bug);
@@ -286,6 +288,7 @@ public class BugzillaMiner extends Miner {
 					model.updateBugBlocks (bug, blocks);
 					model.updateBugDependsOn (bug, dependsOn);
 					model.updateBugKeywords (bug, keywords);
+					model.updateBugCc (bug, ccIdentities);
 				}
 
 				if (processComments) {
@@ -464,11 +467,11 @@ public class BugzillaMiner extends Miner {
 
 							if (change.getAdded () != null) {
 								Identity ccIdentity = resolveIdentity (change.getAdded (), true);
-								model.addBugCc (bug, entry.getWhen (), addedBy, ccIdentity, change.getAdded (), false);
+								model.addBugCcHistory (bug, entry.getWhen (), addedBy, ccIdentity, change.getAdded (), false);
 							}
 							if (change.getRemoved () != null) {
 								Identity ccIdentity = resolveIdentity (change.getRemoved (), true);
-								model.addBugCc (bug, entry.getWhen (), addedBy, ccIdentity, change.getRemoved (), true);
+								model.addBugCcHistory (bug, entry.getWhen (), addedBy, ccIdentity, change.getRemoved (), true);
 							}
 						}
 						ccCnt += (change.getAdded () != null && change.getRemoved () != null)? 2 : 1;
@@ -1010,6 +1013,14 @@ public class BugzillaMiner extends Miner {
 		}
 		
 		return severity;
+	}
+
+	private Identity[] resolveIdentities (String[] names, boolean acceptUnknown) throws SQLException, BugzillaException {
+		Identity[] identities = new Identity[names.length];
+		for (int i = 0; i < names.length; i++) {
+			identities[i] = resolveIdentity (names[i], acceptUnknown);
+		}
+		return identities;
 	}
 
 	private Identity resolveIdentity (String name) throws SQLException, BugzillaException {

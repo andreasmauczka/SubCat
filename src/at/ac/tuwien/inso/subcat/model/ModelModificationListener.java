@@ -100,7 +100,7 @@ public interface ModelModificationListener {
 	public void attachmentIsObsoleteAdded (Attachment attachment,
 			Identity identity, Date date, boolean oldValue, boolean newValue);
 
-	public void bugCcAdded (Bug bug, Date date, Identity addedBy,
+	public void bugCcHistoryAdded (Bug bug, Date date, Identity addedBy,
 			Identity cc, String ccMail, boolean removed);
 
 	public void bugBlocksAdded (Bug bug, Date date, Identity addedBy,
@@ -186,4 +186,8 @@ public interface ModelModificationListener {
 	public void bugKeywordsAdded (Bug bug, Keyword[] keywords);
 
 	public void bugKeywordsUpdated (Bug bug, Keyword[] keywords);
+
+	public void bugCcAdded (Bug bug, Identity[] identities);
+
+	public void bugCcUpdated (Bug bug, Identity[] identities);
 }

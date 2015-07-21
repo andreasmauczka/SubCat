@@ -328,6 +328,15 @@ public class Model {
 		+ "PRIMARY KEY (bug, identifier)"
 		+ ")";
 
+	private static final String BUG_CC_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugCc ("
+		+ "bug			INT				NOT NULL,"
+		+ "identity		INT				NOT NULL,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
+		+ "PRIMARY KEY (bug, identity)"
+		+ ")";
+
 	private static final String BUG_DEPENDS_ON_TABLE =
 		"CREATE TABLE IF NOT EXISTS BugDependsOn ("
 		+ "bug			INT				NOT NULL,"
@@ -595,7 +604,7 @@ public class Model {
 		+ ")";
 
 	private static final String CC_TABLE =
-		"CREATE TABLE IF NOT EXISTS BugCc ("
+		"CREATE TABLE IF NOT EXISTS BugCcHistory ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
 		+ "date			TEXT								NOT NULL,"
 		+ "bug			INT									NOT NULL,"
@@ -843,7 +852,7 @@ public class Model {
 		+ " (SELECT COUNT() FROM Comments WHERE Comments.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugHistory WHERE BugHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM Attachments, Comments WHERE Attachments.comment = Comments.id AND Comments.bug = Bugs.id),"
-		+ " (SELECT COUNT() FROM BugCc WHERE BugCc.bug = Bugs.id),"
+		+ " (SELECT COUNT() FROM BugCcHistory WHERE BugCcHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugBlocksHistory WHERE BugBlocksHistory.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM BugAliases WHERE BugAliases.bug = Bugs.id),"
 		+ " (SELECT COUNT() FROM SeverityHistory WHERE SeverityHistory.bug = Bugs.id),"
@@ -1451,6 +1460,11 @@ public class Model {
 		+ "(identifier, identity, component, title, creation, priority, severity, status, resolution, lastChange, version, operatingSystem, platform, targetMilestone)"
 		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
+	private static final String BUG_CC_INSERTION =
+		"INSERT INTO BugCc"
+		+ "(bug, identity)"
+		+ "VALUES (?,?)";
+
 	private static final String BUG_DEADLINE_INSERTION =
 		"INSERT INTO BugDeadlines"
 		+ "(bug, date)"
@@ -1587,8 +1601,8 @@ public class Model {
 		+ "(attachment, identity, date, field, oldValue, newValue)"
 		+ "VALUES (?,?,?,?,?,?)";
 
-	private static final String BUG_CC_INSERTION =
-		"INSERT INTO BugCc"
+	private static final String BUG_CC_HISTORY_INSERTION =
+		"INSERT INTO BugCcHistory"
 		+ "(bug, date, addedBy, cc, ccMail, removed)"
 		+ "VALUES (?,?,?,?,?,?)";
 
@@ -1827,6 +1841,9 @@ public class Model {
 	
 	private static final String DELETE_BUG_BLOCKS =
 		"DELETE FROM BugBlocks WHERE bug = ?";
+
+	private static final String DELETE_BUG_CC =
+		"DELETE FROM BugCc WHERE bug = ?";
 
 	private static final String DELETE_BUG_KEYWORDS =
 		"DELETE FROM BugKeywords WHERE bug = ?";
@@ -2703,6 +2720,61 @@ public class Model {
 		stmt.close ();
 	}
 
+	private void _addBugCc (Bug bug, Identity[] identities) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (identities != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_CC_INSERTION);
+
+		for (Identity id : identities) {
+			assert (id != null);
+			assert (id.getId () != null);
+
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, id.getId ());
+			stmt.executeUpdate ();
+		}
+
+		stmt.close ();
+	}
+
+	private void _removeBugCc (Bug bug) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_CC);
+
+		stmt.setInt (1, bug.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
+	public void addBugCc (Bug bug, Identity[] identities) throws SQLException {
+		if (identities == null) {
+			return ;
+		}
+
+		_addBugCc (bug, identities);
+		pool.emitBugCcAdded (bug, identities);
+	}
+
+	public void updateBugCc (Bug bug, Identity[] identities) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (identities != null);
+
+		_removeBugCc (bug);
+		if (identities != null) {
+			_addBugCc (bug, identities);
+		}		
+
+		pool.emitBugCcUpdated (bug, identities);
+	}
+
 	private void _addBugKeywords (Bug bug, Keyword[] keywords) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
@@ -3455,7 +3527,7 @@ public class Model {
 		pool.emitAttachmentHistoryAdded (attachment, identity, date, fieldName, oldValue, newValue);
 	}
 
-	public void addBugCc (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) throws SQLException {
+	public void addBugCcHistory (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
 		assert (bug.getId () != null);
@@ -3465,7 +3537,7 @@ public class Model {
 		assert (cc == null || cc.getId () != null);
 		assert (ccMail != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_CC_INSERTION);
+		PreparedStatement stmt = conn.prepareStatement (BUG_CC_HISTORY_INSERTION);
 		stmt.setInt (1, bug.getId ());
 		resSetDate (stmt, 2, date);
 		stmt.setInt (3, addedBy.getId ());
@@ -3479,7 +3551,7 @@ public class Model {
 		stmt.executeUpdate();
 		stmt.close ();
 
-		pool.emitBugCcAdded (bug, date, addedBy, cc, ccMail, removed);
+		pool.emitBugCcHistoryAdded (bug, date, addedBy, cc, ccMail, removed);
 	}
 
 	public void addBugBlocks (Bug bug, Date date, Identity addedBy, Bug blocks, int bugIdentifier, boolean removed) throws SQLException {
@@ -5566,6 +5638,7 @@ public class Model {
 		stmt.executeUpdate (KEYWORD_TABLE);
 		stmt.executeUpdate (BUG_GROUP_TABLE);
 		stmt.executeUpdate (BUG_TABLE);
+		stmt.executeUpdate (BUG_CC_TABLE);
 		stmt.executeUpdate (BUG_KEYWORDS_TABLE);
 		stmt.executeUpdate (ASSIGNED_TO_HISTORY_TABLE);
 		stmt.executeUpdate (QA_CONTACT_HISTORY_TABLE);

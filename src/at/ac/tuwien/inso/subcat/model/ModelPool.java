@@ -382,9 +382,9 @@ public class ModelPool {
 		}
 	}
 
-	public synchronized void emitBugCcAdded (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) {
+	public synchronized void emitBugCcHistoryAdded (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) {
 		for (ModelModificationListener listener : listeners) {
-			listener.bugCcAdded (bug, date, addedBy, cc, ccMail, removed);
+			listener.bugCcHistoryAdded (bug, date, addedBy, cc, ccMail, removed);
 		}
 	}
 
@@ -599,6 +599,18 @@ public class ModelPool {
 	public synchronized void emitBugKeywordsUpdated (Bug bug, Keyword[] keywords) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugKeywordsUpdated (bug, keywords);
+		}
+	}
+
+	public synchronized void emitBugCcUpdated (Bug bug, Identity[] identities) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugCcUpdated (bug, identities);
+		}
+	}
+
+	public synchronized void emitBugCcAdded (Bug bug, Identity[] identities) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugCcAdded (bug, identities);
 		}
 	}
 

@@ -530,5 +530,17 @@ public class ModelPool {
 		}
 	}
 
+	public synchronized void emitBugDeadlineAdded (Bug bug, Date deadline) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugDeadlineAdded (bug, deadline);
+		}
+	}
+
+	public synchronized void emitBugDeadlineUpdated (Bug bug, Date deadline) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugDeadlineUpdated (bug, deadline);
+		}
+	}
+
 }
 

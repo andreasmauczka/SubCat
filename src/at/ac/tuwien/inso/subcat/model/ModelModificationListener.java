@@ -162,4 +162,8 @@ public interface ModelModificationListener {
 			BugGroup groupRemoved, Identity identityRemoved);
 
 	public void platformAdded (Platform pf);
+
+	public void bugDeadlineAdded (Bug bug, Date deadline);
+
+	public void bugDeadlineUpdated (Bug bug, Date deadline);
 }

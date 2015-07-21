@@ -249,6 +249,7 @@ public class BugzillaMiner extends Miner {
 				OperatingSystem operatingSystems = resolveOperatingSystem (bzBug.getOpSys ());
 				Platform platform = resolvePlatform (bzBug.getPlatform ());
 				Status status = resolveStatus (bzBug.getStatus ());
+				Date deadline = bzBug.getDeadline ();
 
 
 				List<BugzillaAttachment> attachments = new LinkedList<BugzillaAttachment> ();
@@ -257,9 +258,11 @@ public class BugzillaMiner extends Miner {
 				Bug bug;
 				if (bugStats == null) {
 					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
+					model.addBugDeadline (bug, deadline);
 				} else {
 					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
 					model.updateBug (bug);
+					model.updateBugDeadline (bug, deadline);
 				}
 
 				if (processComments) {

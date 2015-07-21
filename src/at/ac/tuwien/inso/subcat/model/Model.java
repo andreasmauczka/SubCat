@@ -281,6 +281,13 @@ public class Model {
 		+ "FOREIGN KEY(status) REFERENCES Status (id)"
 		+ ")";
 
+	private static final String BUG_DEADLINE_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugDeadlines ("
+		+ "bug			INT PRIMARY KEY						NOT NULL,"
+		+ "date			TEXT								NOT NULL,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id)"
+		+ ")";
+
 	private static final String VERSION_HISTORY_TABLE =
 		"CREATE TABLE IF NOT EXISTS VersionHistory ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -1394,6 +1401,11 @@ public class Model {
 		+ "(identifier, identity, component, title, creation, priority, severity, status, resolution, lastChange, version, operatingSystem, platform, targetMilestone)"
 		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
+	private static final String BUG_DEADLINE_INSERTION =
+		"INSERT INTO BugDeadlines"
+		+ "(bug, date)"
+		+ "VALUES (?, ?)";
+
 	private static final String BUG_UPDATE =
 		"UPDATE Bugs SET"
 		+ " identifier = ?,"
@@ -1709,6 +1721,9 @@ public class Model {
 	private static final String DELETE_SELECTED_USERS =
 		"DELETE FROM SelectedUsers";
 	
+	private static final String DELETE_BUG_DEADLINE =
+		"DELETE FROM BugDeadlines WHERE bug = ?";
+
 	private static final String DELETE_SENTENCE_SENTIMENTS =
 		"DELETE FROM SentenceSentiment "
 		+ "WHERE groupId IN "
@@ -2548,6 +2563,43 @@ public class Model {
 		pool.emitBugAdded (bug);
 	}
 
+	public void addBugDeadline (Bug bug, Date deadline) throws SQLException {
+		if (deadline == null) {
+			return ;
+		}
+
+		_addBugDeadline (bug, deadline);
+		pool.emitBugDeadlineAdded (bug, deadline);
+	}
+
+	private void _addBugDeadline (Bug bug, Date deadline) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (deadline != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_DEADLINE_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, bug.getId ());
+		resSetDate (stmt, 2, deadline);
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
+	private void _removeBugDeadline (Bug bug) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_DEADLINE,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, bug.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
 	public void updateBug (Bug bug) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
@@ -2597,8 +2649,21 @@ public class Model {
 		stmt.setInt (15, bug.getId ());
 		stmt.executeUpdate();
 		stmt.close ();
-
+		
 		pool.emitBugUpdated (bug);
+	}
+
+	public void updateBugDeadline (Bug bug, Date deadline) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		_removeBugDeadline (bug);
+		if (deadline != null) {
+			_addBugDeadline (bug, deadline);
+		}		
+
+		pool.emitBugDeadlineUpdated (bug, deadline);
 	}
 
 	public void addBugAlias (Bug bug, Identity addedBy, Date date, String alias) throws SQLException {
@@ -5085,6 +5150,7 @@ public class Model {
 		stmt.executeUpdate (OPERATING_SYSTEM_HISTORY_TABLE);
 		stmt.executeUpdate (KEYWORD_HISTORY_TABLE);
 		stmt.executeUpdate (BUG_ALIASES);
+		stmt.executeUpdate (BUG_DEADLINE_TABLE);
 		stmt.executeUpdate (COMMENT_TABLE);
 		stmt.executeUpdate (STATUS_TABLE);
 		stmt.executeUpdate (BUG_HISTORY_TABLE);

@@ -65,6 +65,7 @@ public class BugzillaBug {
 	// since ???
 	private String version;
 	private String targetMilestone;
+	private Date deadline;
 
 
 	public BugzillaBug (int id, String alias, String assignedTo,
@@ -73,7 +74,7 @@ public class BugzillaBug {
 			Date lastChangeTime, String opSys, String platform,
 			String priority, String product,
 			String resolution, String severity, String status, String summary,
-			String version, String targetMilestone)
+			String version, String targetMilestone, Date deadline)
 	{
 		assert (alias != null);
 		assert (component != null);
@@ -111,6 +112,7 @@ public class BugzillaBug {
 		this.summary = summary;
 		this.version = version;
 		this.targetMilestone = targetMilestone;
+		this.deadline = deadline;
 	}
 
 
@@ -190,6 +192,10 @@ public class BugzillaBug {
 		return targetMilestone;
 	}
 
+	public Date getDeadline () {
+		return deadline;
+	}
+	
 	@Override
 	public String toString () {
 		return "Bug [id=" + id + ", alias=" + alias + ", assignedTo="

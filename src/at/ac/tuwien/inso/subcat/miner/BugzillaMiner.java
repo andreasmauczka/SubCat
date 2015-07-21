@@ -253,6 +253,7 @@ public class BugzillaMiner extends Miner {
 				Integer duplication = bzBug.getDup ();
 				Integer[] blocks = bzBug.getBlocks ();
 				Integer[] dependsOn = bzBug.getDependsOn ();
+				Keyword[] keywords = resolveKeywords (bzBug.getKeywords ());
 
 				String  qaContact = bzBug.getQaContact ();
 				Identity qaContactIdentity = null;
@@ -275,6 +276,7 @@ public class BugzillaMiner extends Miner {
 					model.addBugQaContact (bug, qaContactIdentity, qaContactGroup);
 					model.addBugBlocks (bug, blocks);
 					model.addBugDependsOn (bug, dependsOn);
+					model.addBugKeywords (bug, keywords);
 				} else {
 					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
 					model.updateBug (bug);
@@ -283,6 +285,7 @@ public class BugzillaMiner extends Miner {
 					model.updateBugQaContact (bug, qaContactIdentity, qaContactGroup);
 					model.updateBugBlocks (bug, blocks);
 					model.updateBugDependsOn (bug, dependsOn);
+					model.updateBugKeywords (bug, keywords);
 				}
 
 				if (processComments) {
@@ -950,6 +953,17 @@ public class BugzillaMiner extends Miner {
 		return os;		
 	}
 
+	private Keyword[] resolveKeywords (String[] names) throws SQLException {
+		assert (names != null);
+
+		Keyword[] keywords = new Keyword[names.length];
+		for (int i = 0; i < names.length; i++) {
+			keywords[i] = resolveKeyword (names[i]);
+		}
+
+		return keywords;
+	}
+	
 	private synchronized Keyword resolveKeyword (String name) throws SQLException {
 		assert (name != null);
 

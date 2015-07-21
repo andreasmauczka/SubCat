@@ -252,7 +252,6 @@ public class Model {
 		+ "FOREIGN KEY(keyword) REFERENCES Keywords (id)"
 		+ ")";
 
-	// TODO: Add isObsolete
 	private static final String BUG_TABLE =
 		"CREATE TABLE IF NOT EXISTS Bugs ("
 		+ "id				INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -281,6 +280,15 @@ public class Model {
 		+ "FOREIGN KEY(operatingSystem) REFERENCES OperatingSystems (id),"
 		+ "FOREIGN KEY(platform) REFERENCES Platforms (id),"
 		+ "FOREIGN KEY(status) REFERENCES Status (id)"
+		+ ")";
+
+	private static final String BUG_KEYWORDS_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugKeywords ("
+		+ "bug			INT				NOT NULL,"
+		+ "keyword		INT						,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(keyword) REFERENCES Keywords (id),"
+		+ "PRIMARY KEY (bug, keyword)"
 		+ ")";
 
 	private static final String BUG_DEADLINE_TABLE =
@@ -1598,6 +1606,11 @@ public class Model {
 		"INSERT INTO BugDependsOn"
 		+ "(bug, identifier, dependsOn)"
 		+ "VALUES (?,?,?)";
+
+	private static final String BUG_KEYWORD_INSERTION =
+		"INSERT INTO BugKeywords"
+		+ "(bug, keyword)"
+		+ "VALUES (?,?)";
 	
 	private static final String BUG_BLOCKS_HISTORY_RESOLVE_BUGS =
 		"UPDATE"
@@ -1814,6 +1827,9 @@ public class Model {
 	
 	private static final String DELETE_BUG_BLOCKS =
 		"DELETE FROM BugBlocks WHERE bug = ?";
+
+	private static final String DELETE_BUG_KEYWORDS =
+		"DELETE FROM BugKeywords WHERE bug = ?";
 
 	private static final String DELETE_BUG_DEPENDS_ON =
 		"DELETE FROM BugDependsOn WHERE bug = ?";
@@ -2685,6 +2701,61 @@ public class Model {
 		resSetDate (stmt, 2, deadline);
 		stmt.executeUpdate();
 		stmt.close ();
+	}
+
+	private void _addBugKeywords (Bug bug, Keyword[] keywords) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (keywords != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_KEYWORD_INSERTION);
+
+		for (Keyword kw : keywords) {
+			assert (kw != null);
+			assert (kw.getId () != null);
+
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, kw.getId ());
+			stmt.executeUpdate ();
+		}
+
+		stmt.close ();
+	}
+
+	private void _removeBugKeywords (Bug bug) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_KEYWORDS);
+
+		stmt.setInt (1, bug.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
+	public void addBugKeywords (Bug bug, Keyword[] keywords) throws SQLException {
+		if (keywords == null) {
+			return ;
+		}
+
+		_addBugKeywords (bug, keywords);
+		pool.emitBugKeywordsAdded (bug, keywords);
+	}
+
+	public void updateBugKeywords (Bug bug, Keyword[] keywords) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (keywords != null);
+
+		_removeBugKeywords (bug);
+		if (keywords != null) {
+			_addBugKeywords (bug, keywords);
+		}		
+
+		pool.emitBugKeywordsUpdated (bug, keywords);
 	}
 
 	private void _addBugDependsOn (Bug bug, Integer[] dependsOn) throws SQLException {
@@ -5495,6 +5566,7 @@ public class Model {
 		stmt.executeUpdate (KEYWORD_TABLE);
 		stmt.executeUpdate (BUG_GROUP_TABLE);
 		stmt.executeUpdate (BUG_TABLE);
+		stmt.executeUpdate (BUG_KEYWORDS_TABLE);
 		stmt.executeUpdate (ASSIGNED_TO_HISTORY_TABLE);
 		stmt.executeUpdate (QA_CONTACT_HISTORY_TABLE);
 		stmt.executeUpdate (PRIORITY_HISTORY_TABLE);

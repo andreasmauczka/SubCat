@@ -590,5 +590,17 @@ public class ModelPool {
 		}
 	}
 
+	public synchronized void emitBugKeywordsAdded (Bug bug, Keyword[] keywords) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugKeywordsAdded (bug, keywords);
+		}
+	}
+
+	public synchronized void emitBugKeywordsUpdated (Bug bug, Keyword[] keywords) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugKeywordsUpdated (bug, keywords);
+		}
+	}
+
 }
 

@@ -69,6 +69,7 @@ public class BugzillaBug {
 	private String qaContact;
 	private Integer[] blocks;
 	private Integer[] dependsOn;
+	private String[] keywords;
 
 
 	public BugzillaBug (int id, String alias, String assignedTo,
@@ -78,7 +79,8 @@ public class BugzillaBug {
 			String priority, String product,
 			String resolution, String severity, String status, String summary,
 			String version, String targetMilestone, Date deadline,
-			String qaContact, Integer[] blocks, Integer[] dependsOn)
+			String qaContact, Integer[] blocks, Integer[] dependsOn,
+			String[] keywords)
 	{
 		assert (alias != null);
 		assert (component != null);
@@ -101,6 +103,9 @@ public class BugzillaBug {
 		}
 		if (dependsOn == null) {
 			dependsOn = new Integer[0];
+		}
+		if (keywords == null) {
+			keywords = new String[0];
 		}
 
 		this.id = id;
@@ -126,6 +131,7 @@ public class BugzillaBug {
 		this.qaContact = qaContact;
 		this.blocks = blocks;
 		this.dependsOn = dependsOn;
+		this.keywords = keywords;
 	}
 
 
@@ -219,6 +225,10 @@ public class BugzillaBug {
 
 	public Integer[] getDependsOn () {
 		return dependsOn;
+	}
+
+	public String[] getKeywords () {
+		return keywords;
 	}
 
 	@Override

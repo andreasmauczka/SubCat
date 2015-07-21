@@ -250,6 +250,16 @@ public class BugzillaMiner extends Miner {
 				Platform platform = resolvePlatform (bzBug.getPlatform ());
 				Status status = resolveStatus (bzBug.getStatus ());
 				Date deadline = bzBug.getDeadline ();
+				Integer duplication = bzBug.getDup ();
+
+				String  qaContact = bzBug.getQaContact ();
+				Identity qaContactIdentity = null;
+				BugGroup qaContactGroup = null;
+				if (isGroupIdentifier (qaContact)) {
+					qaContactGroup = resolveGroup (qaContact);
+				} else {
+					qaContactIdentity = resolveIdentity (qaContact);
+				}
 
 
 				List<BugzillaAttachment> attachments = new LinkedList<BugzillaAttachment> ();
@@ -259,10 +269,14 @@ public class BugzillaMiner extends Miner {
 				if (bugStats == null) {
 					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
 					model.addBugDeadline (bug, deadline);
+					model.addBugDuplication (bug, duplication);
+					model.addBugQaContact (bug, qaContactIdentity, qaContactGroup);
 				} else {
 					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
 					model.updateBug (bug);
 					model.updateBugDeadline (bug, deadline);
+					model.updateBugDuplication (bug, duplication);
+					model.updateBugQaContact (bug, qaContactIdentity, qaContactGroup);
 				}
 
 				if (processComments) {
@@ -780,6 +794,7 @@ public class BugzillaMiner extends Miner {
 		try {
 			model.resolveBugBlocksBugs (project);
 			model.resolveBugDependencies (project);
+			model.resolveBugDuplicationsBugs (project);
 
 			// Update server time *after* mining to make sure we don't
 			// miss updates in case anything goes wrong.

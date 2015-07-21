@@ -542,6 +542,7 @@ public class BugzillaContext {
 			String platform = getStringFromResultMap (bugMap, "platform");
 			String targetMilestone = getStringFromResultMap (bugMap, "target_milestone");
 			Date deadline = getDateFromResultMap (bugMap, "deadline", true);
+			String qaContact = getStringFromResultMap (bugMap, "qa_contact");
 
 
 			bugs[i] = new BugzillaBug (id, alias, assignedTo,
@@ -551,7 +552,8 @@ public class BugzillaContext {
 					lastChangeTime, opSys,
 					platform, priority, product,
 					resolution, severity, status, summary,
-					version, targetMilestone, deadline);
+					version, targetMilestone, deadline,
+					qaContact);
 		}
 
 		return bugs;

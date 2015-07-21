@@ -166,4 +166,12 @@ public interface ModelModificationListener {
 	public void bugDeadlineAdded (Bug bug, Date deadline);
 
 	public void bugDeadlineUpdated (Bug bug, Date deadline);
+
+	public void bugDuplicationUpdated (Bug bug, Integer duplication);
+
+	public void bugDuplicationAdded (Bug bug, Integer duplication);
+
+	public void bugQaContactAdded (Bug bug, Identity identity, BugGroup group);
+
+	public void bugQaContactUpdated (Bug bug, Identity identity, BugGroup group);
 }

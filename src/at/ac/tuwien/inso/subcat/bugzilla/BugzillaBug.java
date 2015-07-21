@@ -44,7 +44,7 @@ public class BugzillaBug {
 	private String component;
 	private Date creationTime;
 	// since 3.4
-	private Integer dups;
+	private Integer dup;
 	// since 3.4
 	private boolean isOpen;
 	private Date lastChangeTime;
@@ -66,15 +66,17 @@ public class BugzillaBug {
 	private String version;
 	private String targetMilestone;
 	private Date deadline;
+	private String qaContact;
 
 
 	public BugzillaBug (int id, String alias, String assignedTo,
 			String[] ccs, String component,
-			Date creationTime, Integer dups, boolean isOpen,
+			Date creationTime, Integer dup, boolean isOpen,
 			Date lastChangeTime, String opSys, String platform,
 			String priority, String product,
 			String resolution, String severity, String status, String summary,
-			String version, String targetMilestone, Date deadline)
+			String version, String targetMilestone, Date deadline,
+			String qaContact)
 	{
 		assert (alias != null);
 		assert (component != null);
@@ -99,7 +101,7 @@ public class BugzillaBug {
 		this.ccs = ccs;
 		this.component = component;
 		this.creationTime = creationTime;
-		this.dups = dups;
+		this.dup = dup;
 		this.isOpen = isOpen;
 		this.lastChangeTime = lastChangeTime;
 		this.opSys = opSys;
@@ -113,6 +115,7 @@ public class BugzillaBug {
 		this.version = version;
 		this.targetMilestone = targetMilestone;
 		this.deadline = deadline;
+		this.qaContact = qaContact;
 	}
 
 
@@ -140,8 +143,8 @@ public class BugzillaBug {
 		return creationTime;
 	}
 
-	public Integer getDups () {
-		return dups;
+	public Integer getDup () {
+		return dup;
 	}
 
 	public boolean isOpen () {
@@ -195,13 +198,17 @@ public class BugzillaBug {
 	public Date getDeadline () {
 		return deadline;
 	}
-	
+
+	public String getQaContact () {
+		return qaContact;
+	}
+
 	@Override
 	public String toString () {
 		return "Bug [id=" + id + ", alias=" + alias + ", assignedTo="
 				+ assignedTo + ", ccs=" + Arrays.toString(ccs) + ", component="
-				+ component + ", creationTime=" + creationTime + ", dups="
-				+ dups + ", isOpen=" + isOpen + ", lastChangeTime="
+				+ component + ", creationTime=" + creationTime + ", dup="
+				+ dup + ", isOpen=" + isOpen + ", lastChangeTime="
 				+ lastChangeTime + ", opSys=" + opSys + ", priority="
 				+ priority + ", product=" + product + ", resolution="
 				+ resolution + ", severity=" + severity + ", status=" + status

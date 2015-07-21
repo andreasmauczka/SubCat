@@ -47,6 +47,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import com.sun.xml.internal.ws.org.objectweb.asm.Type;
+
 import at.ac.tuwien.inso.subcat.config.DistributionAttributesConfig;
 import at.ac.tuwien.inso.subcat.config.DistributionChartConfig;
 import at.ac.tuwien.inso.subcat.config.DistributionChartOptionConfig;
@@ -286,6 +288,25 @@ public class Model {
 		+ "bug			INT PRIMARY KEY						NOT NULL,"
 		+ "date			TEXT								NOT NULL,"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id)"
+		+ ")";
+
+	private static final String BUG_DUPLICATION_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugDuplications ("
+		+ "bug						INT PRIMARY KEY	NOT NULL,"
+		+ "duplicationIdentifier	INT				NOT NULL,"
+		+ "duplication				INT						,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(duplication) REFERENCES Bugs (id)"
+		+ ")";
+
+	private static final String BUG_QA_CONTACT_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugQaContacts ("
+		+ "bug			INT PRIMARY KEY					NOT NULL,"
+		+ "identity		INT										,"
+		+ "bugGroup		INT										,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(bugGroup) REFERENCES BugGroups (id)"
 		+ ")";
 
 	private static final String VERSION_HISTORY_TABLE =
@@ -1406,6 +1427,16 @@ public class Model {
 		+ "(bug, date)"
 		+ "VALUES (?, ?)";
 
+	private static final String BUG_DUPLICATION_INSERTION =
+		"INSERT INTO BugDuplications"
+		+ "(bug, duplicationIdentifier)"
+		+ "VALUES (?, ?)";
+
+	private static final String BUG_QA_CONTACT_INSERTION =
+		"INSERT INTO BugQaContacts"
+		+ "(bug, identity, bugGroup)"
+		+ "VALUES (?, ?, ?)";
+		
 	private static final String BUG_UPDATE =
 		"UPDATE Bugs SET"
 		+ " identifier = ?,"
@@ -1424,7 +1455,6 @@ public class Model {
 		+ " targetMilestone = ? "
 		+ "WHERE"
 		+ " id = ?";
-
 	
 	private static final String BUG_ALIAS_INSERTION =
 		"INSERT INTO BugAliases"
@@ -1545,6 +1575,15 @@ public class Model {
 		+ " blocks = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugBlocks.blocksIdentifier AND Components.project = ?) "
 		+ "WHERE"
 		+ " blocks IS NULL"
+		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
+
+	private static final String BUG_DUPLICATIONS_RESOLVE_BUGs =
+		"UPDATE"
+		+ " BugDuplications "
+		+ "SET "
+		+ " duplication = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugDuplications.duplicationIdentifier AND Components.project = ?) "
+		+ "WHERE"
+		+ " duplication IS NULL"
 		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
 	private static final String BUG_DEPENDENCY_INSERTION =
@@ -1724,6 +1763,12 @@ public class Model {
 	private static final String DELETE_BUG_DEADLINE =
 		"DELETE FROM BugDeadlines WHERE bug = ?";
 
+	private static final String DELETE_BUG_DUPLICATIONS =
+		"DELETE FROM BugDuplications WHERE bug = ?";
+
+	private static final String DELETE_BUG_QA_CONTACTS =
+		"DELETE FROM BugQaContacts WHERE bug = ?";
+	
 	private static final String DELETE_SENTENCE_SENTIMENTS =
 		"DELETE FROM SentenceSentiment "
 		+ "WHERE groupId IN "
@@ -2587,6 +2632,21 @@ public class Model {
 		stmt.close ();
 	}
 
+	private void _addBugDuplication (Bug bug, Integer duplication) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (duplication != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_DUPLICATION_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, bug.getId ());
+		stmt.setInt (2, duplication);
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
 	private void _removeBugDeadline (Bug bug) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
@@ -2598,6 +2658,54 @@ public class Model {
 		stmt.setInt (1, bug.getId ());
 		stmt.executeUpdate();
 		stmt.close ();
+	}
+
+	public void addBugDuplication (Bug bug, Integer duplication) throws SQLException {
+		if (duplication == null) {
+			return ;
+		}
+
+		_addBugDuplication (bug, duplication);
+		pool.emitBugDuplicationAdded (bug, duplication);
+	}
+
+	public void updateBugDeadline (Bug bug, Date deadline) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		_removeBugDeadline (bug);
+		if (deadline != null) {
+			_addBugDeadline (bug, deadline);
+		}		
+
+		pool.emitBugDeadlineUpdated (bug, deadline);
+	}
+
+	private void _removeBugDuplication (Bug bug) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_DUPLICATIONS,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, bug.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
+	public void updateBugDuplication (Bug bug, Integer duplication) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		_removeBugDuplication (bug);
+		if (duplication != null) {
+			_addBugDuplication (bug, duplication);
+		}		
+
+		pool.emitBugDuplicationUpdated (bug, duplication);
 	}
 
 	public void updateBug (Bug bug) throws SQLException {
@@ -2653,19 +2761,70 @@ public class Model {
 		pool.emitBugUpdated (bug);
 	}
 
-	public void updateBugDeadline (Bug bug, Date deadline) throws SQLException {
+	public void addBugQaContact (Bug bug, Identity identity, BugGroup group) throws SQLException {
+		if (identity == null && group == null) {
+			return ;
+		}
+
+		_addBugQaContact (bug, identity, group);
+		pool.emitBugQaContactAdded (bug, identity, group);
+	}
+
+	public void updateBugQaContact (Bug bug, Identity identity, BugGroup group) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (identity != null || group != null);
+		assert (identity == null || identity.getId () != null);
+		assert (group == null || group.getId () != null);
+
+		_removeBugQaContact (bug);
+		if (identity != null || group != null) {
+			_addBugQaContact (bug, identity, group);
+		}
+
+		pool.emitBugQaContactUpdated (bug, identity, group);
+	}
+
+	private void _removeBugQaContact (Bug bug) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		_removeBugDeadline (bug);
-		if (deadline != null) {
-			_addBugDeadline (bug, deadline);
-		}		
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_QA_CONTACTS);
 
-		pool.emitBugDeadlineUpdated (bug, deadline);
+		stmt.setInt (1, bug.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
 	}
+	
+	private void _addBugQaContact (Bug bug, Identity identity, BugGroup group) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (identity != null || group != null);
+		assert (identity == null || identity.getId () != null);
+		assert (group == null || group.getId () != null);
+		
+		PreparedStatement stmt = conn.prepareStatement (BUG_QA_CONTACT_INSERTION);
 
+		stmt.setInt (1, bug.getId ());
+		if (identity != null) {
+			stmt.setInt (2, identity.getId ());
+		} else {
+			stmt.setNull (2, Type.INT);
+		}
+
+		if (group != null) {
+			stmt.setInt (3, group.getId ());
+		} else {
+			stmt.setNull (3, Type.INT);
+		}
+
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+	
 	public void addBugAlias (Bug bug, Identity addedBy, Date date, String alias) throws SQLException {
 		assert (bug != null);
 		assert (bug.getId () != null);
@@ -3154,6 +3313,19 @@ public class Model {
 		assert (project.getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_RESOLVE_BUGS);
+		stmt.setInt (1, project.getId ());
+		stmt.setInt (2, project.getId ());
+
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
+	public void resolveBugDuplicationsBugs (Project project) throws SQLException {
+		assert (conn != null);
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_DUPLICATIONS_RESOLVE_BUGs);
 		stmt.setInt (1, project.getId ());
 		stmt.setInt (2, project.getId ());
 
@@ -5151,6 +5323,8 @@ public class Model {
 		stmt.executeUpdate (KEYWORD_HISTORY_TABLE);
 		stmt.executeUpdate (BUG_ALIASES);
 		stmt.executeUpdate (BUG_DEADLINE_TABLE);
+		stmt.executeUpdate (BUG_DUPLICATION_TABLE);
+		stmt.executeUpdate (BUG_QA_CONTACT_TABLE);
 		stmt.executeUpdate (COMMENT_TABLE);
 		stmt.executeUpdate (STATUS_TABLE);
 		stmt.executeUpdate (BUG_HISTORY_TABLE);

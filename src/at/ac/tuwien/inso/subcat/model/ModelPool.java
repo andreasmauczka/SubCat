@@ -542,5 +542,29 @@ public class ModelPool {
 		}
 	}
 
+	public synchronized void emitBugDuplicationUpdated (Bug bug, Integer duplication) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugDuplicationUpdated (bug, duplication);
+		}
+	}
+
+	public synchronized void emitBugDuplicationAdded (Bug bug, Integer duplication) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugDuplicationAdded (bug, duplication);
+		}
+	}
+
+	public synchronized void emitBugQaContactAdded (Bug bug, Identity identity, BugGroup group) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugQaContactAdded (bug, identity, group);
+		}
+	}
+
+	public synchronized void emitBugQaContactUpdated (Bug bug, Identity identity, BugGroup group) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugQaContactUpdated (bug, identity, group);
+		}
+	}
+
 }
 

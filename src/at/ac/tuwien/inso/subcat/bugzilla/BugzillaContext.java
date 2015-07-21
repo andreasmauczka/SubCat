@@ -516,7 +516,7 @@ public class BugzillaContext {
 		// Convert results:
 		Object[] objArr = getArrayFromResultMap (map, "bugs");
 		assertArrayType (objArr, Map.class);
-
+		
 		BugzillaBug[] bugs = new BugzillaBug[objArr.length];
 		for (int i = 0; i < objArr.length; i++) {
 			assertType (objArr[i], Map.class);
@@ -546,6 +546,7 @@ public class BugzillaContext {
 			Integer[] blocks = getIntegerArrayFromResultMap (bugMap, "blocks");
 			Integer[] dependsOn = getIntegerArrayFromResultMap (bugMap, "depends_on");
 			String[] keywords = getStringArrayFromResultMap (bugMap, "keywords", true);
+			String[] groups = getStringArrayFromResultMap (bugMap, "groups", true);
 
 
 			bugs[i] = new BugzillaBug (id, alias, assignedTo,
@@ -556,7 +557,8 @@ public class BugzillaContext {
 					platform, priority, product,
 					resolution, severity, status, summary,
 					version, targetMilestone, deadline,
-					qaContact, blocks, dependsOn, keywords);
+					qaContact, blocks, dependsOn, keywords,
+					groups);
 		}
 
 		return bugs;
@@ -824,7 +826,8 @@ public class BugzillaContext {
 	//
 	// Test Main:
 	//
-	
+
+
 	/*
 	public static void main (String[] args) {
 		try {

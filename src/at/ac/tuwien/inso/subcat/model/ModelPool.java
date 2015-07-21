@@ -614,5 +614,17 @@ public class ModelPool {
 		}
 	}
 
+	public synchronized void emitBugGroupMembershipsAdded (Bug bug, BugGroup[] groups) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugGroupMembershipsAdded (bug, groups);
+		}
+	}
+
+	public synchronized void emitBugGroupMembershipsUpdated (Bug bug, BugGroup[] groups) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugGroupMembershipsUpdated (bug, groups);
+		}
+	}
+
 }
 

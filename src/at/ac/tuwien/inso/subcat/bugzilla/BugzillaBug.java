@@ -70,6 +70,7 @@ public class BugzillaBug {
 	private Integer[] blocks;
 	private Integer[] dependsOn;
 	private String[] keywords;
+	private String[] groups;
 
 
 	public BugzillaBug (int id, String alias, String assignedTo,
@@ -80,7 +81,7 @@ public class BugzillaBug {
 			String resolution, String severity, String status, String summary,
 			String version, String targetMilestone, Date deadline,
 			String qaContact, Integer[] blocks, Integer[] dependsOn,
-			String[] keywords)
+			String[] keywords, String[] groups)
 	{
 		assert (alias != null);
 		assert (component != null);
@@ -107,6 +108,9 @@ public class BugzillaBug {
 		if (keywords == null) {
 			keywords = new String[0];
 		}
+		if (groups == null) {
+			groups = new String[0];
+		}
 
 		this.id = id;
 		this.alias = alias;
@@ -132,6 +136,7 @@ public class BugzillaBug {
 		this.blocks = blocks;
 		this.dependsOn = dependsOn;
 		this.keywords = keywords;
+		this.groups = groups;
 	}
 
 
@@ -231,6 +236,10 @@ public class BugzillaBug {
 		return keywords;
 	}
 
+	public String[] getGroups () {
+		return groups;
+	}
+	
 	@Override
 	public String toString () {
 		return "Bug [id=" + id + ", alias=" + alias + ", assignedTo="

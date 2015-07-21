@@ -190,4 +190,8 @@ public interface ModelModificationListener {
 	public void bugCcAdded (Bug bug, Identity[] identities);
 
 	public void bugCcUpdated (Bug bug, Identity[] identities);
+
+	public void bugGroupMembershipsAdded (Bug bug, BugGroup[] groups);
+
+	public void bugGroupMembershipsUpdated (Bug bug, BugGroup[] groups);
 }

@@ -337,6 +337,15 @@ public class Model {
 		+ "PRIMARY KEY (bug, identity)"
 		+ ")";
 
+	private static final String BUG_GROUPS_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugGroupMemberships ("
+		+ "bug			INT				NOT NULL,"
+		+ "bugGroup		INT				NOT NULL,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(bugGroup) REFERENCES BugGroups (id),"
+		+ "PRIMARY KEY (bug, bugGroup)"
+		+ ")";
+
 	private static final String BUG_DEPENDS_ON_TABLE =
 		"CREATE TABLE IF NOT EXISTS BugDependsOn ("
 		+ "bug			INT				NOT NULL,"
@@ -1465,6 +1474,11 @@ public class Model {
 		+ "(bug, identity)"
 		+ "VALUES (?,?)";
 
+	private static final String BUG_GROUP_MEMBERSHIP_INSERTION =
+		"INSERT INTO BugGroupMemberships"
+		+ "(bug, bugGroup)"
+		+ "VALUES (?,?)";
+
 	private static final String BUG_DEADLINE_INSERTION =
 		"INSERT INTO BugDeadlines"
 		+ "(bug, date)"
@@ -1844,6 +1858,9 @@ public class Model {
 
 	private static final String DELETE_BUG_CC =
 		"DELETE FROM BugCc WHERE bug = ?";
+
+	private static final String DELETE_BUG_GROUP_MEMBERSHIPS =
+		"DELETE FROM BugGroupMemberships WHERE bug = ?";
 
 	private static final String DELETE_BUG_KEYWORDS =
 		"DELETE FROM BugKeywords WHERE bug = ?";
@@ -2718,6 +2735,61 @@ public class Model {
 		resSetDate (stmt, 2, deadline);
 		stmt.executeUpdate();
 		stmt.close ();
+	}
+
+	private void _addBugGroupMemberships (Bug bug, BugGroup[] groups) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (groups != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_GROUP_MEMBERSHIP_INSERTION);
+
+		for (BugGroup grp : groups) {
+			assert (grp != null);
+			assert (grp.getId () != null);
+
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, grp.getId ());
+			stmt.executeUpdate ();
+		}
+
+		stmt.close ();
+	}
+
+	private void _removeBugGroupMemberships (Bug bug) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_GROUP_MEMBERSHIPS);
+
+		stmt.setInt (1, bug.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
+	public void addBugGroupMemberships (Bug bug, BugGroup[] groups) throws SQLException {
+		if (groups == null) {
+			return ;
+		}
+
+		_addBugGroupMemberships (bug, groups);
+		pool.emitBugGroupMembershipsAdded (bug, groups);
+	}
+
+	public void updateBugGroupMemberships (Bug bug, BugGroup[] groups) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (groups != null);
+
+		_removeBugGroupMemberships (bug);
+		if (groups != null) {
+			_addBugGroupMemberships (bug, groups);
+		}		
+
+		pool.emitBugGroupMembershipsUpdated (bug, groups);
 	}
 
 	private void _addBugCc (Bug bug, Identity[] identities) throws SQLException {
@@ -5638,6 +5710,7 @@ public class Model {
 		stmt.executeUpdate (KEYWORD_TABLE);
 		stmt.executeUpdate (BUG_GROUP_TABLE);
 		stmt.executeUpdate (BUG_TABLE);
+		stmt.executeUpdate (BUG_GROUPS_TABLE);
 		stmt.executeUpdate (BUG_CC_TABLE);
 		stmt.executeUpdate (BUG_KEYWORDS_TABLE);
 		stmt.executeUpdate (ASSIGNED_TO_HISTORY_TABLE);

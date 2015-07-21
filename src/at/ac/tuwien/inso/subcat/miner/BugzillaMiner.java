@@ -255,6 +255,7 @@ public class BugzillaMiner extends Miner {
 				Integer[] dependsOn = bzBug.getDependsOn ();
 				Keyword[] keywords = resolveKeywords (bzBug.getKeywords ());
 				Identity[] ccIdentities = resolveIdentities (bzBug.getCcs (), true);
+				BugGroup[] groups = resolveGroups (bzBug.getGroups ());
 
 				String  qaContact = bzBug.getQaContact ();
 				Identity qaContactIdentity = null;
@@ -279,6 +280,7 @@ public class BugzillaMiner extends Miner {
 					model.addBugDependsOn (bug, dependsOn);
 					model.addBugKeywords (bug, keywords);
 					model.addBugCc (bug, ccIdentities);
+					model.addBugGroupMemberships (bug, groups);
 				} else {
 					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
 					model.updateBug (bug);
@@ -289,6 +291,7 @@ public class BugzillaMiner extends Miner {
 					model.updateBugDependsOn (bug, dependsOn);
 					model.updateBugKeywords (bug, keywords);
 					model.updateBugCc (bug, ccIdentities);
+					model.updateBugGroupMemberships (bug, groups);
 				}
 
 				if (processComments) {
@@ -930,6 +933,16 @@ public class BugzillaMiner extends Miner {
 		}
 		
 		return stat;
+	}
+
+	private BugGroup[] resolveGroups (String[] names) throws SQLException {
+		BugGroup[] groups = new BugGroup[names.length];
+		
+		for (int i = 0; i < names.length; i++) {
+			groups[i] = resolveGroup (names[i]);
+		}
+		
+		return groups;
 	}
 
 	private synchronized BugGroup resolveGroup (String name) throws SQLException {

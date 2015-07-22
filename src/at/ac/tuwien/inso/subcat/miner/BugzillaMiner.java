@@ -263,6 +263,7 @@ public class BugzillaMiner extends Miner {
 				Identity[] ccIdentities = resolveIdentities (bzBug.getCcs (), true);
 				BugGroup[] groups = resolveGroups (bzBug.getGroups ());
 				BugFlagAssignment[] bugFlagAssignments = resolveBugFlagAssignments (bzBug.getProcessFlags ());
+				String[] seeAlso = bzBug.getSeeAlso ();
 
 				String  qaContact = bzBug.getQaContact ();
 				Identity qaContactIdentity = null;
@@ -289,6 +290,7 @@ public class BugzillaMiner extends Miner {
 					model.addBugCc (bug, ccIdentities);
 					model.addBugGroupMemberships (bug, groups);
 					model.addBugFlagAssignments (bug, bugFlagAssignments);
+					model.addBugSeeAlso (bug, seeAlso);
 				} else {
 					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
 					model.updateBug (bug);
@@ -301,6 +303,7 @@ public class BugzillaMiner extends Miner {
 					model.updateBugCc (bug, ccIdentities);
 					model.updateBugGroupMemberships (bug, groups);
 					model.updateBugFlagAssignments (bug, bugFlagAssignments);
+					model.updateBugSeeAlso (bug, seeAlso);
 				}
 
 				if (processComments) {

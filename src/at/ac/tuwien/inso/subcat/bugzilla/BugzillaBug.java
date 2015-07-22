@@ -72,6 +72,7 @@ public class BugzillaBug {
 	private String[] keywords;
 	private String[] groups;
 	private BugzillaFlag[] processFlags;
+	private String[] seeAlso;
 
 
 	public BugzillaBug (int id, String alias, String assignedTo,
@@ -82,7 +83,7 @@ public class BugzillaBug {
 			String resolution, String severity, String status, String summary,
 			String version, String targetMilestone, Date deadline,
 			String qaContact, Integer[] blocks, Integer[] dependsOn,
-			String[] keywords, String[] groups, BugzillaFlag[] processFlags)
+			String[] keywords, String[] groups, BugzillaFlag[] processFlags, String[] seeAlso)
 	{
 		assert (alias != null);
 		assert (component != null);
@@ -116,6 +117,9 @@ public class BugzillaBug {
 		if (processFlags == null) {
 			processFlags = new BugzillaFlag[0];
 		}
+		if (seeAlso == null) {
+			seeAlso = new String[0];
+		}
 
 		this.id = id;
 		this.alias = alias;
@@ -143,6 +147,7 @@ public class BugzillaBug {
 		this.keywords = keywords;
 		this.groups = groups;
 		this.processFlags = processFlags;
+		this.seeAlso = seeAlso;
 	}
 
 
@@ -248,6 +253,10 @@ public class BugzillaBug {
 
 	public BugzillaFlag[] getProcessFlags () {
 		return processFlags;
+	}
+
+	public String[] getSeeAlso () {
+		return seeAlso;
 	}
 
 	@Override

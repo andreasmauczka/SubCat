@@ -546,6 +546,7 @@ public class BugzillaContext {
 			Integer[] dependsOn = getIntegerArrayFromResultMap (bugMap, "depends_on");
 			String[] keywords = getStringArrayFromResultMap (bugMap, "keywords", true);
 			String[] groups = getStringArrayFromResultMap (bugMap, "groups", true);
+			String[] seeAlso = getStringArrayFromResultMap (bugMap, "see_also", true);
 			BugzillaFlag[] flags = processFlagHash (bugMap);
 
 
@@ -558,7 +559,7 @@ public class BugzillaContext {
 					resolution, severity, status, summary,
 					version, targetMilestone, deadline,
 					qaContact, blocks, dependsOn, keywords,
-					groups, flags);
+					groups, flags, seeAlso);
 		}
 
 		return bugs;

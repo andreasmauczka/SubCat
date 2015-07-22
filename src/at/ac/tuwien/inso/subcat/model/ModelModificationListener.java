@@ -202,4 +202,8 @@ public interface ModelModificationListener {
 	public void bugFlagAssignmentsAdded (Bug bug, BugFlagAssignment[] flags);
 
 	public void bugFlagAssignmentsUpdated (Bug bug, BugFlagAssignment[] flags);
+
+	public void bugSeeAlsoUpdated (Bug bug, String[] links);
+
+	public void bugSeeAlsoAdded (Bug bug, String[] links);
 }

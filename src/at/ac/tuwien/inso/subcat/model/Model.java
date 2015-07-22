@@ -373,6 +373,14 @@ public class Model {
 		+ "PRIMARY KEY (bug, identity)"
 		+ ")";
 
+	private static final String BUG_SEE_ALSO_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugSeeAlso ("
+		+ "bug		INT				NOT NULL,"
+		+ "link		TEXT			NOT NULL,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "PRIMARY KEY (bug, link)"
+		+ ")";
+
 	private static final String BUG_GROUPS_TABLE =
 		"CREATE TABLE IF NOT EXISTS BugGroupMemberships ("
 		+ "bug			INT				NOT NULL,"
@@ -1530,6 +1538,11 @@ public class Model {
 		+ "(bug, identity)"
 		+ "VALUES (?,?)";
 
+	private static final String BUG_SEE_ALSO_INSERTION =
+		"INSERT INTO BugSeeAlso"
+		+ "(bug, link)"
+		+ "VALUES (?,?)";
+
 	private static final String BUG_GROUP_MEMBERSHIP_INSERTION =
 		"INSERT INTO BugGroupMemberships"
 		+ "(bug, bugGroup)"
@@ -1929,6 +1942,9 @@ public class Model {
 
 	private static final String DELETE_BUG_CC =
 		"DELETE FROM BugCc WHERE bug = ?";
+
+	private static final String DELETE_BUG_SEE_ALSO =
+		"DELETE FROM BugSeeAlso WHERE bug = ?";
 
 	private static final String DELETE_BUG_GROUP_MEMBERSHIPS =
 		"DELETE FROM BugGroupMemberships WHERE bug = ?";
@@ -2990,6 +3006,60 @@ public class Model {
 		}		
 
 		pool.emitBugGroupMembershipsUpdated (bug, groups);
+	}
+
+	private void _addBugSeeAlso (Bug bug, String[] links) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (links != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_SEE_ALSO_INSERTION);
+
+		for (String link : links) {
+			assert (link != null);
+
+			stmt.setInt (1, bug.getId ());
+			stmt.setString (2, link);
+			stmt.executeUpdate ();
+		}
+
+		stmt.close ();
+	}
+
+	private void _removeBugSeeAlso (Bug bug) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_SEE_ALSO);
+
+		stmt.setInt (1, bug.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
+	public void addBugSeeAlso (Bug bug, String[] links) throws SQLException {
+		if (links == null) {
+			return ;
+		}
+
+		_addBugSeeAlso (bug, links);
+		pool.emitBugSeeAlsoAdded (bug, links);
+	}
+
+	public void updateBugSeeAlso (Bug bug, String[] links) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (links != null);
+
+		_removeBugSeeAlso (bug);
+		if (links != null) {
+			_addBugSeeAlso (bug, links);
+		}		
+
+		pool.emitBugSeeAlsoUpdated (bug, links);
 	}
 
 	private void _addBugCc (Bug bug, Identity[] identities) throws SQLException {
@@ -6021,6 +6091,7 @@ public class Model {
 		stmt.executeUpdate (BUG_DEADLINE_TABLE);
 		stmt.executeUpdate (BUG_DUPLICATION_TABLE);
 		stmt.executeUpdate (BUG_QA_CONTACT_TABLE);
+		stmt.executeUpdate (BUG_SEE_ALSO_TABLE);
 		stmt.executeUpdate (COMMENT_TABLE);
 		stmt.executeUpdate (STATUS_TABLE);
 		stmt.executeUpdate (BUG_HISTORY_TABLE);

@@ -649,5 +649,17 @@ public class ModelPool {
 			listener.bugFlagAssignmentsUpdated (bug, flags);
 		}
 	}
+
+	synchronized void emitBugSeeAlsoAdded (Bug bug, String[] links) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugSeeAlsoAdded (bug, links);
+		}
+	}
+
+	synchronized void emitBugSeeAlsoUpdated (Bug bug, String[] links) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugSeeAlsoUpdated (bug, links);
+		}
+	}
 }
 

@@ -194,4 +194,12 @@ public interface ModelModificationListener {
 	public void bugGroupMembershipsAdded (Bug bug, BugGroup[] groups);
 
 	public void bugGroupMembershipsUpdated (Bug bug, BugGroup[] groups);
+
+	public void bugFlagStatusAdded (BugFlagStatus status);
+
+	public void bugFlagAdded (BugFlag flag);
+
+	public void bugFlagAssignmentsAdded (Bug bug, BugFlagAssignment[] flags);
+
+	public void bugFlagAssignmentsUpdated (Bug bug, BugFlagAssignment[] flags);
 }

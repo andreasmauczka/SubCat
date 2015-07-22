@@ -376,98 +376,98 @@ public class ModelPool {
 		return this.printTemplates;
 	}
 
-	public synchronized void emitAttachmentIsObsoleteAdded (Attachment attachment, Identity identity, Date date, boolean oldValue, boolean newValue) {
+	synchronized void emitAttachmentIsObsoleteAdded (Attachment attachment, Identity identity, Date date, boolean oldValue, boolean newValue) {
 		for (ModelModificationListener listener : listeners) {
 			listener.attachmentIsObsoleteAdded (attachment, identity, date, oldValue, newValue);
 		}
 	}
 
-	public synchronized void emitBugCcHistoryAdded (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) {
+	synchronized void emitBugCcHistoryAdded (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugCcHistoryAdded (bug, date, addedBy, cc, ccMail, removed);
 		}
 	}
 
-	public synchronized void emitBugBlocksAdded (Bug bug, Date date, Identity addedBy,
+	synchronized void emitBugBlocksAdded (Bug bug, Date date, Identity addedBy,
 			boolean removed) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugBlocksAdded (bug, date, addedBy, removed);
 		}
 	}
 
-	public synchronized void emitBugAliasAdded (Bug bug, Identity addedBy, Date date, String alias) {
+	synchronized void emitBugAliasAdded (Bug bug, Identity addedBy, Date date, String alias) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugAliasAdded (bug, addedBy, date, alias);
 		}
 	}
 
-	public synchronized void emitSeverityHistoryAdded (Bug bug, Identity addedBy, Date date, Severity oldSeverity, Severity newSeverity) {
+	synchronized void emitSeverityHistoryAdded (Bug bug, Identity addedBy, Date date, Severity oldSeverity, Severity newSeverity) {
 		for (ModelModificationListener listener : listeners) {
 			listener.severityHistoryAdded (bug, addedBy, date, oldSeverity, newSeverity);
 		}
 	}
 
-	public synchronized void emitPriorityHistoryAdded (Bug bug, Identity addedBy, Date date,
+	synchronized void emitPriorityHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Priority oldPriority, Priority newPriority) {
 		for (ModelModificationListener listener : listeners) {
 			listener.priorityHistoryAdded (bug, addedBy, date, oldPriority, newPriority);
 		}
 	}
 
-	public synchronized void emitStatusHistoryAdded (Bug bug, Identity addedBy, Date date,
+	synchronized void emitStatusHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Status oldStatus, Status newStatus) {
 		for (ModelModificationListener listener : listeners) {
 			listener.statusHistoryAdded (bug, addedBy, date, oldStatus, newStatus);
 		}
 	}
 
-	public synchronized void emitResolutionAdded (Resolution resolution) {
+	synchronized void emitResolutionAdded (Resolution resolution) {
 		for (ModelModificationListener listener : listeners) {
 			listener.resolutionAdded (resolution);
 		}
 	}
 
-	public synchronized void emitResolutionHistoryAdded (Bug bug, Identity addedBy,
+	synchronized void emitResolutionHistoryAdded (Bug bug, Identity addedBy,
 			Date date, Resolution resolution) {
 		for (ModelModificationListener listener : listeners) {
 			listener.resolutionHistoryAdded (bug, addedBy, date, resolution);
 		}
 	}
 
-	public synchronized void emitConfirmedHistoryAdded (Bug bug, Identity addedBy,
+	synchronized void emitConfirmedHistoryAdded (Bug bug, Identity addedBy,
 			Date date, boolean removed) {
 		for (ModelModificationListener listener : listeners) {
 			listener.confiremdHistoryAdded (bug, addedBy, date, removed);
 		}
 	}
 
-	public synchronized void emitVersionAdded (Version version) {
+	synchronized void emitVersionAdded (Version version) {
 		for (ModelModificationListener listener : listeners) {
 			listener.versionAdded (version);
 		}
 	}
 
-	public synchronized void emitVersionHistoryAdded (Bug bug, Identity addedBy, Date date,
+	synchronized void emitVersionHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Version oldVersion, Version newVersion) {
 		for (ModelModificationListener listener : listeners) {
 			listener.versionHistoryAdded (bug, addedBy, date, oldVersion, newVersion);
 		}
 	}
 
-	public synchronized void emitOperatingSystemAdded (OperatingSystem os) {
+	synchronized void emitOperatingSystemAdded (OperatingSystem os) {
 		for (ModelModificationListener listener : listeners) {
 			listener.operatingSystemAdded (os);
 		}
 	}
 
-	public synchronized void emitOperatingSystemHistoryAdded (Bug bug, Identity addedBy,
+	synchronized void emitOperatingSystemHistoryAdded (Bug bug, Identity addedBy,
 			Date date, OperatingSystem oldOs, OperatingSystem newOs) {
 		for (ModelModificationListener listener : listeners) {
 			listener.operatingSystemHistoryAdded (bug, addedBy, date, oldOs, newOs);
 		}
 	}
 
-	public synchronized void emitAttachmentHistoryAdded (Attachment attachment,
+	synchronized void emitAttachmentHistoryAdded (Attachment attachment,
 			Identity addedBy, Date date, String fieldName, String oldValue,
 			String newValue) {
 		for (ModelModificationListener listener : listeners) {
@@ -475,39 +475,39 @@ public class ModelPool {
 		}
 	}
 
-	public synchronized void emitKeywordAdded (Keyword keyword) {
+	synchronized void emitKeywordAdded (Keyword keyword) {
 		for (ModelModificationListener listener : listeners) {
 			listener.keywordAdded (keyword);
 		}
 	}
 
-	public synchronized void emitKeywordHistoryAdded (Bug bug, Identity addedBy, Date date,
+	synchronized void emitKeywordHistoryAdded (Bug bug, Identity addedBy, Date date,
 			Keyword keyword, boolean removed) {
 		for (ModelModificationListener listener : listeners) {
 			listener.keywordHistoryAdded (bug, addedBy, date, keyword, removed);
 		}
 	}
 
-	public synchronized void emitMilestoneAdded (Milestone ms) {
+	synchronized void emitMilestoneAdded (Milestone ms) {
 		for (ModelModificationListener listener : listeners) {
 			listener.milestoneAdded (ms);
 		}
 	}
 
-	public synchronized void emitMilestoneHistoryAdded (Bug bug, Identity addedBy,
+	synchronized void emitMilestoneHistoryAdded (Bug bug, Identity addedBy,
 			Date date, Milestone oldMilestone, Milestone newMilestone) {
 		for (ModelModificationListener listener : listeners) {
 			listener.milestoneAdded (bug, addedBy, date, oldMilestone, newMilestone);
 		}
 	}
 
-	public synchronized void emitBugGroupAdded (BugGroup grp) {
+	synchronized void emitBugGroupAdded (BugGroup grp) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugGroupAdded (grp);
 		}
 	}
 
-	public synchronized void emitAssignedToHistoryAdded (Bug bug, Identity addedBy, Date date,
+	synchronized void emitAssignedToHistoryAdded (Bug bug, Identity addedBy, Date date,
 			String identifierAdded, BugGroup groupAdded, Identity identityAdded,
 			String identifierRemoved, BugGroup groupRemoved, Identity identityRemoved) {
 		for (ModelModificationListener listener : listeners) {
@@ -515,7 +515,7 @@ public class ModelPool {
 		}
 	}
 
-	public synchronized void emitQaContactHistoryAdded (Bug bug, Identity addedBy,
+	synchronized void emitQaContactHistoryAdded (Bug bug, Identity addedBy,
 			Date date, String identifierAdded, BugGroup groupAdded,
 			Identity identityAdded, String identifierRemoved,
 			BugGroup groupRemoved, Identity identityRemoved) {
@@ -524,107 +524,130 @@ public class ModelPool {
 		}
 	}
 
-	public synchronized void emitPlatformAdded (Platform pf) {
+	synchronized void emitPlatformAdded (Platform pf) {
 		for (ModelModificationListener listener : listeners) {
 			listener.platformAdded (pf);
 		}
 	}
 
-	public synchronized void emitBugDeadlineAdded (Bug bug, Date deadline) {
+	synchronized void emitBugDeadlineAdded (Bug bug, Date deadline) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugDeadlineAdded (bug, deadline);
 		}
 	}
 
-	public synchronized void emitBugDeadlineUpdated (Bug bug, Date deadline) {
+	synchronized void emitBugDeadlineUpdated (Bug bug, Date deadline) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugDeadlineUpdated (bug, deadline);
 		}
 	}
 
-	public synchronized void emitBugDuplicationUpdated (Bug bug, Integer duplication) {
+	synchronized void emitBugDuplicationUpdated (Bug bug, Integer duplication) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugDuplicationUpdated (bug, duplication);
 		}
 	}
 
-	public synchronized void emitBugDuplicationAdded (Bug bug, Integer duplication) {
+	synchronized void emitBugDuplicationAdded (Bug bug, Integer duplication) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugDuplicationAdded (bug, duplication);
 		}
 	}
 
-	public synchronized void emitBugQaContactAdded (Bug bug, Identity identity, BugGroup group) {
+	synchronized void emitBugQaContactAdded (Bug bug, Identity identity, BugGroup group) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugQaContactAdded (bug, identity, group);
 		}
 	}
 
-	public synchronized void emitBugQaContactUpdated (Bug bug, Identity identity, BugGroup group) {
+	synchronized void emitBugQaContactUpdated (Bug bug, Identity identity, BugGroup group) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugQaContactUpdated (bug, identity, group);
 		}
 	}
 
-	public synchronized void emitBugBlocksAdded (Bug bug, Integer[] blocks) {
+	synchronized void emitBugBlocksAdded (Bug bug, Integer[] blocks) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugBlocksAdded (bug, blocks);
 		}
 	}
 
-	public synchronized void emitBugBlocksUpdated (Bug bug, Integer[] blocks) {
+	synchronized void emitBugBlocksUpdated (Bug bug, Integer[] blocks) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugBlocksUpdated (bug, blocks);
 		}
 	}
 
-	public synchronized void emitBugDependsOnAdded (Bug bug, Integer[] dependsOn) {
+	synchronized void emitBugDependsOnAdded (Bug bug, Integer[] dependsOn) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugDependsOnAdded (bug, dependsOn);
 		}
 	}
 
-	public synchronized void emitBugDependsOnUpdated (Bug bug, Integer[] dependsOn) {
+	synchronized void emitBugDependsOnUpdated (Bug bug, Integer[] dependsOn) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugDependsOnUpdated (bug, dependsOn);
 		}
 	}
 
-	public synchronized void emitBugKeywordsAdded (Bug bug, Keyword[] keywords) {
+	synchronized void emitBugKeywordsAdded (Bug bug, Keyword[] keywords) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugKeywordsAdded (bug, keywords);
 		}
 	}
 
-	public synchronized void emitBugKeywordsUpdated (Bug bug, Keyword[] keywords) {
+	synchronized void emitBugKeywordsUpdated (Bug bug, Keyword[] keywords) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugKeywordsUpdated (bug, keywords);
 		}
 	}
 
-	public synchronized void emitBugCcUpdated (Bug bug, Identity[] identities) {
+	synchronized void emitBugCcUpdated (Bug bug, Identity[] identities) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugCcUpdated (bug, identities);
 		}
 	}
 
-	public synchronized void emitBugCcAdded (Bug bug, Identity[] identities) {
+	synchronized void emitBugCcAdded (Bug bug, Identity[] identities) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugCcAdded (bug, identities);
 		}
 	}
 
-	public synchronized void emitBugGroupMembershipsAdded (Bug bug, BugGroup[] groups) {
+	synchronized void emitBugGroupMembershipsAdded (Bug bug, BugGroup[] groups) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugGroupMembershipsAdded (bug, groups);
 		}
 	}
 
-	public synchronized void emitBugGroupMembershipsUpdated (Bug bug, BugGroup[] groups) {
+	synchronized void emitBugGroupMembershipsUpdated (Bug bug, BugGroup[] groups) {
 		for (ModelModificationListener listener : listeners) {
 			listener.bugGroupMembershipsUpdated (bug, groups);
 		}
 	}
 
+	synchronized void emitBugFlagStatusAdded (BugFlagStatus status) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugFlagStatusAdded (status);
+		}
+	}
+
+	synchronized void emitBugFlagAdded (BugFlag flag) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugFlagAdded (flag);
+		}
+	}
+
+	synchronized void emitBugFlagAssignmentsAdded (Bug bug, BugFlagAssignment[] flags) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugFlagAssignmentsAdded (bug, flags);
+		}
+	}
+
+	synchronized void emitBugFlagAssignmentsUpdated (Bug bug,BugFlagAssignment[] flags) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugFlagAssignmentsUpdated (bug, flags);
+		}
+	}
 }
 

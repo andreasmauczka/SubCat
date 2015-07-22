@@ -46,6 +46,7 @@ import at.ac.tuwien.inso.subcat.bugzilla.BugzillaChange;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaComment;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaContext;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaException;
+import at.ac.tuwien.inso.subcat.bugzilla.BugzillaFlag;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaHistory;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaProduct;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaUser;
@@ -53,6 +54,9 @@ import at.ac.tuwien.inso.subcat.model.Attachment;
 import at.ac.tuwien.inso.subcat.model.AttachmentStatus;
 import at.ac.tuwien.inso.subcat.model.Bug;
 import at.ac.tuwien.inso.subcat.model.BugAttachmentStats;
+import at.ac.tuwien.inso.subcat.model.BugFlag;
+import at.ac.tuwien.inso.subcat.model.BugFlagAssignment;
+import at.ac.tuwien.inso.subcat.model.BugFlagStatus;
 import at.ac.tuwien.inso.subcat.model.BugGroup;
 import at.ac.tuwien.inso.subcat.model.BugStats;
 import at.ac.tuwien.inso.subcat.model.Comment;
@@ -101,8 +105,9 @@ public class BugzillaMiner extends Miner {
 	
 	private Map<String, AttachmentStatus> attachmentStatus = new HashMap<String, AttachmentStatus> ();
 	private Map<String, OperatingSystem> operatingSystems = new HashMap<String, OperatingSystem> ();
-	private Map<String, Component> components = new HashMap<String, Component> ();
+	private Map<String, BugFlagStatus> flagStates = new HashMap<String, BugFlagStatus> ();
 	private Map<String, Resolution> resolutions = new HashMap<String, Resolution> ();
+	private Map<String, Component> components = new HashMap<String, Component> ();
 	private Map<String, Milestone> milestones = new HashMap<String, Milestone> ();
 	private Map<String, Priority> priorities = new HashMap<String, Priority> ();
 	private Map<String, Severity> severities = new HashMap<String, Severity> ();
@@ -111,6 +116,7 @@ public class BugzillaMiner extends Miner {
 	private Map<String, Version> versions = new HashMap<String, Version> ();
 	private Map<String, Keyword> keywords = new HashMap<String, Keyword> ();
 	private Map<String, BugGroup> groups = new HashMap<String, BugGroup> ();
+	private Map<Integer, BugFlag> flags = new HashMap<Integer, BugFlag> ();
 	private Map<String, Status> status = new HashMap<String, Status> ();
 	private Project project;
 
@@ -256,6 +262,7 @@ public class BugzillaMiner extends Miner {
 				Keyword[] keywords = resolveKeywords (bzBug.getKeywords ());
 				Identity[] ccIdentities = resolveIdentities (bzBug.getCcs (), true);
 				BugGroup[] groups = resolveGroups (bzBug.getGroups ());
+				BugFlagAssignment[] bugFlagAssignments = resolveBugFlagAssignments (bzBug.getProcessFlags ());
 
 				String  qaContact = bzBug.getQaContact ();
 				Identity qaContactIdentity = null;
@@ -281,6 +288,7 @@ public class BugzillaMiner extends Miner {
 					model.addBugKeywords (bug, keywords);
 					model.addBugCc (bug, ccIdentities);
 					model.addBugGroupMemberships (bug, groups);
+					model.addBugFlagAssignments (bug, bugFlagAssignments);
 				} else {
 					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
 					model.updateBug (bug);
@@ -292,6 +300,7 @@ public class BugzillaMiner extends Miner {
 					model.updateBugKeywords (bug, keywords);
 					model.updateBugCc (bug, ccIdentities);
 					model.updateBugGroupMemberships (bug, groups);
+					model.updateBugFlagAssignments (bug, bugFlagAssignments);
 				}
 
 				if (processComments) {
@@ -866,6 +875,8 @@ public class BugzillaMiner extends Miner {
 		keywords = model.getKeywordsByName (project);
 		groups = model.getBugGroupsByName (project);
 		platforms = model.getPlatformsByName (project);
+		flagStates = model.getBugFlagStatesByName (project);
+		flags = model.getBugFlagsByIdentifier (project);
 
 		model.setDefaultStatus (resolveStatus ("UNCO"));
 
@@ -1151,6 +1162,49 @@ public class BugzillaMiner extends Miner {
 		}
 		
 		return ms;
+	}
+
+	private synchronized BugFlagStatus resolveFlagStatus (String name) throws SQLException {
+		assert (name != null);
+
+		BugFlagStatus state = flagStates.get (name);
+		if (state == null) {
+			state = model.addBugFlagStatus (project, name);
+			flagStates.put (name, state);
+		}
+
+		return state;
+	}
+
+	private synchronized BugFlag resolveBugFlag (Integer identifier, String name, Integer typeId) throws SQLException {
+		assert (identifier != null);
+		assert (name != null);
+		assert (typeId != null);
+
+		BugFlag flag = flags.get (identifier);
+		if (flag == null) {
+			flag = model.addBugFlag (project, identifier, name, typeId);
+			flags.put (flag.getIdentifier (), flag);
+		}
+
+		return flag;
+	}
+	
+	private BugFlagAssignment[] resolveBugFlagAssignments (BugzillaFlag[] bzFlags) throws SQLException, BugzillaException {
+		BugFlagAssignment[] flags = new BugFlagAssignment[bzFlags.length];
+
+		for (int i = 0; i < bzFlags.length ; i++) {
+			BugFlag flag = resolveBugFlag (bzFlags[i].getId (), bzFlags[i].getName (), bzFlags[i].getTypeId ());
+			Date creationDate = bzFlags[i].getCreationDate ();
+			Date modificationDate = bzFlags[i].getModificationDate ();
+			BugFlagStatus status = resolveFlagStatus (bzFlags[i].getStatus ());
+			Identity setter = resolveIdentity (bzFlags[i].getSetter ());
+			Identity requestee = (bzFlags[i].getRequestee () != null)? resolveIdentity (bzFlags[i].getRequestee ()) : null;
+
+			flags[0] = new BugFlagAssignment (flag, creationDate, modificationDate, status, setter, requestee);
+		}
+		
+		return flags;
 	}
 	
 	@Override

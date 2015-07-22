@@ -104,21 +104,20 @@ public class BugzillaContext {
 	// Debug Helper:
 	//
 
-	/*
 	private static void printValue (String key, Object obj, String offset) {
 		if (obj instanceof Map) {
 			print ((Map<?,?>) obj, offset + " " + key + ":");
 			return ;
 		}
 		if (obj instanceof Object[]) {
-			System.out.print (offset + key + "[");
+			System.out.print (offset + "." + key + "[");
 			for (Object obj2 : (Object[]) obj) {
 				System.out.print (obj2 + ",");
 			}
 			System.out.println ("]");
 			return ;			
 		}
-		System.out.println (offset + key + ": " + obj);
+		System.out.println (offset + "." + key + ": " + obj);
 	}
 
 	private static void print (Map<?,?> map, String offset) {
@@ -547,6 +546,7 @@ public class BugzillaContext {
 			Integer[] dependsOn = getIntegerArrayFromResultMap (bugMap, "depends_on");
 			String[] keywords = getStringArrayFromResultMap (bugMap, "keywords", true);
 			String[] groups = getStringArrayFromResultMap (bugMap, "groups", true);
+			BugzillaFlag[] flags = processFlagHash (bugMap);
 
 
 			bugs[i] = new BugzillaBug (id, alias, assignedTo,
@@ -558,7 +558,7 @@ public class BugzillaContext {
 					resolution, severity, status, summary,
 					version, targetMilestone, deadline,
 					qaContact, blocks, dependsOn, keywords,
-					groups);
+					groups, flags);
 		}
 
 		return bugs;
@@ -635,6 +635,30 @@ public class BugzillaContext {
 		return bugs;
 	}
 
+	private BugzillaFlag[] processFlagHash (Map<?,?> map) throws BugzillaException {
+		assert (map != null);
+
+		Map<?,?>[] objArr = getMapArrayFromResultMap (map, "flags");
+		BugzillaFlag[] flags = new BugzillaFlag[objArr.length];
+		for (int i = 0; i < objArr.length ; i++) {
+			assertType (objArr[i], Map.class);
+			Map<?,?> flagMap = (Map<?,?>) objArr[i];
+
+			int id = getIntFromResultMap (flagMap, "id");
+			String name = getStringFromResultMap (flagMap, "name");
+			int typeId = getIntFromResultMap (flagMap, "type_id");
+			Date creationDate = getDateFromResultMap (flagMap, "creation_date");
+			Date modificationDate = getDateFromResultMap (flagMap, "modification_date");
+			String setter = getStringFromResultMap (flagMap, "setter");
+			String requestee = getStringFromResultMap (flagMap, "requestee");
+			String status = getStringFromResultMap (flagMap, "status");
+		
+			flags[i] = new BugzillaFlag (id, name, typeId, creationDate, modificationDate, status, setter, requestee);
+		}
+
+		return flags;
+	}
+	
 	public Map<Integer, BugzillaHistory[]> getHistory (Collection<Integer> ids) throws BugzillaException {
 		Integer[] arr = new Integer[ids.size ()];
 		ids.toArray (arr);
@@ -827,6 +851,15 @@ public class BugzillaContext {
 	// Test Main:
 	//
 
+	public static void main (String[] args) {
+		try {
+			BugzillaContext context = new BugzillaContext ("https://bugzilla.gnome.org");
+			context.enableUntrustedCertificates ();
+			context.getBugs (559704);
+		} catch (MalformedURLException | BugzillaException e) {
+			e.printStackTrace();
+		}
+	}
 
 	/*
 	public static void main (String[] args) {

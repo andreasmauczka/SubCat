@@ -47,8 +47,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import com.sun.xml.internal.ws.org.objectweb.asm.Type;
-
 import at.ac.tuwien.inso.subcat.config.DistributionAttributesConfig;
 import at.ac.tuwien.inso.subcat.config.DistributionChartConfig;
 import at.ac.tuwien.inso.subcat.config.DistributionChartOptionConfig;
@@ -201,6 +199,44 @@ public class Model {
 		+ "name			TEXT								NOT NULL,"
 		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
 		+ "UNIQUE (project, name)"
+		+ ")";
+
+	private static final String BUG_FLAG_STATUS_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugFlagStatuses ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "project		INT									NOT NULL,"
+		+ "name			TEXT								NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
+		+ "UNIQUE (project, name)"
+		+ ")";
+
+	private static final String BUG_FLAG_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugFlags ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "project		INT									NOT NULL,"
+		+ "identifier	INT									NOT NULL,"
+		+ "name			TEXT								NOT NULL,"
+		+ "typeId		INT									NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
+		+ "UNIQUE (project, identifier),"
+		+ "UNIQUE (project, name)"
+		+ ")";
+
+	private static final String BUG_FLAG_ASSIGNMENT_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugFlagAssignments ("
+		+ "bug				INT			NOT NULL,"
+		+ "flag				INT			NOT NULL,"
+		+ "creationDate		TEXT		NOT NULL,"
+		+ "modificationDate	TEXT		NOT NULL,"
+		+ "status			INT			NOT NULL,"
+		+ "setter			INT			NOT NULL,"
+		+ "requestee		INT					,"
+		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
+		+ "FOREIGN KEY(flag) REFERENCES BugFlags (id),"
+		+ "FOREIGN KEY(status) REFERENCES BugFlagStatuses (id),"
+		+ "FOREIGN KEY(setter) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(requestee) REFERENCES Identities (id),"
+		+ "PRIMARY KEY (bug, flag)"
 		+ ")";
 
 	private static final String RESOLUTION_TABLE =
@@ -1058,6 +1094,26 @@ public class Model {
 		+ "WHERE"
 		+ " project = ?";
 
+	private static final String SELECT_ALL_BUG_FLAGS_STATES =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " BugFlagStatuses "
+		+ "WHERE"
+		+ " project = ?";
+
+	private static final String SELECT_ALL_BUG_FLAGS =
+		"SELECT"
+		+ " id,"
+		+ " identifier,"
+		+ " name,"
+		+ " typeId "
+		+ "FROM"
+		+ " BugFlags "
+		+ "WHERE"
+		+ " project = ?";
+	
 	private static final String SELECT_ALL_OPERATING_SYSTEMS =
 		"SELECT"
 		+ " id,"
@@ -1548,6 +1604,11 @@ public class Model {
 		+ "(bug, addedBy, date, resolution)"
 		+ "VALUES (?, ?, ?, ?)";
 
+	private static final String BUG_FLAG_ASSIGNMENT_INSERTION =
+		"INSERT INTO BugFlagAssignments"
+		+ "(bug, flag, creationDate, modificationDate, status, setter, requestee)"
+		+ "VALUES (?, ?, ?, ?, ?, ?, ?)";
+	
 	private static final String CONFIRMED_HISTORY_INSERTION =
 		"INSERT INTO ConfirmedHistory"
 		+ "(bug, addedBy, date, removed)"
@@ -1705,6 +1766,16 @@ public class Model {
 		+ "(project, name)"
 		+ "VALUES (?,?)";
 
+	private static final String BUG_FLAG_STATUS_INSERTION =
+		"INSERT INTO BugFlagStatuses "
+		+ "(project, name)"
+		+ "VALUES (?,?)";
+
+	private static final String BUG_FLAG_INSERTION =
+		"INSERT INTO BugFlags "
+		+ "(project, identifier, name, typeId)"
+		+ "VALUES (?,?,?,?)";
+
 	private static final String RESOLUTION_INSERTION =
 		"INSERT INTO Resolutions "
 		+ "(project, name)"
@@ -1861,6 +1932,9 @@ public class Model {
 
 	private static final String DELETE_BUG_GROUP_MEMBERSHIPS =
 		"DELETE FROM BugGroupMemberships WHERE bug = ?";
+
+	private static final String DELETE_BUG_FLAG_ASSIGNMENTS =
+		"DELETE FROM BugFlagAssignments WHERE bug = ?";
 
 	private static final String DELETE_BUG_KEYWORDS =
 		"DELETE FROM BugKeywords WHERE bug = ?";
@@ -2263,6 +2337,132 @@ public class Model {
 		pool.emitSeverityAdded (severity);
 	}
 
+	public BugFlagStatus addBugFlagStatus (Project project, String name) throws SQLException {
+		BugFlagStatus status = new BugFlagStatus (null, project, name);
+		add (status);
+		return status;
+	}
+
+	public void add (BugFlagStatus status) throws SQLException {
+		assert (conn != null);
+		assert (status != null);
+		Project project = status.getProject ();
+		assert (project.getId () != null);
+		assert (status.getId () == null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_FLAG_STATUS_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, project.getId ());
+		stmt.setString(2, status.getName ());
+		stmt.executeUpdate();
+
+		status.setId (getLastInsertedId (stmt));
+
+		stmt.close ();		
+
+		pool.emitBugFlagStatusAdded (status);
+	}
+
+	public BugFlag addBugFlag (Project proj, Integer identifier, String name, Integer typeId) throws SQLException {
+		BugFlag flag = new BugFlag (null, proj, identifier, name, typeId);
+		add (flag);
+		return flag;
+	}
+	
+	public void add (BugFlag flag) throws SQLException {
+		assert (conn != null);
+		assert (flag != null);
+		Project project = flag.getProject ();
+		assert (project.getId () != null);
+		assert (flag.getId () == null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_FLAG_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, project.getId ());
+		stmt.setInt (2, flag.getIdentifier ());
+		stmt.setString (3, flag.getName ());
+		stmt.setInt (4, flag.getTypeId ());
+		stmt.executeUpdate();
+
+		flag.setId (getLastInsertedId (stmt));
+
+		stmt.close ();		
+
+		pool.emitBugFlagAdded (flag);
+	}
+
+	public void addBugFlagAssignments (Bug bug, BugFlagAssignment[] flags) throws SQLException {
+		if (flags == null) {
+			return ;
+		}
+
+		_addBugFlagAssignments (bug, flags);
+		pool.emitBugFlagAssignmentsAdded (bug, flags);
+	}
+
+	public void updateBugFlagAssignments (Bug bug, BugFlagAssignment[] flags) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (flags != null);
+
+		_removeBugFlagAssignments (bug);
+		if (flags != null) {
+			_addBugFlagAssignments (bug, flags);
+		}		
+
+		pool.emitBugFlagAssignmentsUpdated (bug, flags);
+	}
+
+	private void _addBugFlagAssignments (Bug bug, BugFlagAssignment[] flags) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+		assert (flags != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_FLAG_ASSIGNMENT_INSERTION);
+
+		for (BugFlagAssignment flag : flags) {
+			assert (flag != null);
+			assert (flag.getFlag () != null);
+			assert (flag.getStatus () != null);
+			assert (flag.getSetter () != null);
+			assert (flag.getFlag ().getId () != null);
+			assert (flag.getStatus ().getId () != null);
+			assert (flag.getSetter ().getId () != null);
+
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, flag.getFlag ().getId ());
+			resSetDate (stmt, 3, flag.getCreationDate ());
+			resSetDate (stmt, 4, flag.getModificationDate ());
+			stmt.setInt (5, flag.getStatus ().getId ());
+			stmt.setInt (6, flag.getSetter ().getId ());
+			if (flag.getRequestee () != null) {
+				stmt.setInt (7, flag.getRequestee ().getId ());
+			} else {
+				stmt.setNull (7, Types.INTEGER);
+			}
+
+			stmt.executeUpdate ();
+		}
+
+		stmt.close ();
+	}
+
+	private void _removeBugFlagAssignments (Bug bug) throws SQLException {
+		assert (conn != null);
+		assert (bug != null);
+		assert (bug.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_FLAG_ASSIGNMENTS);
+
+		stmt.setInt (1, bug.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+	
 	public Resolution addResolution (Project project, String name) throws SQLException {
 		Resolution res = new Resolution (null, project, name);
 		add (res);
@@ -3185,13 +3385,13 @@ public class Model {
 		if (identity != null) {
 			stmt.setInt (2, identity.getId ());
 		} else {
-			stmt.setNull (2, Type.INT);
+			stmt.setNull (2, Types.INTEGER);
 		}
 
 		if (group != null) {
 			stmt.setInt (3, group.getId ());
 		} else {
-			stmt.setNull (3, Type.INT);
+			stmt.setNull (3, Types.INTEGER);
 		}
 
 		stmt.executeUpdate();
@@ -5162,6 +5362,52 @@ public class Model {
 		return severities;
 	}
 
+	public Map<Integer, BugFlagStatus> getBugFlagStates (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS_STATES);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<Integer, BugFlagStatus> states = new HashMap<Integer, BugFlagStatus> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			BugFlagStatus state = new BugFlagStatus (res.getInt (1), proj, res.getString (2));
+			states.put (state.getId (), state);
+		}
+	
+		return states;
+	}
+
+	public Map<Integer, BugFlag> getBugFlags (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<Integer, BugFlag> flags = new HashMap<Integer, BugFlag> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Integer id  = res.getInt (1);
+			Integer identifier = res.getInt (2);
+			String name = res.getString (3);
+			Integer typeId = res.getInt (4);
+
+			
+			BugFlag flag = new BugFlag (id, proj, identifier, name, typeId);
+			flags.put (flag.getId (), flag);
+		}
+	
+		return flags;
+	}
+
 	public Map<Integer, OperatingSystem> getOperatingSystems (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -5240,6 +5486,51 @@ public class Model {
 		}
 	
 		return severities;
+	}
+
+	public Map<String, BugFlagStatus> getBugFlagStatesByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS_STATES);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<String, BugFlagStatus> states = new HashMap<String, BugFlagStatus> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			BugFlagStatus state = new BugFlagStatus (res.getInt (1), proj, res.getString (2));
+			states.put (state.getName (), state);
+		}
+	
+		return states;
+	}
+
+	public Map<Integer, BugFlag> getBugFlagsByIdentifier (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<Integer, BugFlag> flags = new HashMap<Integer, BugFlag> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			Integer id  = res.getInt (1);
+			Integer identifier = res.getInt (2);
+			String name = res.getString (3);
+			Integer typeId = res.getInt (4);
+			
+			BugFlag flag = new BugFlag (id, proj, identifier, name, typeId);
+			flags.put (flag.getIdentifier (), flag);
+		}
+	
+		return flags;
 	}
 
 	public Map<Integer, Status> getStatuses (Project proj) throws SQLException {
@@ -5708,8 +5999,11 @@ public class Model {
 		stmt.executeUpdate (MILESTONE_TABLE);
 		stmt.executeUpdate (OPERATING_SYSTEM_TABLE);
 		stmt.executeUpdate (KEYWORD_TABLE);
+		stmt.executeUpdate (BUG_FLAG_STATUS_TABLE);
+		stmt.executeUpdate (BUG_FLAG_TABLE);
 		stmt.executeUpdate (BUG_GROUP_TABLE);
 		stmt.executeUpdate (BUG_TABLE);
+		stmt.executeUpdate (BUG_FLAG_ASSIGNMENT_TABLE);
 		stmt.executeUpdate (BUG_GROUPS_TABLE);
 		stmt.executeUpdate (BUG_CC_TABLE);
 		stmt.executeUpdate (BUG_KEYWORDS_TABLE);

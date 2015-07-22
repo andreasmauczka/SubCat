@@ -71,6 +71,7 @@ public class BugzillaBug {
 	private Integer[] dependsOn;
 	private String[] keywords;
 	private String[] groups;
+	private BugzillaFlag[] processFlags;
 
 
 	public BugzillaBug (int id, String alias, String assignedTo,
@@ -81,7 +82,7 @@ public class BugzillaBug {
 			String resolution, String severity, String status, String summary,
 			String version, String targetMilestone, Date deadline,
 			String qaContact, Integer[] blocks, Integer[] dependsOn,
-			String[] keywords, String[] groups)
+			String[] keywords, String[] groups, BugzillaFlag[] processFlags)
 	{
 		assert (alias != null);
 		assert (component != null);
@@ -95,6 +96,7 @@ public class BugzillaBug {
 		assert (summary != null);
 		assert (platform != null);
 		assert (targetMilestone != null);
+		assert (processFlags != null);
 
 		if (ccs == null) {
 			ccs = new String[0];
@@ -110,6 +112,9 @@ public class BugzillaBug {
 		}
 		if (groups == null) {
 			groups = new String[0];
+		}
+		if (processFlags == null) {
+			processFlags = new BugzillaFlag[0];
 		}
 
 		this.id = id;
@@ -137,6 +142,7 @@ public class BugzillaBug {
 		this.dependsOn = dependsOn;
 		this.keywords = keywords;
 		this.groups = groups;
+		this.processFlags = processFlags;
 	}
 
 
@@ -239,7 +245,11 @@ public class BugzillaBug {
 	public String[] getGroups () {
 		return groups;
 	}
-	
+
+	public BugzillaFlag[] getProcessFlags () {
+		return processFlags;
+	}
+
 	@Override
 	public String toString () {
 		return "Bug [id=" + id + ", alias=" + alias + ", assignedTo="

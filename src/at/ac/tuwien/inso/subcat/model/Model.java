@@ -646,12 +646,20 @@ public class Model {
 		+ ")";
 
 	private static final String BUG_DUPLICATION_COMMENT_TABLE =
-		"CREATE TABLE IF NOT EXISTS BugDuplicationComment ("
+		"CREATE TABLE IF NOT EXISTS BugDuplicationComments ("
 		+ "comment		INTEGER		NOT NULL,"
 		+ "identifier	INTEGER		NOT NULL,"
 		+ "duplication	INTEGER				,"
 		+ "FOREIGN KEY(comment) REFERENCES Comments (id),"
 		+ "FOREIGN KEY(duplication) REFERENCES Bugs (id)"
+		+ ")";
+
+	private static final String BUG_ATTACHMENT_REVIEW_COMMENT_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugAttachmentReviewComments ("
+		+ "comment		INTEGER		NOT NULL,"
+		+ "attachment	INTEGER		NOT NULL,"
+		+ "FOREIGN KEY(comment) REFERENCES Comments (id),"
+		+ "FOREIGN KEY(attachment) REFERENCES Attachments (id)"
 		+ ")";
 
 	private static final String STATUS_TABLE =
@@ -1760,9 +1768,9 @@ public class Model {
 
 	private static final String BUG_DUPLICATION_COMMENT_RESOLVE_BUGS =
 		"UPDATE"
-		+ " BugDuplicationComment "
+		+ " BugDuplicationComments "
 		+ "SET "
-		+ " duplication = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugDuplicationComment.identifier AND Components.project = ?) "
+		+ " duplication = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugDuplicationComments.identifier AND Components.project = ?) "
 		+ "WHERE"
 		+ " duplication IS NULL"
 		+ " AND comment in (SELECT Comments.id FROM Comments, Bugs, Components WHERE Comments.bug = Bugs.id AND Bugs.component = Components.id AND Components.project = ?)";
@@ -1824,10 +1832,15 @@ public class Model {
 		+ "VALUES (?,?)";
 
 	private static final String BUG_DUPLICATION_COMMENT_INSERTION =
-		"INSERT INTO BugDuplicationComment "
+		"INSERT INTO BugDuplicationComments "
 		+ "(comment, identifier)"
 		+ "VALUES (?,?)";
 
+	private static final String BUG_ATTACHMENT_REVIEW_COMMENT_INSERTION =
+		"INSERT INTO BugAttachmentReviewComments "
+		+ "(comment, attachment)"
+		+ "VALUES (?,?)";
+	
 	private static final String BUG_CLASS_INSERTION =
 		"INSERT INTO BugClasses "
 		+ "(project, name)"
@@ -2420,6 +2433,22 @@ public class Model {
 		stmt.close ();		
 
 		pool.emitBugDuplicationCommentAdded (comment, identifier);
+	}
+
+	public void addBugAttachmentReviewComment (Comment comment, Attachment attachment) throws SQLException {
+		assert (conn != null);
+		assert (comment != null);
+		assert (comment.getId () != null);
+		assert (attachment != null);
+		assert (attachment.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_ATTACHMENT_REVIEW_COMMENT_INSERTION);
+		stmt.setInt (1, comment.getId ());
+		stmt.setInt (2, attachment.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitBugAttachmentReviewCommentAdded (comment, attachment);
 	}
 
 	public BugClass addBugClass (Project project, String name) throws SQLException {
@@ -6286,6 +6315,7 @@ public class Model {
 		stmt.executeUpdate (ATTACHMENT_STATUS_TABLE);
 		stmt.executeUpdate (ATTACHMENT_STATUS_HISTORY_TABLE);
 		stmt.executeUpdate (ATTACHMENT_HISTORY_TABLE);
+		stmt.executeUpdate (BUG_ATTACHMENT_REVIEW_COMMENT_TABLE);
 		stmt.executeUpdate (BUG_CATEGORIES_TABLE);
 		stmt.executeUpdate (COMMIT_CATEGORIES_TABLE);
 		stmt.executeUpdate (DICTIONARY_TABLE);

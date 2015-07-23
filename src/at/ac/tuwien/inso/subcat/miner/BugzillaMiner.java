@@ -80,6 +80,7 @@ import at.ac.tuwien.inso.subcat.utility.Reporter;
 
 
 public class BugzillaMiner extends Miner {
+	private static final Pattern reviewPattern = Pattern.compile ("(?m)\\A(?:(?:Comment on attachment ([0-9]+))|(?:Review of attachment ([0-9]+):))$");
 	private static final Pattern dupPattern = Pattern.compile ("\\*\\*\\* (?:(?:Bug ([0-9]+) has been marked as a duplicate of this bug\\.)|(?:This bug has been marked as a duplicate of (?:bug )?([0-9]+))) \\*\\*\\*");
 	private static final Pattern patternMailValidator = Pattern.compile ("^[_A-Za-z0-9-]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$");
 
@@ -133,6 +134,7 @@ public class BugzillaMiner extends Miner {
 		public Integer id;
 		public Comment comment;
 		public LinkedList<BugzillaAttachmentHistoryEntry> history = new LinkedList<BugzillaAttachmentHistoryEntry> ();
+		public LinkedList<Comment> reviewComments = new LinkedList<Comment> ();
 	}
 	
 	private class BugzillaAttachmentHistoryEntry {
@@ -144,7 +146,7 @@ public class BugzillaMiner extends Miner {
 	}
 	
 	private class Worker extends Thread {
-
+		
 		@Override
 		public void run () {
 			LinkedList<BugzillaBug> bbugs = new LinkedList<BugzillaBug> ();
@@ -281,6 +283,7 @@ public class BugzillaMiner extends Miner {
 
 				List<BugzillaAttachment> attachments = new LinkedList<BugzillaAttachment> ();
 
+				
 				// Add to model:
 				Bug bug;
 				if (bugStats == null) {
@@ -326,6 +329,9 @@ public class BugzillaMiner extends Miner {
 					Attachment attachment;
 					if (attStats == null) {
 						attachment = model.addAttachment (att.id, att.comment);
+						for (Comment comment : att.reviewComments) {
+							model.addBugAttachmentReviewComment (comment, attachment);
+						}
 					} else {
 						attachment = new Attachment (attStats.getId (), att.id, att.comment);
 						model.updateAttachment (attachment);
@@ -395,6 +401,8 @@ public class BugzillaMiner extends Miner {
 			assert (bug != null);
 			assert (comments != null);
 
+
+			HashMap<Integer, BugzillaAttachment> attachmentMap = new HashMap<Integer, BugzillaAttachment> ();
 			int cmntCnt = 0;
 
 			for (BugzillaComment comment : comments) {
@@ -409,9 +417,18 @@ public class BugzillaMiner extends Miner {
 					String cmntContent = comment.getText ();
 
 					cmnt = model.addComment (cmntCnt, bug, cmntCreation, cmntCreator, cmntContent);
+
 					Integer dupIdentifier = getCommentDuplicationBugId (cmntContent);
 					if (dupIdentifier != null) {
 						model.addBugDuplicationComment (cmnt, dupIdentifier);
+					}
+
+					Integer reviewIdentifier = getCommentReviewAttachmentId (cmntContent);
+					if (reviewIdentifier != null) {
+						BugzillaAttachment attachment = attachmentMap.get (reviewIdentifier);
+						if (attachment != null) {
+							attachment.reviewComments .add (cmnt);
+						}
 					}
 				}
 
@@ -420,9 +437,10 @@ public class BugzillaMiner extends Miner {
 				if (patchId != null) {
 					cmnt = getComment (bug, cmnt, cmntCnt);
 					BugzillaAttachment attachment = new BugzillaAttachment ();
+					attachmentMap.put (patchId, attachment);
+					attachments.add (attachment);
 					attachment.comment = cmnt;
 					attachment.id = patchId;
-					attachments.add (attachment);
 				}
 
 				// TODO: Patch Reviews / Comment on Attachment
@@ -765,20 +783,17 @@ public class BugzillaMiner extends Miner {
 		passSize = settings.bugGetParameter (this, "pass-size", 20);
 		pageSize = settings.bugGetParameter (this, "page-size", 200);
 
-		for (int i = 0; i < settings.bugThreads; i++) {
-			Worker worker = new Worker ();
-			workers.add (worker);
-			worker.start ();
-		}
-
-		emitStart ();
-
-		// Retrieve the server time before mining
-		// as start-time for the next resume operation:
 		Date startServerTime = null;
 
-		
 		try {
+			for (int i = 0; i < settings.bugThreads; i++) {
+				Worker worker = new Worker ();
+				workers.add (worker);
+				worker.start ();
+			}
+	
+			emitStart ();
+	
 			try {
 				context = new BugzillaContext (settings.bugRepository);
 			} catch (MalformedURLException e) {
@@ -793,6 +808,8 @@ public class BugzillaMiner extends Miner {
 				context.login (settings.bugLoginUser, settings.bugLoginPw);
 			}
 
+			// Retrieve the server time before mining
+			// as start-time for the next resume operation:
 			startServerTime = context.getServerTime ();
 
 			model = pool.getModel ();
@@ -930,11 +947,26 @@ public class BugzillaMiner extends Miner {
 	// Helper:
 	//
 
+	private static Integer getCommentReviewAttachmentId (String content) {
+		Matcher matcher = reviewPattern.matcher (content);
+		
+		if (matcher.find ()) {
+			String bugId = (matcher.group (1) != null)
+				? matcher.group (1)
+				: matcher.group (2);
+			return new Integer (bugId);
+		}
+
+		return null;
+	}
+
 	private static Integer getCommentDuplicationBugId (String content) {
 		Matcher matcher = dupPattern.matcher (content);
 
 		if (matcher.find ()) {
-			String bugId = (matcher.group (1) != null)? matcher.group (1) : matcher.group (2);
+			String bugId = (matcher.group (1) != null)
+				? matcher.group (1)
+				: matcher.group (2);
 			return new Integer (bugId);
 		}
 

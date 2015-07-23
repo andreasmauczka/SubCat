@@ -210,4 +210,7 @@ public interface ModelModificationListener {
 	public void bugClassAdded (BugClass bc);
 
 	public void bugDuplicationCommentAdded (Comment comment, Integer identifier);
+
+	public void bugAttachmentReviewCommentAdded (Comment comment,
+			Attachment attachment);
 }

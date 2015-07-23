@@ -104,7 +104,7 @@ public class BugzillaContext {
 	// Debug Helper:
 	//
 
-	/*
+	/* */
 	private static void printValue (String key, Object obj, String offset) {
 		if (obj instanceof Map) {
 			print ((Map<?,?>) obj, offset + " " + key + ":");
@@ -207,8 +207,32 @@ public class BugzillaContext {
 			return null;
 		}
 
+		if (Integer.class.isInstance (entries)) {
+			Integer _int = (Integer) entries;
+			if (_int == 0) {
+				return false;
+			}
+			if (_int == 1) {
+				return true;
+			}
+		}
+		
 		assertType (entries, Boolean.class);
 		return (Boolean) entries;
+	}
+
+	private static byte[] getByteArrayFromResultMap (Map<?,?> map, String key) throws BugzillaException {
+		return getByteArrayFromResultMap (map, key, false);
+	}
+
+	private static byte[] getByteArrayFromResultMap (Map<?,?> map, String key, boolean optional) throws BugzillaException {
+		Object entries = getFromResultMap (map, key, optional);
+		if (entries == null) {
+			return null;
+		}
+
+		assertType (entries, byte[].class);
+		return (byte[]) entries;
 	}
 
 	private static String getStringFromResultMap (Map<?,?> map, String key) throws BugzillaException {
@@ -719,9 +743,15 @@ public class BugzillaContext {
 
 		return history;
 	}
-	
-	/* Not provided by our bugzilla version
-	public Map<Integer, Attachment[]> getAttachments (Integer... bugIds) throws BugzillaException {
+
+	public Map<Integer, BugzillaAttachment> getAttachments (Collection<Integer> ids) throws BugzillaException {
+		Integer[] arr = new Integer[ids.size ()];
+		ids.toArray (arr);
+
+		return getAttachments (arr);
+	}
+
+	public Map<Integer, BugzillaAttachment> getAttachments (Integer... bugIds) throws BugzillaException {
 		// Get the result map:
 		Map<String, Object[]> params = new HashMap<String, Object[]> ();
 		params.put ("ids", bugIds);		
@@ -731,64 +761,65 @@ public class BugzillaContext {
 
 		// Convert results:
 		Map<?,?> map = (Map<?,?>) resObj;
-		Map<?,?> objMap = getMapFromResultMap (map, "bugs");
-		assertType (objMap, Map.class);
+		Map<?,?> attMapsMap = getMapFromResultMap (map, "bugs");
 
-		HashMap<Integer, Attachment[]> res = new HashMap<Integer, Attachment[]> ();
-		for(Entry<?, ?> entry : objMap.entrySet()) {
-			// Key:
-			Object key = entry.getKey();
-			assertType (key, String.class);
+		HashMap<Integer, BugzillaAttachment> res = new HashMap<Integer, BugzillaAttachment> ();
+		for (Object _bugs : attMapsMap.values ()) {
+			Object[] bugs = (Object[]) _bugs;
 
-			Integer bugId = null;
-			try {
-				bugId = Integer.parseInt ((String) key);
-			} catch (NumberFormatException e) {
-				throw new BugzillaException (e);
+			for (Object attMap : bugs) {
+				assertType (attMap, Map.class);
+				processAttachmentHash ((Map<?,?>) attMap, res);
 			}
-
-			// Value:
-			Object value = entry.getValue();
-			assertType (value, Map.class);
-
-
-			Attachment[] comments = processAttachmentHash ((Map<?,?>) value);
-			res.put (bugId, comments);
 		}
-		
+
+/*
+			for(Entry<?, ?> attMapEntry : attMapsMap.entrySet()) {
+				// Key:
+				Object key = attMapEntry.getKey();
+				assertType (key, String.class);
+	
+				Integer attId = null;
+				try {
+					attId = Integer.parseInt ((String) key);
+				} catch (NumberFormatException e) {
+					throw new BugzillaException (e);
+				}
+	
+				// Value:
+				Object value = attMapEntry.getValue();
+				assertType (value, Map.class);
+	
+	
+				BugzillaAttachment att = processAttachmentHash (attId, (Map<?,?>) attMapEntry);
+System.out.println ("PUT: " + attId);
+				res.put (attId, att);
+			}
+*/
 		return res;
 	}
 
-	private Attachment[] processAttachmentHash (Map<?,?> map) throws BugzillaException {
-		Object[] objArr = getArrayFromResultMap (map, "comments");
-		assertArrayType (objArr, Map.class);
-
-		Attachment[] attachments = new Attachment[objArr.length];
-		for (int i = 0; i < objArr.length ; i++) {
-			assertType (objArr[i], Map.class);
-			Map<?,?> attachmentMap = (Map<?,?>) objArr[i];
-
-			int id = getIntFromResultMap (attachmentMap, "id");
-			int bugId = getIntFromResultMap (attachmentMap, "bug_id");
-			Date creationTime = getDateFromResultMap (attachmentMap, "ceration_time");
-			Date lastChangeTime = getDateFromResultMap (attachmentMap, "last_change_time");
-			String fileName = getStringFromResultMap (attachmentMap, "file_name");
-			String summary = getStringFromResultMap (attachmentMap, "summary");
-			String creator = getStringFromResultMap (attachmentMap, "creator");
-			Boolean isPrivate = getBoolFromResultMap (attachmentMap, "is_private");
-			Boolean isObsolete = getBoolFromResultMap (attachmentMap, "is_obsolete");
-			Boolean isPatch = getBoolFromResultMap (attachmentMap, "is_patch");
-			String data = getStringFromResultMap (attachmentMap, "data");
-			String contentType = getStringFromResultMap (attachmentMap, "content_type");
-
-			attachments[i] = new Attachment(id, bugId, creationTime,
-					lastChangeTime, fileName, contentType, summary,
-					creator, isPrivate, isObsolete,
-					isPatch, data);
-		}
-
-		return attachments;
-	}*/
+	private void processAttachmentHash (Map<?,?> attachmentMap, HashMap<Integer, BugzillaAttachment> res) throws BugzillaException {
+		int id = getIntFromResultMap (attachmentMap, "id");
+		int bugId = getIntFromResultMap (attachmentMap, "bug_id");
+		Date creationTime = getDateFromResultMap (attachmentMap, "creation_time");
+		Date lastChangeTime = getDateFromResultMap (attachmentMap, "last_change_time");
+		String fileName = getStringFromResultMap (attachmentMap, "file_name");
+		String summary = getStringFromResultMap (attachmentMap, "summary");
+		String creator = getStringFromResultMap (attachmentMap, "creator");
+		Boolean isPrivate = getBoolFromResultMap (attachmentMap, "is_private");
+		Boolean isObsolete = getBoolFromResultMap (attachmentMap, "is_obsolete");
+		Boolean isPatch = getBoolFromResultMap (attachmentMap, "is_patch");
+		byte[] data = getByteArrayFromResultMap (attachmentMap, "data");
+		String contentType = getStringFromResultMap (attachmentMap, "content_type");
+		BugzillaFlag[] flags = processFlagHash (attachmentMap);
+		
+		BugzillaAttachment att = new BugzillaAttachment (id, bugId, creationTime,
+			lastChangeTime, fileName, contentType, summary,
+			creator, isPrivate, isObsolete,
+			isPatch, data, flags);
+		res.put (id, att);
+	}
 
 
 

@@ -89,6 +89,8 @@ public class BugzillaMinerMetaData extends MetaData {
 				assertInteger (name, val, 1, Integer.MAX_VALUE, errors);
 			} else if (name.equals ("page-size")) {
 				assertInteger (name, val, 1, Integer.MAX_VALUE, errors);
+			} else if (name.equals ("process-attachment-details")) {
+				assertBoolean (name, val, errors);
 			} else {
 				errors.put (name, "unknown parameter");
 			}
@@ -100,6 +102,7 @@ public class BugzillaMinerMetaData extends MetaData {
 	@Override
 	public Map<String, ParamType> getSpecificParams () {
 		HashMap<String, ParamType> map = new HashMap<String, ParamType> ();
+		map.put ("process-attachment-details", ParamType.BOOLEAN);
 		map.put ("process-comments", ParamType.BOOLEAN);
 		map.put ("process-history", ParamType.BOOLEAN);
 		map.put ("pass-size", ParamType.INTEGER);

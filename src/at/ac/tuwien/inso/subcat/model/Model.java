@@ -248,6 +248,23 @@ public class Model {
 		+ "PRIMARY KEY (bug, flag)"
 		+ ")";
 
+	private static final String BUG_ATTACHMENT_FLAG_ASSIGNMENT_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugAttachmentFlagAssignments ("
+		+ "attachment		INT			NOT NULL,"
+		+ "flag				INT			NOT NULL,"
+		+ "creationDate		TEXT		NOT NULL,"
+		+ "modificationDate	TEXT		NOT NULL,"
+		+ "status			INT			NOT NULL,"
+		+ "setter			INT			NOT NULL,"
+		+ "requestee		INT					,"
+		+ "FOREIGN KEY(attachment) REFERENCES Attachments (id),"
+		+ "FOREIGN KEY(flag) REFERENCES BugFlags (id),"
+		+ "FOREIGN KEY(status) REFERENCES BugFlagStatuses (id),"
+		+ "FOREIGN KEY(setter) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(requestee) REFERENCES Identities (id),"
+		+ "PRIMARY KEY (attachment, flag)"
+		+ ")";
+
 	private static final String RESOLUTION_TABLE =
 		"CREATE TABLE IF NOT EXISTS Resolutions ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -576,13 +593,30 @@ public class Model {
 		+ "FOREIGN KEY(category) REFERENCES Categories (id),"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id)"
 		+ ")";
-	
+
 	private static final String ATTACHMENT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Attachments ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
 		+ "identifier	TEXT								NOT NULL,"
 		+ "comment		INTEGER								NOT NULL,"
 		+ "FOREIGN KEY(comment) REFERENCES Comments (id)"
+		+ ")";
+
+	private static final String ATTACHMENT_DETAIL_TABLE =
+		"CREATE TABLE IF NOT EXISTS AttachmentDetails ("
+		+ "attachment			INT		PRIMARY KEY	NOT NULL,"
+		+ "data					BLOB						,"
+		+ "attCreationTime		TEXT				NOT NULL,"
+		+ "lastchangeTime		TEXT				NOT NULL,"
+		+ "fileName				TEXT				NOT NULL,"
+		+ "summary				TEXT				NOT NULL,"
+		+ "isPrivate			BOOL				NOT NULL,"
+		+ "isObsolete			BOOL				NOT NULL,"
+		+ "isPatch				BOOL				NOT NULL,"
+		+ "creator				INT					NOT NULL,"
+		+ "contentType			TEXT				NOT NULL,"
+		+ "FOREIGN KEY(attachment) REFERENCES Attachments (id),"
+		+ "FOREIGN KEY(creator) REFERENCES Identities (id)"
 		+ ")";
 
 	private static final String ATTACHMENT_ISOBSOLETE_TABLE =
@@ -1479,10 +1513,16 @@ public class Model {
 	// Insertions:
 	//
 
+	// TODO: rename to ObsoleteAttachmentsHistory
 	private static final String OBSOLETE_ATTACHMENT_INSERTION =
 		"INSERT INTO ObsoleteAttachments "
 		+ "(attachment, identity, date, oldValue, newValue) "
 		+ "VALUES (?, ?, ?, ?, ?);";
+
+	private static final String ATTACHMENT_DETAIL_INSERTION =
+		"INSERT INTO AttachmentDetails "
+		+ "(attachment, data, attCreationTime, lastchangeTime, fileName, summary, isPrivate, isObsolete, isPatch, creator, contentType) "
+		+ "VALUES (?,?,?,?,?,?,?,?,?,?,?)";
 
 	private static final String BUG_CATEGORY_INSERTION =
 		"INSERT INTO BugCategories "
@@ -1503,6 +1543,21 @@ public class Model {
 		"INSERT INTO Projects"
 		+ "(date, domain, product, revision, defaultStatusId, lastBugDate, bugTracker)"
 		+ "VALUES (?,?,?,?,?,?,?)";
+
+	private static final String ATTACHMENT_DETAIL_UPDATE =
+		"Update AttachmentDetails SET "
+		+ " data = ?,"
+		+ " attCreationTime = ?,"
+		+ " lastchangeTime = ?,"
+		+ " fileName = ?,"
+		+ " summary = ?,"
+		+ " isPrivate = ?,"
+		+ " isObsolete = ?,"
+		+ " isPatch = ?,"
+		+ " creator = ?,"
+		+ " contentType = ?"
+		+ "WHERE"
+		+ " attachment = ?";
 	
 	private static final String PROJECT_UPDATE =
 		"UPDATE Projects SET "
@@ -1663,6 +1718,11 @@ public class Model {
 	private static final String BUG_FLAG_ASSIGNMENT_INSERTION =
 		"INSERT INTO BugFlagAssignments"
 		+ "(bug, flag, creationDate, modificationDate, status, setter, requestee)"
+		+ "VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+	private static final String BUG_ATTACHMENT_FLAG_ASSIGNMENT_INSERTION =
+		"INSERT INTO BugAttachmentFlagAssignments"
+		+ "(attachment, flag, creationDate, modificationDate, status, setter, requestee)"
 		+ "VALUES (?, ?, ?, ?, ?, ?, ?)";
 	
 	private static final String CONFIRMED_HISTORY_INSERTION =
@@ -2019,6 +2079,9 @@ public class Model {
 	private static final String DELETE_BUG_FLAG_ASSIGNMENTS =
 		"DELETE FROM BugFlagAssignments WHERE bug = ?";
 
+	private static final String DELETE_BUG_ATTACHMENT_FLAG_ASSIGNMENTS =
+		"DELETE FROM BugAttachmentFlagAssignments WHERE attachment = ?";
+
 	private static final String DELETE_BUG_KEYWORDS =
 		"DELETE FROM BugKeywords WHERE bug = ?";
 
@@ -2176,7 +2239,46 @@ public class Model {
 
 		pool.emitAttachmentIsObsoleteAdded (attachment, identity, date, oldValue, newValue);
 	}
-	
+
+
+	public AttachmentDetails addAttachmentDetails (Attachment attachment, byte[] attData,
+			Date attCreationTime, Date attLastchangeTime, String attFileName,
+			String attSummary, Boolean attIsPrivate, Boolean attIsObsolete,
+			Boolean attIsPatch, Identity attCreator, String attContentType) throws SQLException {
+
+		AttachmentDetails ad = new AttachmentDetails (attachment, attData,
+				attCreationTime, attLastchangeTime, attFileName,
+				attSummary, attIsPrivate, attIsObsolete,
+				attIsPatch, attCreator, attContentType);
+
+		add (ad);
+		return ad;
+	}
+
+	public void add (AttachmentDetails ad) throws SQLException {
+		assert (conn != null);
+		assert (ad != null);
+		assert (ad.getAttachment ().getId () != null);
+		assert (ad.getCreator ().getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_DETAIL_INSERTION);
+		stmt.setInt (1, ad.getAttachment ().getId ());
+		stmt.setBytes (2, ad.getData ());
+		resSetDate (stmt, 3, ad.getCreationTime ());
+		resSetDate (stmt, 4, ad.getLastChangeTime ());
+		stmt.setString (5, ad.getFileName ());
+		stmt.setString (6, ad.getSummary ());
+		stmt.setBoolean (7, ad.getIsPrivate ());
+		stmt.setBoolean (8, ad.getIsObsolete ());
+		stmt.setBoolean (9, ad.getIsPatch ());
+		stmt.setInt (10, ad.getCreator ().getId ());
+		stmt.setString (11, ad.getContentType ());
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitAttachmentDetailsAdded (ad);
+	}
+
 	public void addFlag (Project proj, String flag) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -2272,6 +2374,29 @@ public class Model {
 		pool.emitProjectUpdated (project);
 	}
 
+	public void updateAttachmentDetail (AttachmentDetails ad) throws SQLException {
+		assert (conn != null);
+		assert (ad != null);
+		assert (ad.getAttachment ().getId () != null);
+		assert (ad.getCreator ().getId () != null);
+		
+		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_DETAIL_UPDATE);
+		stmt.setBytes (1, ad.getData ());
+		resSetDate (stmt, 2, ad.getCreationTime ());
+		resSetDate (stmt, 3, ad.getLastChangeTime ());
+		stmt.setString (4, ad.getFileName ());
+		stmt.setString (5, ad.getSummary ());
+		stmt.setBoolean (6, ad.getIsPrivate ());
+		stmt.setBoolean (7, ad.getIsObsolete ());
+		stmt.setBoolean (8, ad.getIsPatch ());
+		stmt.setInt (9, ad.getCreator ().getId ());
+		stmt.setString (10, ad.getContentType ());
+		stmt.setInt (11, ad.getAttachment ().getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitAttachmentDetailsUpdated (ad);
+	}
 	
 	public User addUser (Project project, String name) throws SQLException {
 		User user = new User (null, project, name);
@@ -2603,6 +2728,76 @@ public class Model {
 		stmt.executeUpdate();
 		stmt.close ();
 	}
+	
+	public void addBugAttachmentFlagAssignments (Attachment attachment, BugFlagAssignment[] flags) throws SQLException {
+		if (flags == null) {
+			return ;
+		}
+
+		_addBugAttachmentFlagAssignments (attachment, flags);
+		pool.emitBugAttachmentFlagAssignmentsAdded (attachment, flags);
+	}
+
+	public void updateBugAttachmentFlagAssignments (Attachment attachment, BugFlagAssignment[] flags) throws SQLException {
+		assert (conn != null);
+		assert (attachment != null);
+		assert (attachment.getId () != null);
+		assert (flags != null);
+
+		_removeBugAttachmentFlagAssignments (attachment);
+		if (flags != null) {
+			_addBugAttachmentFlagAssignments (attachment, flags);
+		}		
+
+		pool.emitBugAttachmentFlagAssignmentsUpdated (attachment, flags);
+	}
+
+	private void _addBugAttachmentFlagAssignments (Attachment attachment, BugFlagAssignment[] flags) throws SQLException {
+		assert (conn != null);
+		assert (attachment != null);
+		assert (attachment.getId () != null);
+		assert (flags != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_ATTACHMENT_FLAG_ASSIGNMENT_INSERTION);
+
+		for (BugFlagAssignment flag : flags) {
+			assert (flag != null);
+			assert (flag.getFlag () != null);
+			assert (flag.getStatus () != null);
+			assert (flag.getSetter () != null);
+			assert (flag.getFlag ().getId () != null);
+			assert (flag.getStatus ().getId () != null);
+			assert (flag.getSetter ().getId () != null);
+
+			stmt.setInt (1, attachment.getId ());
+			stmt.setInt (2, flag.getFlag ().getId ());
+			resSetDate (stmt, 3, flag.getCreationDate ());
+			resSetDate (stmt, 4, flag.getModificationDate ());
+			stmt.setInt (5, flag.getStatus ().getId ());
+			stmt.setInt (6, flag.getSetter ().getId ());
+			if (flag.getRequestee () != null) {
+				stmt.setInt (7, flag.getRequestee ().getId ());
+			} else {
+				stmt.setNull (7, Types.INTEGER);
+			}
+
+			stmt.executeUpdate ();
+		}
+
+		stmt.close ();
+	}
+
+	private void _removeBugAttachmentFlagAssignments (Attachment attachment) throws SQLException {
+		assert (conn != null);
+		assert (attachment != null);
+		assert (attachment.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_ATTACHMENT_FLAG_ASSIGNMENTS);
+
+		stmt.setInt (1, attachment.getId ());
+		stmt.executeUpdate();
+		stmt.close ();
+	}	
 	
 	public Resolution addResolution (Project project, String name) throws SQLException {
 		Resolution res = new Resolution (null, project, name);
@@ -6315,6 +6510,8 @@ public class Model {
 		stmt.executeUpdate (ATTACHMENT_STATUS_TABLE);
 		stmt.executeUpdate (ATTACHMENT_STATUS_HISTORY_TABLE);
 		stmt.executeUpdate (ATTACHMENT_HISTORY_TABLE);
+		stmt.executeUpdate (ATTACHMENT_DETAIL_TABLE);
+		stmt.executeUpdate (BUG_ATTACHMENT_FLAG_ASSIGNMENT_TABLE);
 		stmt.executeUpdate (BUG_ATTACHMENT_REVIEW_COMMENT_TABLE);
 		stmt.executeUpdate (BUG_CATEGORIES_TABLE);
 		stmt.executeUpdate (COMMIT_CATEGORIES_TABLE);

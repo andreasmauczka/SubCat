@@ -680,5 +680,31 @@ public class ModelPool {
 			listener.bugAttachmentReviewCommentAdded (comment, attachment);
 		}
 	}
+
+	synchronized void emitAttachmentDetailsAdded (AttachmentDetails ad) {
+		for (ModelModificationListener listener : listeners) {
+			listener.attachmentDetailsAdded (ad);
+		}
+	}
+
+	synchronized void emitAttachmentDetailsUpdated (AttachmentDetails ad) {
+		for (ModelModificationListener listener : listeners) {
+			listener.attachmentDetailsUpdated (ad);
+		}
+	}
+
+	synchronized void emitBugAttachmentFlagAssignmentsAdded (Attachment attachment,
+			BugFlagAssignment[] flags) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugAttachmentFlagAssignmentsAdded (attachment, flags);
+		}
+	}
+
+	synchronized void emitBugAttachmentFlagAssignmentsUpdated (Attachment attachment,
+			BugFlagAssignment[] flags) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugAttachmentFlagAssignmentsUpdated (attachment, flags);
+		}
+	}
 }
 

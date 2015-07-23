@@ -1,6 +1,6 @@
-/* Attachment.java
+/* AttachmentDetails.java
  *
- * Copyright (C) 2014 Florian Brosch
+ * Copyright (C) 2015 Florian Brosch
  *
  * Based on work from Andreas Mauczka
  *
@@ -28,44 +28,32 @@
  *       Florian Brosch <flo.brosch@gmail.com>
  */
 
-package at.ac.tuwien.inso.subcat.bugzilla;
+package at.ac.tuwien.inso.subcat.model;
 
 import java.util.Date;
 
 
-public class BugzillaAttachment {
+public class AttachmentDetails {
+	private Attachment attachment;
 	private byte[] data;
 	private Date creationTime;
 	private Date lastChangeTime;
-	private int id;
-	private int bugId;
 	private String fileName;
 	private String summary;
 	private Boolean isPrivate;
 	private Boolean isObsolete;
 	private Boolean isPatch;
-	private String creator;
+	private Identity creator;
 	private String contentType;
-	private BugzillaFlag[] flags;
 
-	
-	public BugzillaAttachment (int id, int bug_id, Date creationTime,
-			Date lastChangeTime,  String fileName, String contentType,
-			String summary, String creator, Boolean isPrivate, Boolean isObsolete,
-			Boolean isPatch, byte[] data, BugzillaFlag[] flags) {
-
-		assert (creationTime != null);
-		assert (lastChangeTime != null);
-		assert (fileName != null);
-		assert (contentType != null);
-		assert (creator != null);
-		assert (data != null);
-
+	public AttachmentDetails(Attachment attachment, byte[] data, Date creationTime,
+			Date lastChangeTime, String fileName, String summary,
+			Boolean isPrivate, Boolean isObsolete, Boolean isPatch,
+			Identity creator, String contentType) {
+		this.attachment = attachment;
 		this.data = data;
 		this.creationTime = creationTime;
 		this.lastChangeTime = lastChangeTime;
-		this.id = id;
-		this.bugId = bug_id;
 		this.fileName = fileName;
 		this.summary = summary;
 		this.isPrivate = isPrivate;
@@ -73,7 +61,10 @@ public class BugzillaAttachment {
 		this.isPatch = isPatch;
 		this.creator = creator;
 		this.contentType = contentType;
-		this.flags = flags;
+	}
+
+	public Attachment getAttachment () {
+		return attachment;
 	}
 
 	public byte[] getData () {
@@ -84,16 +75,8 @@ public class BugzillaAttachment {
 		return creationTime;
 	}
 
-	public Date getLastChange_time () {
+	public Date getLastChangeTime () {
 		return lastChangeTime;
-	}
-
-	public int getId () {
-		return id;
-	}
-
-	public int getBugId () {
-		return bugId;
 	}
 
 	public String getFileName () {
@@ -116,7 +99,7 @@ public class BugzillaAttachment {
 		return isPatch;
 	}
 
-	public String getCreator () {
+	public Identity getCreator () {
 		return creator;
 	}
 
@@ -124,7 +107,4 @@ public class BugzillaAttachment {
 		return contentType;
 	}
 
-	public BugzillaFlag[] getFlags () {
-		return flags;
-	}
 }

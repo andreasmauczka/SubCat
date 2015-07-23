@@ -41,6 +41,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import at.ac.tuwien.inso.subcat.bugzilla.BugzillaAttachment;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaBug;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaChange;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaComment;
@@ -51,6 +52,7 @@ import at.ac.tuwien.inso.subcat.bugzilla.BugzillaHistory;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaProduct;
 import at.ac.tuwien.inso.subcat.bugzilla.BugzillaUser;
 import at.ac.tuwien.inso.subcat.model.Attachment;
+import at.ac.tuwien.inso.subcat.model.AttachmentDetails;
 import at.ac.tuwien.inso.subcat.model.AttachmentStatus;
 import at.ac.tuwien.inso.subcat.model.Bug;
 import at.ac.tuwien.inso.subcat.model.BugAttachmentStats;
@@ -127,17 +129,18 @@ public class BugzillaMiner extends Miner {
 	private List<Worker> workers = new LinkedList<Worker> ();
 	private MinerException storedException;
 	
+	private boolean processAttachmentDetails;
 	private boolean processComments;
 	private boolean processHistory;
 
-	private class BugzillaAttachment {
+	private class BzAttachment {
 		public Integer id;
 		public Comment comment;
-		public LinkedList<BugzillaAttachmentHistoryEntry> history = new LinkedList<BugzillaAttachmentHistoryEntry> ();
+		public LinkedList<BzAttachmentHistoryEntry> history = new LinkedList<BzAttachmentHistoryEntry> ();
 		public LinkedList<Comment> reviewComments = new LinkedList<Comment> ();
 	}
 	
-	private class BugzillaAttachmentHistoryEntry {
+	private class BzAttachmentHistoryEntry {
 		public Identity identity;
 		public Date date;
 		public String fieldName;
@@ -233,14 +236,24 @@ public class BugzillaMiner extends Miner {
 			assert (bzBugs.size () == bzBugIds.size ());
 
 			// Get data:
-			Map<Integer, BugzillaHistory[]> _histories;
-			Map<Integer, BugzillaComment[]> _comments;
+			Map<Integer, BugzillaHistory[]> _histories = null;
+			Map<Integer, BugzillaComment[]> _comments = null;
+			Map<Integer, BugzillaAttachment> _attachments = null;
 
-			_histories = context.getHistory (bzBugIds);
-			_comments = context.getComments (bzBugIds);
+			if (processComments) {
+				_histories = context.getHistory (bzBugIds);
+			}
+
+			if (processComments) {
+				_comments = context.getComments (bzBugIds);
+			}
+
+			if (processAttachmentDetails) {
+				_attachments = context.getAttachments (bzBugIds);
+			}
 			
 			for (BugzillaBug bzBug : bzBugs) {
-				BugzillaComment[] comments = _comments.get (bzBug.getId ());
+				BugzillaComment[] comments = (_comments != null)? _comments.get (bzBug.getId ()) : null;
 				Identity creator = null;
 				if (comments != null && comments.length > 0) {
 					creator = resolveIdentity (comments[0].getCreator ());
@@ -281,7 +294,7 @@ public class BugzillaMiner extends Miner {
 				}
 
 
-				List<BugzillaAttachment> attachments = new LinkedList<BugzillaAttachment> ();
+				List<BzAttachment> attachments = new LinkedList<BzAttachment> ();
 
 				
 				// Add to model:
@@ -322,25 +335,64 @@ public class BugzillaMiner extends Miner {
 					BugzillaHistory[] histories = _histories.get (bzBug.getId ());
 					addHistory (bug, histories, attachments, bugStats);
 				}
-
-				for (BugzillaAttachment att : attachments) {
+				
+				for (BzAttachment att : attachments) {
 					Map<Integer, BugAttachmentStats> bugStatsMap = (bugStats == null)? null : bugStats.getAttachmentStatsByIdentifier ();				
 					BugAttachmentStats attStats = (bugStatsMap == null)? null : bugStatsMap.get (att.id);
 					Attachment attachment;
 					if (attStats == null) {
 						attachment = model.addAttachment (att.id, att.comment);
+						if (processAttachmentDetails) {
+							BugzillaAttachment bzAtt = _attachments.get (att.id);
+							assert (bzAtt != null);
+
+							byte[] attData = bzAtt.getData ();
+							Date attCreationTime = bzAtt.getCreationTime ();
+							Date attLastchangeTime = bzAtt.getLastChange_time ();
+							String attFileName = bzAtt.getFileName ();
+							String attSummary = bzAtt.getSummary ();
+							Boolean attIsPrivate = bzAtt.getIsPrivate ();
+							Boolean attIsObsolete = bzAtt.getIsObsolete ();
+							Boolean attIsPatch = bzAtt.getIsPatch ();
+							Identity attCreator = resolveIdentity (bzAtt.getCreator ());
+							String attContentType = bzAtt.getContentType ();
+							BugFlagAssignment[] attFlagAssignments = resolveBugFlagAssignments (bzAtt.getFlags ());
+
+							model.addAttachmentDetails (attachment, attData, attCreationTime, attLastchangeTime, attFileName, attSummary, attIsPrivate, attIsObsolete, attIsPatch, attCreator, attContentType);
+							model.addBugAttachmentFlagAssignments (attachment, attFlagAssignments);
+						}
+
 						for (Comment comment : att.reviewComments) {
 							model.addBugAttachmentReviewComment (comment, attachment);
 						}
 					} else {
 						attachment = new Attachment (attStats.getId (), att.id, att.comment);
 						model.updateAttachment (attachment);
+						if (processAttachmentDetails) {
+							BugzillaAttachment bzAtt = _attachments.get (att.id);
+
+							byte[] attData = bzAtt.getData ();
+							Date attCreationTime = bzAtt.getCreationTime ();
+							Date attLastchangeTime = bzAtt.getLastChange_time ();
+							String attFileName = bzAtt.getFileName ();
+							String attSummary = bzAtt.getSummary ();
+							Boolean attIsPrivate = bzAtt.getIsPrivate ();
+							Boolean attIsObsolete = bzAtt.getIsObsolete ();
+							Boolean attIsPatch = bzAtt.getIsPatch ();
+							Identity attCreator = resolveIdentity (bzAtt.getCreator ());
+							String attContentType = bzAtt.getContentType ();
+							BugFlagAssignment[] attFlagAssignments = resolveBugFlagAssignments (bzAtt.getFlags ());
+
+							AttachmentDetails attachmentDetails = new AttachmentDetails (attachment, attData, attCreationTime, attLastchangeTime, attFileName, attSummary, attIsPrivate, attIsObsolete, attIsPatch, attCreator, attContentType);
+							model.updateAttachmentDetail (attachmentDetails);
+							model.updateBugAttachmentFlagAssignments (attachment, attFlagAssignments);
+						}
 					}
 
 					int attStatCnt = 0;
 					int histObsCnt = 0;
 					int histCnt = 0;
-					for (BugzillaAttachmentHistoryEntry histo : att.history) {
+					for (BzAttachmentHistoryEntry histo : att.history) {
 						if ("attachments.gnome_attachment_status".equals (histo.fieldName) || "flagtypes.name".equals (histo.fieldName)) {
 							if (attStats == null || attStatCnt >= attStats.getStatusHistoryCount ()) {
 								AttachmentStatus oldAttStatus = resolveAttachmentStatus (histo.oldValue);
@@ -397,12 +449,12 @@ public class BugzillaMiner extends Miner {
 				: null;
 		}
 
-		private void addComments (Bug bug, BugzillaComment[] comments, List<BugzillaAttachment> attachments, BugStats bugStats) throws SQLException, BugzillaException {
+		private void addComments (Bug bug, BugzillaComment[] comments, List<BzAttachment> attachments, BugStats bugStats) throws SQLException, BugzillaException {
 			assert (bug != null);
 			assert (comments != null);
 
 
-			HashMap<Integer, BugzillaAttachment> attachmentMap = new HashMap<Integer, BugzillaAttachment> ();
+			HashMap<Integer, BzAttachment> attachmentMap = new HashMap<Integer, BzAttachment> ();
 			int cmntCnt = 0;
 
 			for (BugzillaComment comment : comments) {
@@ -425,7 +477,7 @@ public class BugzillaMiner extends Miner {
 
 					Integer reviewIdentifier = getCommentReviewAttachmentId (cmntContent);
 					if (reviewIdentifier != null) {
-						BugzillaAttachment attachment = attachmentMap.get (reviewIdentifier);
+						BzAttachment attachment = attachmentMap.get (reviewIdentifier);
 						if (attachment != null) {
 							attachment.reviewComments .add (cmnt);
 						}
@@ -436,7 +488,7 @@ public class BugzillaMiner extends Miner {
 				Integer patchId = extractPatchId (comment);
 				if (patchId != null) {
 					cmnt = getComment (bug, cmnt, cmntCnt);
-					BugzillaAttachment attachment = new BugzillaAttachment ();
+					BzAttachment attachment = new BzAttachment ();
 					attachmentMap.put (patchId, attachment);
 					attachments.add (attachment);
 					attachment.comment = cmnt;
@@ -456,10 +508,10 @@ public class BugzillaMiner extends Miner {
 			return cmnt;
 		}
 
-		private BugzillaAttachment getAttachment (List<BugzillaAttachment> attachments, Integer integer) {
+		private BzAttachment getAttachment (List<BzAttachment> attachments, Integer integer) {
 			assert (attachments != null);
 			assert (integer != null);
-			for (BugzillaAttachment att : attachments) {
+			for (BzAttachment att : attachments) {
 				if (integer.equals (att.id)) {
 					return att;
 				}
@@ -469,7 +521,7 @@ public class BugzillaMiner extends Miner {
 			return null;
 		}
 
-		private void addHistory (Bug bug, BugzillaHistory[] history, List<BugzillaAttachment> attachments, BugStats bugStats) throws SQLException, BugzillaException {
+		private void addHistory (Bug bug, BugzillaHistory[] history, List<BzAttachment> attachments, BugStats bugStats) throws SQLException, BugzillaException {
 			assert (bug != null);
 
 			if (history == null) {
@@ -741,14 +793,14 @@ public class BugzillaMiner extends Miner {
 						}
 						qaCnt++;
 					} else if (change.getAttachmentId () != null) {
-						BugzillaAttachmentHistoryEntry attHisto = new BugzillaAttachmentHistoryEntry ();
+						BzAttachmentHistoryEntry attHisto = new BzAttachmentHistoryEntry ();
 						attHisto.identity = resolveIdentity (entry.getWho ());
 						attHisto.date = entry.getWhen ();
 						attHisto.fieldName = change.getFieldName ();
 						attHisto.oldValue = change.getRemoved ();
 						attHisto.newValue = change.getAdded ();
 
-						BugzillaAttachment bugzillaAttachment = getAttachment (attachments, change.getAttachmentId ());
+						BzAttachment bugzillaAttachment = getAttachment (attachments, change.getAttachmentId ());
 						bugzillaAttachment.history.add (attHisto);
 					} else {
 						if (bugStats == null || bugHistoryCnt >= bugStats.getHistoryCount ()) {
@@ -780,6 +832,7 @@ public class BugzillaMiner extends Miner {
 	public void run () throws MinerException, ParameterException {
 		processComments = settings.bugGetParameter (this, "process-comments", true);
 		processHistory = settings.bugGetParameter (this, "process-history", true);
+		processAttachmentDetails = settings.bugGetParameter (this, "process-attachment-details", true);
 		passSize = settings.bugGetParameter (this, "pass-size", 20);
 		pageSize = settings.bugGetParameter (this, "page-size", 200);
 

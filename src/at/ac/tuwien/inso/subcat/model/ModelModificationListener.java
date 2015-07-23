@@ -213,4 +213,14 @@ public interface ModelModificationListener {
 
 	public void bugAttachmentReviewCommentAdded (Comment comment,
 			Attachment attachment);
+
+	public void attachmentDetailsAdded (AttachmentDetails ad);
+
+	public void attachmentDetailsUpdated (AttachmentDetails ad);
+
+	public void bugAttachmentFlagAssignmentsAdded (Attachment attachment,
+			BugFlagAssignment[] flags);
+
+	public void bugAttachmentFlagAssignmentsUpdated (Attachment attachment,
+			BugFlagAssignment[] flags);
 }

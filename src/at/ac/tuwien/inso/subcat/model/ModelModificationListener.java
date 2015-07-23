@@ -208,4 +208,6 @@ public interface ModelModificationListener {
 	public void bugSeeAlsoAdded (Bug bug, String[] links);
 
 	public void bugClassAdded (BugClass bc);
+
+	public void bugDuplicationCommentAdded (Comment comment, Integer identifier);
 }

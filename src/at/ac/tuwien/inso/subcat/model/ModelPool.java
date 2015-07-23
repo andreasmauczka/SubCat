@@ -667,5 +667,11 @@ public class ModelPool {
 			listener.bugClassAdded (bc);
 		}
 	}
+
+	synchronized void emitBugDuplicationCommentAdded (Comment comment, Integer identifier) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugDuplicationCommentAdded (comment, identifier);
+		}
+	}
 }
 

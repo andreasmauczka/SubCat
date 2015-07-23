@@ -80,7 +80,8 @@ import at.ac.tuwien.inso.subcat.utility.Reporter;
 
 
 public class BugzillaMiner extends Miner {
-	private Pattern patternMailValidator = Pattern.compile ("^[_A-Za-z0-9-]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$");
+	private static final Pattern dupPattern = Pattern.compile ("\\*\\*\\* (?:(?:Bug ([0-9]+) has been marked as a duplicate of this bug\\.)|(?:This bug has been marked as a duplicate of (?:bug )?([0-9]+))) \\*\\*\\*");
+	private static final Pattern patternMailValidator = Pattern.compile ("^[_A-Za-z0-9-]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*(\\.[A-Za-z]{2,})$");
 
 	private int pageSize;
 	private int passSize;
@@ -408,6 +409,10 @@ public class BugzillaMiner extends Miner {
 					String cmntContent = comment.getText ();
 
 					cmnt = model.addComment (cmntCnt, bug, cmntCreation, cmntCreator, cmntContent);
+					Integer dupIdentifier = getCommentDuplicationBugId (cmntContent);
+					if (dupIdentifier != null) {
+						model.addBugDuplicationComment (cmnt, dupIdentifier);
+					}
 				}
 
 				// Process attached patches:
@@ -420,7 +425,6 @@ public class BugzillaMiner extends Miner {
 					attachments.add (attachment);
 				}
 
-				// TODO: Duplications
 				// TODO: Patch Reviews / Comment on Attachment
 
 				cmntCnt++;
@@ -822,6 +826,7 @@ public class BugzillaMiner extends Miner {
 		}
 
 		try {
+			model.resolveDuplicationCommentyBugs (project);
 			model.resolveBugBlocksHistoryBugs (project);
 			model.resolveBugBlocksBugs (project);
 			model.resolveBugDependencyHistory (project);
@@ -925,6 +930,17 @@ public class BugzillaMiner extends Miner {
 	// Helper:
 	//
 
+	private static Integer getCommentDuplicationBugId (String content) {
+		Matcher matcher = dupPattern.matcher (content);
+
+		if (matcher.find ()) {
+			String bugId = (matcher.group (1) != null)? matcher.group (1) : matcher.group (2);
+			return new Integer (bugId);
+		}
+
+		return null;
+	}
+	
 	private static boolean isGroupIdentifier (String identifier) {
 		return identifier.matches (".*@[a-zA-Z0-9_-]+\\.bugs\\z");
 	}

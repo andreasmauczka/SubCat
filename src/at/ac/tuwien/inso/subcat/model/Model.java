@@ -645,6 +645,15 @@ public class Model {
 		+ "UNIQUE (bug, pos)"
 		+ ")";
 
+	private static final String BUG_DUPLICATION_COMMENT_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugDuplicationComment ("
+		+ "comment		INTEGER		NOT NULL,"
+		+ "identifier	INTEGER		NOT NULL,"
+		+ "duplication	INTEGER				,"
+		+ "FOREIGN KEY(comment) REFERENCES Comments (id),"
+		+ "FOREIGN KEY(duplication) REFERENCES Bugs (id)"
+		+ ")";
+
 	private static final String STATUS_TABLE =
 		"CREATE TABLE IF NOT EXISTS Status ("
 		+ "id			INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
@@ -1749,6 +1758,15 @@ public class Model {
 		+ " blocks IS NULL"
 		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
 
+	private static final String BUG_DUPLICATION_COMMENT_RESOLVE_BUGS =
+		"UPDATE"
+		+ " BugDuplicationComment "
+		+ "SET "
+		+ " duplication = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugDuplicationComment.identifier AND Components.project = ?) "
+		+ "WHERE"
+		+ " duplication IS NULL"
+		+ " AND comment in (SELECT Comments.id FROM Comments, Bugs, Components WHERE Comments.bug = Bugs.id AND Bugs.component = Components.id AND Components.project = ?)";
+
 	private static final String BUG_BLOCKS_RESOLVE_BUGS =
 		"UPDATE"
 		+ " BugBlocks "
@@ -1803,6 +1821,11 @@ public class Model {
 	private static final String SEVERITY_INSERTION =
 		"INSERT INTO Severity "
 		+ "(project, name)"
+		+ "VALUES (?,?)";
+
+	private static final String BUG_DUPLICATION_COMMENT_INSERTION =
+		"INSERT INTO BugDuplicationComment "
+		+ "(comment, identifier)"
 		+ "VALUES (?,?)";
 
 	private static final String BUG_CLASS_INSERTION =
@@ -2382,6 +2405,21 @@ public class Model {
 		stmt.close ();		
 
 		pool.emitSeverityAdded (severity);
+	}
+
+	public void addBugDuplicationComment (Comment comment, Integer identifier) throws SQLException {
+		assert (conn != null);
+		assert (comment != null);
+		assert (comment.getId () != null);
+		assert (identifier != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_DUPLICATION_COMMENT_INSERTION);
+		stmt.setInt (1, comment.getId ());
+		stmt.setInt (2, identifier);		
+		stmt.executeUpdate();
+		stmt.close ();		
+
+		pool.emitBugDuplicationCommentAdded (comment, identifier);
 	}
 
 	public BugClass addBugClass (Project project, String name) throws SQLException {
@@ -4025,6 +4063,19 @@ public class Model {
 		assert (project.getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_HISTORY_RESOLVE_BUGS);
+		stmt.setInt (1, project.getId ());
+		stmt.setInt (2, project.getId ());
+
+		stmt.executeUpdate();
+		stmt.close ();
+	}
+
+	public void resolveDuplicationCommentyBugs (Project project) throws SQLException {
+		assert (conn != null);
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_DUPLICATION_COMMENT_RESOLVE_BUGS);
 		stmt.setInt (1, project.getId ());
 		stmt.setInt (2, project.getId ());
 
@@ -6212,6 +6263,7 @@ public class Model {
 		stmt.executeUpdate (BUG_SEE_ALSO_TABLE);
 		stmt.executeUpdate (BUG_CLASS_TABLE);
 		stmt.executeUpdate (COMMENT_TABLE);
+		stmt.executeUpdate (BUG_DUPLICATION_COMMENT_TABLE);
 		stmt.executeUpdate (STATUS_TABLE);
 		stmt.executeUpdate (BUG_HISTORY_TABLE);
 		stmt.executeUpdate (STATUS_HISTORY_TABLE);

@@ -201,6 +201,15 @@ public class Model {
 		+ "UNIQUE (project, name)"
 		+ ")";
 
+	private static final String BUG_CLASS_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugClasses ("
+		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
+		+ "project		INT									NOT NULL,"
+		+ "name			TEXT								NOT NULL,"
+		+ "FOREIGN KEY(project) REFERENCES Projects (id),"
+		+ "UNIQUE (project, name)"
+		+ ")";
+
 	private static final String BUG_FLAG_STATUS_TABLE =
 		"CREATE TABLE IF NOT EXISTS BugFlagStatuses ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -306,6 +315,7 @@ public class Model {
 		+ "targetMilestone	INT									NOT NULL,"
 		+ "comments			INT									NOT NULL DEFAULT 0,"
 		+ "status			INT									NOT NULL,"
+		+ "classification	INT											,"
 		+ "FOREIGN KEY(priority) REFERENCES Priorities (id),"
 		+ "FOREIGN KEY(severity) REFERENCES Severity (id),"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
@@ -315,7 +325,8 @@ public class Model {
 		+ "FOREIGN KEY(targetMilestone) REFERENCES Milestones (id),"
 		+ "FOREIGN KEY(operatingSystem) REFERENCES OperatingSystems (id),"
 		+ "FOREIGN KEY(platform) REFERENCES Platforms (id),"
-		+ "FOREIGN KEY(status) REFERENCES Status (id)"
+		+ "FOREIGN KEY(status) REFERENCES Status (id),"
+		+ "FOREIGN KEY(classification) REFERENCES BugClasses (id)"
 		+ ")";
 
 	private static final String BUG_KEYWORDS_TABLE =
@@ -1012,7 +1023,8 @@ public class Model {
 		+ " Bugs.version,"
 		+ " Bugs.operatingSystem,"
 		+ " Bugs.platform,"
-		+ " Bugs.targetMilestone "
+		+ " Bugs.targetMilestone,"
+		+ " Bugs.classification "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -1055,7 +1067,9 @@ public class Model {
 		+ " Bugs.platform,"
 		+ " Platforms.name,"
 		+ " Bugs.targetMilestone,"
-		+ " Milestones.name "
+		+ " Milestones.name."
+		+ " Bugs.classification,"
+		+ " BugClasses.name "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -1080,10 +1094,12 @@ public class Model {
 		+ " ON Platforms.id = Bugs.platform "
 		+ "JOIN Milestones"
 		+ " ON Milestones.id = Bugs.targetMilestone "
+		+ "LEFT JOIN BugClasses "
+		+ " ON BugClasses.id = Bugs.classification "
 		+ "WHERE"
 		+ " Components.project = ?"
 		+ " AND Bugs.identifier = ?";
-	
+
 	private static final String SELECT_ALL_CATEGORIES =
 		"SELECT"
 		+ " id,"
@@ -1146,6 +1162,15 @@ public class Model {
 		+ " name "
 		+ "FROM"
 		+ " Keywords "
+		+ "WHERE"
+		+ " project = ?";
+
+	private static final String SELECT_BUG_CLASSES =
+		"SELECT"
+		+ " id,"
+		+ " name "
+		+ "FROM"
+		+ " BugClasses "
 		+ "WHERE"
 		+ " project = ?";
 
@@ -1530,8 +1555,8 @@ public class Model {
 
 	private static final String BUG_INSERTION =
 		"INSERT INTO Bugs "
-		+ "(identifier, identity, component, title, creation, priority, severity, status, resolution, lastChange, version, operatingSystem, platform, targetMilestone)"
-		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+		+ "(identifier, identity, component, title, creation, priority, severity, status, resolution, lastChange, version, operatingSystem, platform, targetMilestone, classification)"
+		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 	private static final String BUG_CC_INSERTION =
 		"INSERT INTO BugCc"
@@ -1578,7 +1603,8 @@ public class Model {
 		+ " version = ?,"
 		+ " operatingSystem = ?,"
 		+ " platform = ?,"
-		+ " targetMilestone = ? "
+		+ " targetMilestone = ?,"
+		+ " classification = ?"
 		+ "WHERE"
 		+ " id = ?";
 	
@@ -1779,6 +1805,11 @@ public class Model {
 		+ "(project, name)"
 		+ "VALUES (?,?)";
 
+	private static final String BUG_CLASS_INSERTION =
+		"INSERT INTO BugClasses "
+		+ "(project, name)"
+		+ "VALUES (?,?)";
+	
 	private static final String BUG_FLAG_STATUS_INSERTION =
 		"INSERT INTO BugFlagStatuses "
 		+ "(project, name)"
@@ -2353,6 +2384,33 @@ public class Model {
 		pool.emitSeverityAdded (severity);
 	}
 
+	public BugClass addBugClass (Project project, String name) throws SQLException {
+		BugClass bc = new BugClass (null, project, name);
+		add (bc);
+		return bc;		
+	}
+
+	public void add (BugClass bc) throws SQLException {
+		assert (conn != null);
+		assert (bc != null);
+		Project project = bc.getProject ();
+		assert (project.getId () != null);
+		assert (bc.getId () == null);
+
+		PreparedStatement stmt = conn.prepareStatement (BUG_CLASS_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+		stmt.setInt (1, project.getId ());
+		stmt.setString(2, bc.getName ());
+		stmt.executeUpdate();
+
+		bc.setId (getLastInsertedId (stmt));
+
+		stmt.close ();		
+
+		pool.emitBugClassAdded (bc);
+	}
+	
 	public BugFlagStatus addBugFlagStatus (Project project, String name) throws SQLException {
 		BugFlagStatus status = new BugFlagStatus (null, project, name);
 		add (status);
@@ -2868,9 +2926,9 @@ public class Model {
 	public Bug addBug (Integer identifier, Identity identity, Component component, String title, 
 			Date creation, Date lastChange, Priority priority, Severity severity, Status status, 
 			Resolution resolution, Version version, Milestone targetMilestone, 
-			OperatingSystem operatingSystem, Platform platform) throws SQLException
+			OperatingSystem operatingSystem, Platform platform, BugClass classification) throws SQLException
 	{
-		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, status, resolution, version, targetMilestone, operatingSystem, platform);
+		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, status, resolution, version, targetMilestone, operatingSystem, platform, classification);
 		add (bug);
 
 		return bug;
@@ -2920,6 +2978,11 @@ public class Model {
 		stmt.setInt (12, bug.getOperatingSystem ().getId ());
 		stmt.setInt (13, bug.getPlatform ().getId ());
 		stmt.setInt (14, bug.getTargetMilestone ().getId ());
+		if (bug.getClassification () != null) {
+			stmt.setInt (15, bug.getClassification ().getId ());
+		} else {
+			stmt.setNull (15, Types.INTEGER);
+		}
 		stmt.executeUpdate();
 
 		bug.setId (getLastInsertedId (stmt));
@@ -3376,6 +3439,7 @@ public class Model {
 		assert (bug.getOperatingSystem ().getId () != null);
 		assert (bug.getPlatform ().getId () != null);
 		assert (bug.getTargetMilestone ().getId () != null);
+		assert (bug.getClassification () == null || bug.getClassification ().getId () != null);
 
 		
 		PreparedStatement stmt = conn.prepareStatement (BUG_UPDATE);
@@ -3397,7 +3461,12 @@ public class Model {
 		stmt.setInt (12, bug.getOperatingSystem ().getId ());
 		stmt.setInt (13, bug.getPlatform ().getId ());
 		stmt.setInt (14, bug.getTargetMilestone ().getId ());
-		stmt.setInt (15, bug.getId ());
+		if (bug.getClassification () != null) {
+			stmt.setInt (15, bug.getClassification ().getId ());
+		} else {
+			stmt.setInt (15, Types.INTEGER);
+		}
+		stmt.setInt (16, bug.getId ());
 		stmt.executeUpdate();
 		stmt.close ();
 		
@@ -4979,6 +5048,7 @@ public class Model {
 		Map<Integer, Platform> platforms = getPlatforms (proj);
 		Map<Integer, OperatingSystem> operatingSystems = getOperatingSystems (proj);
 		Map<Integer, Status> statuses = getStatuses (proj);
+		Map<Integer, BugClass> classifications = getBugClasses (proj);
 
 
 		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUGS);
@@ -5009,10 +5079,11 @@ public class Model {
 			OperatingSystem operatingSystem = operatingSystems.get (res.getInt (20));
 			Platform platform = platforms.get (res.getInt (21));
 			Status status = statuses.get (res.getInt (14));
+			BugClass classification = classifications.get (res.getInt (23));
 
 			Bug bug = new Bug (id, identifier, identity, component,
 				title, creation, lastChange, priority, severity, status, resolution,
-				version, milestone, operatingSystem, platform);
+				version, milestone, operatingSystem, platform, classification);
 
 			do_next = callback.processResult (bug);
 		}
@@ -5083,10 +5154,17 @@ public class Model {
 			String mileName = res.getString (30);
 			Milestone milestone = new Milestone (mileId, proj, mileName);
 			
+			BugClass classification = null;
+			int classificationId = res.getInt (31);
+			if (!res.wasNull ()) {
+				String classificationName = res.getString (32);
+				classification = new BugClass (classificationId, proj, classificationName);
+			}
+			
 			return new Bug (id, identifier, identity, component,
 				title, creation, lastChange, priority, severity,
 				status, resolution, version, milestone, 
-				operatingSystem, platform);
+				operatingSystem, platform, classification);
 		}
 
 		return null;
@@ -5332,6 +5410,26 @@ public class Model {
 		return kwds;
 	}
 
+	public Map<String, BugClass> getBugClassesByName (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_BUG_CLASSES);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<String, BugClass> classes = new HashMap<String, BugClass> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			BugClass cl = new BugClass (res.getInt (1), proj, res.getString (2));
+			classes.put (cl.getName (), cl);
+		}
+	
+		return classes;
+	}
+
 	public Map<String, Version> getVersionsByName (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
@@ -5536,6 +5634,26 @@ public class Model {
 		}
 	
 		return kwds;
+	}
+
+	public Map<Integer, BugClass> getBugClasses (Project proj) throws SQLException {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		// Statement:
+		PreparedStatement stmt = conn.prepareStatement (SELECT_BUG_CLASSES);
+		stmt.setInt (1, proj.getId ());
+	
+		// Collect data:
+		HashMap<Integer, BugClass> classes = new HashMap<Integer, BugClass> ();
+		ResultSet res = stmt.executeQuery ();
+		while (res.next ()) {
+			BugClass cl = new BugClass (res.getInt (1), proj, res.getString (2));
+			classes.put (cl.getId (), cl);
+		}
+	
+		return classes;
 	}
 
 	public Map<String, Severity> getSeveritiesByName (Project proj) throws SQLException {
@@ -6092,6 +6210,7 @@ public class Model {
 		stmt.executeUpdate (BUG_DUPLICATION_TABLE);
 		stmt.executeUpdate (BUG_QA_CONTACT_TABLE);
 		stmt.executeUpdate (BUG_SEE_ALSO_TABLE);
+		stmt.executeUpdate (BUG_CLASS_TABLE);
 		stmt.executeUpdate (COMMENT_TABLE);
 		stmt.executeUpdate (STATUS_TABLE);
 		stmt.executeUpdate (BUG_HISTORY_TABLE);

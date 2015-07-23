@@ -661,5 +661,11 @@ public class ModelPool {
 			listener.bugSeeAlsoUpdated (bug, links);
 		}
 	}
+
+	synchronized void emitBugClassAdded (BugClass bc) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugClassAdded (bc);
+		}
+	}
 }
 

@@ -73,6 +73,7 @@ public class BugzillaBug {
 	private String[] groups;
 	private BugzillaFlag[] processFlags;
 	private String[] seeAlso;
+	private String classification;
 
 
 	public BugzillaBug (int id, String alias, String assignedTo,
@@ -83,7 +84,8 @@ public class BugzillaBug {
 			String resolution, String severity, String status, String summary,
 			String version, String targetMilestone, Date deadline,
 			String qaContact, Integer[] blocks, Integer[] dependsOn,
-			String[] keywords, String[] groups, BugzillaFlag[] processFlags, String[] seeAlso)
+			String[] keywords, String[] groups, BugzillaFlag[] processFlags,
+			String[] seeAlso, String classification)
 	{
 		assert (alias != null);
 		assert (component != null);
@@ -148,6 +150,7 @@ public class BugzillaBug {
 		this.groups = groups;
 		this.processFlags = processFlags;
 		this.seeAlso = seeAlso;
+		this.classification = classification;
 	}
 
 
@@ -259,6 +262,10 @@ public class BugzillaBug {
 		return seeAlso;
 	}
 
+	public String getClassification () {
+		return classification;
+	}
+	
 	@Override
 	public String toString () {
 		return "Bug [id=" + id + ", alias=" + alias + ", assignedTo="

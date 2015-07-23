@@ -206,4 +206,6 @@ public interface ModelModificationListener {
 	public void bugSeeAlsoUpdated (Bug bug, String[] links);
 
 	public void bugSeeAlsoAdded (Bug bug, String[] links);
+
+	public void bugClassAdded (BugClass bc);
 }

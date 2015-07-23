@@ -49,11 +49,13 @@ public class Bug {
 	private OperatingSystem os;
 	private Platform platform;
 	private Status status;
+	private BugClass classification;
+
 
 	public Bug (Integer id, Integer identifier, Identity identity, Component component,
 			String title, Date creation, Date lastChange, Priority priority, Severity severity,
 			Status status, Resolution resolution, Version version, Milestone milestone,
-			OperatingSystem os, Platform platform) {
+			OperatingSystem os, Platform platform, BugClass classification) {
 		assert (component != null);
 		assert (title != null);
 		assert (creation != null);
@@ -65,7 +67,8 @@ public class Bug {
 		assert (platform != null);
 		assert (status != null);
 		assert (milestone != null);
-
+		assert (severity != null);
+		
 		this.id = id;
 		this.identifier = identifier;
 		this.identity = identity;
@@ -81,6 +84,7 @@ public class Bug {
 		this.os = os;
 		this.platform = platform;
 		this.milestone = milestone;
+		this.classification = classification;
 	}
 
 	public Integer getIdentifier () {
@@ -209,6 +213,10 @@ public class Bug {
 		return platform;
 	}
 
+	public BugClass getClassification () {
+		return classification;
+	}
+	
 	public void setOperatingSystem (OperatingSystem os) {
 		assert (os != null);
 

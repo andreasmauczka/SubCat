@@ -104,6 +104,7 @@ public class BugzillaContext {
 	// Debug Helper:
 	//
 
+	/*
 	private static void printValue (String key, Object obj, String offset) {
 		if (obj instanceof Map) {
 			print ((Map<?,?>) obj, offset + " " + key + ":");
@@ -540,6 +541,7 @@ public class BugzillaContext {
 			String version = getStringFromResultMap (bugMap, "version", true);
 			String platform = getStringFromResultMap (bugMap, "platform");
 			String targetMilestone = getStringFromResultMap (bugMap, "target_milestone");
+			String classification = getStringFromResultMap (bugMap, "classification", true);
 			Date deadline = getDateFromResultMap (bugMap, "deadline", true);
 			String qaContact = getStringFromResultMap (bugMap, "qa_contact");
 			Integer[] blocks = getIntegerArrayFromResultMap (bugMap, "blocks");
@@ -559,7 +561,7 @@ public class BugzillaContext {
 					resolution, severity, status, summary,
 					version, targetMilestone, deadline,
 					qaContact, blocks, dependsOn, keywords,
-					groups, flags, seeAlso);
+					groups, flags, seeAlso, classification);
 		}
 
 		return bugs;
@@ -851,16 +853,6 @@ public class BugzillaContext {
 	//
 	// Test Main:
 	//
-
-	public static void main (String[] args) {
-		try {
-			BugzillaContext context = new BugzillaContext ("https://bugzilla.gnome.org");
-			context.enableUntrustedCertificates ();
-			context.getBugs (559704);
-		} catch (MalformedURLException | BugzillaException e) {
-			e.printStackTrace();
-		}
-	}
 
 	/*
 	public static void main (String[] args) {

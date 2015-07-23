@@ -54,6 +54,7 @@ import at.ac.tuwien.inso.subcat.model.Attachment;
 import at.ac.tuwien.inso.subcat.model.AttachmentStatus;
 import at.ac.tuwien.inso.subcat.model.Bug;
 import at.ac.tuwien.inso.subcat.model.BugAttachmentStats;
+import at.ac.tuwien.inso.subcat.model.BugClass;
 import at.ac.tuwien.inso.subcat.model.BugFlag;
 import at.ac.tuwien.inso.subcat.model.BugFlagAssignment;
 import at.ac.tuwien.inso.subcat.model.BugFlagStatus;
@@ -113,10 +114,11 @@ public class BugzillaMiner extends Miner {
 	private Map<String, Severity> severities = new HashMap<String, Severity> ();
 	private Map<String, Identity> identities = new HashMap<String, Identity> ();
 	private Map<String, Platform> platforms = new HashMap<String, Platform> ();
+	private Map<String, BugClass> classes = new HashMap<String, BugClass> ();
 	private Map<String, Version> versions = new HashMap<String, Version> ();
 	private Map<String, Keyword> keywords = new HashMap<String, Keyword> ();
 	private Map<String, BugGroup> groups = new HashMap<String, BugGroup> ();
-	private Map<Integer, BugFlag> flags = new HashMap<Integer, BugFlag> ();
+	private Map<Integer,BugFlag> flags = new HashMap<Integer, BugFlag> ();
 	private Map<String, Status> status = new HashMap<String, Status> ();
 	private Project project;
 
@@ -255,6 +257,7 @@ public class BugzillaMiner extends Miner {
 				OperatingSystem operatingSystems = resolveOperatingSystem (bzBug.getOpSys ());
 				Platform platform = resolvePlatform (bzBug.getPlatform ());
 				Status status = resolveStatus (bzBug.getStatus ());
+				BugClass bugClass = resolveClass (bzBug.getClassification ());
 				Date deadline = bzBug.getDeadline ();
 				Integer duplication = bzBug.getDup ();
 				Integer[] blocks = bzBug.getBlocks ();
@@ -280,7 +283,7 @@ public class BugzillaMiner extends Miner {
 				// Add to model:
 				Bug bug;
 				if (bugStats == null) {
-					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
+					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform, bugClass);
 					model.addBugDeadline (bug, deadline);
 					model.addBugDuplication (bug, duplication);
 					model.addBugQaContact (bug, qaContactIdentity, qaContactGroup);
@@ -292,7 +295,7 @@ public class BugzillaMiner extends Miner {
 					model.addBugFlagAssignments (bug, bugFlagAssignments);
 					model.addBugSeeAlso (bug, seeAlso);
 				} else {
-					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform);
+					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform, bugClass);
 					model.updateBug (bug);
 					model.updateBugDeadline (bug, deadline);
 					model.updateBugDuplication (bug, duplication);
@@ -880,6 +883,7 @@ public class BugzillaMiner extends Miner {
 		platforms = model.getPlatformsByName (project);
 		flagStates = model.getBugFlagStatesByName (project);
 		flags = model.getBugFlagsByIdentifier (project);
+		classes = model.getBugClassesByName (project);
 
 		model.setDefaultStatus (resolveStatus ("UNCO"));
 
@@ -949,6 +953,20 @@ public class BugzillaMiner extends Miner {
 		return stat;
 	}
 
+	private synchronized BugClass resolveClass (String name) throws SQLException {
+		if (name == null) {
+			return null;
+		}
+
+		BugClass cl = classes.get (name);
+		if (cl == null) {
+			cl = model.addBugClass (project, name);
+			classes.put (name, cl);
+		}
+		
+		return cl;		
+	}
+	
 	private BugGroup[] resolveGroups (String[] names) throws SQLException {
 		BugGroup[] groups = new BugGroup[names.length];
 		

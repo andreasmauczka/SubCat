@@ -53,7 +53,7 @@ public abstract class MetaData {
 	
 	public abstract Miner create (Settings settings, Project project, ModelPool pool, Reporter reporter);
 
-	public abstract boolean checkSpecificParams (Map<String, Object> params, Map<String, String> errors);
+	public abstract boolean checkSpecificParams (Settings settings, Map<String, Object> params, Map<String, String> errors);
 
 	public abstract Map<String, ParamType> getSpecificParams ();
 

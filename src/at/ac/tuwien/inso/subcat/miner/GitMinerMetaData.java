@@ -70,7 +70,8 @@ public class GitMinerMetaData extends MetaData {
 	}
 
 	@Override
-	public boolean checkSpecificParams (Map<String, Object> params, Map<String, String> errors) {
+	public boolean checkSpecificParams (Settings settings, Map<String, Object> params, Map<String, String> errors) {
+		assert (settings != null);
 		assert (params != null);
 		assert (errors != null);
 

@@ -73,24 +73,34 @@ public class BugzillaMinerMetaData extends MetaData {
 	}
 
 	@Override
-	public boolean checkSpecificParams (Map<String, Object> params, Map<String, String> errors) {
+	public boolean checkSpecificParams (Settings settings, Map<String, Object> params, Map<String, String> errors) {
+		assert (settings != null);
 		assert (params != null);
 		assert (errors != null);
-		
+
 		for (Map.Entry<String, Object> entry : params.entrySet ()) {
 			String name = entry.getKey ();
 			Object val = entry.getValue ();
 
 			if (name.equals ("process-comments")) {
 				assertBoolean (name, val, errors);
+				if (settings.bugUpdate) {
+					errors.put (name, "Incompatible with --bug-update");
+				}
 			} else if (name.equals ("process-history")) {
 				assertBoolean (name, val, errors);
+				if (settings.bugUpdate) {
+					errors.put (name, "Incompatible with --bug-update");
+				}
 			} else if (name.equals ("pass-size")) {
 				assertInteger (name, val, 1, Integer.MAX_VALUE, errors);
 			} else if (name.equals ("page-size")) {
 				assertInteger (name, val, 1, Integer.MAX_VALUE, errors);
 			} else if (name.equals ("process-attachment-details")) {
 				assertBoolean (name, val, errors);
+				if (settings.bugUpdate) {
+					errors.put (name, "Incompatible with --bug-update");
+				}
 			} else {
 				errors.put (name, "unknown parameter");
 			}

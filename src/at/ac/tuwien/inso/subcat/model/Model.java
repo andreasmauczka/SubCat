@@ -72,6 +72,7 @@ public class Model {
 	public static final String FLAG_SRC_INFO = "SRC_INFO";
 	public static final String FLAG_COMMIT_CATEGORIES = "COMMIT_CATEGORIES";
 	public static final String FLAG_BUG_CATEGORIES = "BUG_CATEGORIES";
+	public static final String FLAG_BUG_ATTACHMENT_DETAILS = "BUG_ATTACHMENT_DETAILS";
 
 	public static final String CONTEXT_SRC = "src";
 	public static final String CONTEXT_BUG = "bug";

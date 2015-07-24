@@ -830,15 +830,37 @@ public class BugzillaMiner extends Miner {
 
 	@Override
 	public void run () throws MinerException, ParameterException {
-		processComments = settings.bugGetParameter (this, "process-comments", true);
-		processHistory = settings.bugGetParameter (this, "process-history", true);
-		processAttachmentDetails = settings.bugGetParameter (this, "process-attachment-details", true);
-		passSize = settings.bugGetParameter (this, "pass-size", 20);
-		pageSize = settings.bugGetParameter (this, "page-size", 200);
-
 		Date startServerTime = null;
 
 		try {
+			model = pool.getModel ();
+
+			passSize = settings.bugGetParameter (this, "pass-size", 20);
+			pageSize = settings.bugGetParameter (this, "page-size", 200);
+
+			if (settings.bugUpdate) {
+				List<String> flags = model.getFlags (project);
+				processAttachmentDetails = flags.contains (Model.FLAG_BUG_ATTACHMENT_DETAILS);
+				processComments = flags.contains (Model.FLAG_BUG_COMMENTS) && flags.contains (Model.FLAG_BUG_ATTACHMENTS);
+				processHistory = flags.contains (Model.FLAG_BUG_HISTORY);
+			} else {
+				processAttachmentDetails = settings.bugGetParameter (this, "process-attachment-details", true);
+				processComments = settings.bugGetParameter (this, "process-comments", true);
+				processHistory = settings.bugGetParameter (this, "process-history", true);
+
+				model.addFlag (project, Model.FLAG_BUG_INFO);
+				if (processComments == true) {
+					model.addFlag (project, Model.FLAG_BUG_COMMENTS);
+					model.addFlag (project, Model.FLAG_BUG_ATTACHMENTS);
+				}
+				if (processAttachmentDetails == true) {
+					model.addFlag (project, Model.FLAG_BUG_ATTACHMENT_DETAILS);					
+				}
+				if (processHistory == true) {
+					model.addFlag (project, Model.FLAG_BUG_HISTORY);
+				}
+			}
+
 			for (int i = 0; i < settings.bugThreads; i++) {
 				Worker worker = new Worker ();
 				workers.add (worker);
@@ -864,19 +886,6 @@ public class BugzillaMiner extends Miner {
 			// Retrieve the server time before mining
 			// as start-time for the next resume operation:
 			startServerTime = context.getServerTime ();
-
-			model = pool.getModel ();
-			if (project.getLastBugMiningDate () == null) {
-				model.addFlag (project, Model.FLAG_BUG_INFO);
-				if (processComments == true) {
-					model.addFlag (project, Model.FLAG_BUG_COMMENTS);
-					model.addFlag (project, Model.FLAG_BUG_ATTACHMENTS);
-				}
-				if (processHistory == true) {
-					model.addFlag (project, Model.FLAG_BUG_HISTORY);
-				}
-			}
-
 			processBugs ();
 		} catch (SQLException e) {
 			abortRun (new MinerException ("SQL-Error: " + e.getMessage (), e));

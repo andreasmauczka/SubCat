@@ -9,25 +9,12 @@ import java.util.Date;
 import java.util.LinkedList;
 
 import org.sqlite.SQLiteConfig;
+import org.sqlite.SQLiteConfig.SynchronousMode;
 
 import at.ac.tuwien.inso.subcat.utility.sentiment.Sentiment;
 
 
 public class ModelPool {
-
-	//
-	// DB-Settings:
-	//
-
-	private static final String ENABLE_WAL =
-		"PRAGMA journal_mode=WAL";
-	private static final String SYNCHRONOUS_DB =
-		"PRAGMA synchronous=NORMAL";
-
-
-    //
-    //
-    //
 
 	private LinkedList<Connection> connections = new LinkedList<Connection> ();
 	private int connPoolSize;
@@ -95,7 +82,7 @@ public class ModelPool {
 	public synchronized boolean close () {
 		try {
 			for (Connection conn : connections) {
-					conn.close ();
+				conn.close ();
 			}
 	
 			connections = null;
@@ -111,10 +98,9 @@ public class ModelPool {
 	//
 	// Helper:
 	//
-
 	private synchronized Connection popConnection () throws SQLException {
 		assert (connections != null);
-		
+
 		Connection conn = connections.poll ();
 		if (connections.size () == 0) {
 			conn = createConnection ();
@@ -164,16 +150,18 @@ public class ModelPool {
 		// TODO: Escape path
 		SQLiteConfig config = new SQLiteConfig ();
 		config.enableLoadExtension (true);
+		
+		// TODO: Wait until we can set SQLITE_CONFIG_MULTITHREAD
+		// 		 ...
 
 		Connection conn = DriverManager.getConnection ("jdbc:sqlite:" + name, config.toProperties());
 		
 		Statement stmt = conn.createStatement();
 		//stmt.executeUpdate ("PRAGMA journal_mode=MEMORY");
 		stmt.executeUpdate ("PRAGMA temp_store=OFF");
-		stmt.executeUpdate (SYNCHRONOUS_DB);
 		stmt.executeUpdate ("PRAGMA synchronous=OFF");
 		stmt.executeUpdate ("PRAGMA count_changes=OFF");
-		stmt.executeUpdate (ENABLE_WAL);
+		stmt.executeUpdate ("PRAGMA journal_mode=WAL");
 		stmt.close ();
 		
 		return conn;
@@ -360,11 +348,10 @@ public class ModelPool {
 		}
 	}
 
-	public synchronized void emitSentimentAdded (Comment comment,
-			Sentiment<Identity> sentiment) {
+	public synchronized void emitSentimentAdded (Sentiment sentiment) {
 
 		for (ModelModificationListener listener : listeners) {
-			listener.sentimentAdded (comment, sentiment);
+			listener.sentimentAdded (sentiment);
 		}
 	}
 
@@ -706,5 +693,18 @@ public class ModelPool {
 			listener.bugAttachmentFlagAssignmentsUpdated (attachment, flags);
 		}
 	}
-}
 
+	public void emitBugCommentSentimentAdded (Comment comment,
+			Sentiment sentiment) {
+		for (ModelModificationListener listener : listeners) {
+			listener.bugCommentSentimentAdded (comment, sentiment);
+		}
+	}
+
+	public void emitSocialStatsAdded (Identity src, Identity dest,
+			int quotations) {
+		for (ModelModificationListener listener : listeners) {
+			listener.socialStatsAdded (src, dest, quotations);
+		}
+	}
+}

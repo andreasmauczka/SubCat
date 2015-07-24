@@ -283,6 +283,7 @@ public class BugzillaMiner extends Miner {
 				BugGroup[] groups = resolveGroups (bzBug.getGroups ());
 				BugFlagAssignment[] bugFlagAssignments = resolveBugFlagAssignments (bzBug.getProcessFlags ());
 				String[] seeAlso = bzBug.getSeeAlso ();
+				Boolean isOpen = bzBug.isOpen ();
 
 				String  qaContact = bzBug.getQaContact ();
 				Identity qaContactIdentity = null;
@@ -300,7 +301,7 @@ public class BugzillaMiner extends Miner {
 				// Add to model:
 				Bug bug;
 				if (bugStats == null) {
-					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform, bugClass);
+					bug = model.addBug (identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform, bugClass, isOpen);
 					model.addBugDeadline (bug, deadline);
 					model.addBugDuplication (bug, duplication);
 					model.addBugQaContact (bug, qaContactIdentity, qaContactGroup);
@@ -312,7 +313,7 @@ public class BugzillaMiner extends Miner {
 					model.addBugFlagAssignments (bug, bugFlagAssignments);
 					model.addBugSeeAlso (bug, seeAlso);
 				} else {
-					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform, bugClass);
+					bug = new Bug (bugStats.getId (), identifier, creator, component, title, creation, lastChange, priority, severity, status, resolution, version, milestone, operatingSystems, platform, bugClass, isOpen);
 					model.updateBug (bug);
 					model.updateBugDeadline (bug, deadline);
 					model.updateBugDuplication (bug, duplication);

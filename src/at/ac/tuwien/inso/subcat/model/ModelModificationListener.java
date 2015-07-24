@@ -95,7 +95,7 @@ public interface ModelModificationListener {
 	public void attachmentReplacementAdded (Attachment oldAtt,
 			Attachment newAtt);
 
-	public void sentimentAdded (Comment comment, Sentiment<Identity> sentiment);
+	public void sentimentAdded (Sentiment sentiment);
 
 	public void attachmentIsObsoleteAdded (Attachment attachment,
 			Identity identity, Date date, boolean oldValue, boolean newValue);
@@ -223,4 +223,9 @@ public interface ModelModificationListener {
 
 	public void bugAttachmentFlagAssignmentsUpdated (Attachment attachment,
 			BugFlagAssignment[] flags);
+
+	public void bugCommentSentimentAdded (Comment comment,
+			Sentiment sentiment);
+
+	public void socialStatsAdded (Identity src, Identity dest, int quotations);
 }

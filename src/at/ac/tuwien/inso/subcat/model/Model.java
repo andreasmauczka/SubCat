@@ -84,7 +84,6 @@ public class Model {
 	// Table Creation:
 	//
 
-
 	// Note: Dates are not supported by Sqlite
 
 	private static final String PROJECT_TABLE =
@@ -146,7 +145,18 @@ public class Model {
 		+ "FOREIGN KEY(start) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(end) REFERENCES Identities (id)"
 		+ ")";
-	
+
+	private static final String SOCIAL_STATS_TABLE =
+		"CREATE TABLE IF NOT EXISTS SocialStats ("
+		+ "src             INTEGER     NOT NULL,"
+		+ "dest            INTEGER     NOT NULL,"
+		+ "quotations      INTEGER     NOT NULL,"
+		+ "patchesReviewed INTEGER     NOT NULL,"
+		+ "PRIMARY KEY (src, dest),"
+		+ "FOREIGN KEY(src) REFERENCES Identities (id),"
+		+ "FOREIGN KEY(dest) REFERENCES Identities (id)"
+		+ ")";
+
 	private static final String COMPONENT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Components ("
 		+ "id			INTEGER	PRIMARY KEY AUTOINCREMENT	NOT NULL,"
@@ -309,7 +319,7 @@ public class Model {
 		+ "addedBy		INT									NOT NULL,"
 		+ "date			TEXT								NOT NULL,"
 		+ "keyword		INT									NOT NULL,"
-		+ "removed		BOOL									NOT NULL,"
+		+ "removed		BOOL								NOT NULL,"
 		+ "FOREIGN KEY(bug) REFERENCES Bugs (id),"
 		+ "FOREIGN KEY(addedBy) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(keyword) REFERENCES Keywords (id)"
@@ -334,6 +344,7 @@ public class Model {
 		+ "comments			INT									NOT NULL DEFAULT 0,"
 		+ "status			INT									NOT NULL,"
 		+ "classification	INT											,"
+		+ "isOpen			INT									NOT NULL,"
 		+ "FOREIGN KEY(priority) REFERENCES Priorities (id),"
 		+ "FOREIGN KEY(severity) REFERENCES Severity (id),"
 		+ "FOREIGN KEY(identity) REFERENCES Identities (id),"
@@ -894,8 +905,6 @@ public class Model {
 
 		+ "sentimentId				INTEGER		NOT NULL,"
 		+ "pos						INTEGER		NOT NULL,"
-
-		+ "target					INTEGER,"
 		
 		+ "negative					INTEGER		NOT NULL,"
 		+ "somewhatNegative			INTEGER		NOT NULL,"
@@ -919,14 +928,11 @@ public class Model {
 		+ "sentenceCount			INTEGER		NOT NULL,"
 
 		//+ "PRIMARY KEY(sentimentId, pos),"
-		+ "FOREIGN KEY(sentimentId) REFERENCES Sentiment (id),"
-		+ "FOREIGN KEY(target) REFERENCES Identities (id)"
+		+ "FOREIGN KEY(sentimentId) REFERENCES Sentiment (id)"
 		+ ")";
 
 	private static final String SENTIMENT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Sentiment ("
-		+ "commentId				PRIMARY KEY	NOT NULL,"
-
 		+ "negative					INTEGER		NOT NULL,"
 		+ "somewhatNegative			INTEGER		NOT NULL,"
 		+ "neutral					INTEGER		NOT NULL,"
@@ -946,9 +952,18 @@ public class Model {
 		+ "positiveWMean			DOUBLE		NOT NULL,"
 
 		+ "wordCount				INTEGER		NOT NULL,"
-		+ "sentences				INTEGER		NOT NULL,"
-		+ "FOREIGN KEY(commentId) REFERENCES Comment (id)"
+		+ "sentences				INTEGER		NOT NULL"
 		+ ")";
+
+	private static final String BUG_COMMENT_SENTIMENT_TABLE =
+		"CREATE TABLE IF NOT EXISTS BugCommentSentiment ("
+		+ "sentimentId	INTEGER		NOT NULL,"
+		+ "commentId	INTEGER		NOT NULL,"
+		+ "FOREIGN KEY(sentimentId) REFERENCES Sentiment (id),"
+		+ "FOREIGN KEY(commentId) REFERENCES Comment (id),"
+		+ "PRIMARY KEY (sentimentId, commentId)"
+		+ ")";
+
 	
 	//
 	// Triggers:
@@ -1076,7 +1091,8 @@ public class Model {
 		+ " Bugs.operatingSystem,"
 		+ " Bugs.platform,"
 		+ " Bugs.targetMilestone,"
-		+ " Bugs.classification "
+		+ " Bugs.classification,"
+		+ " Bugs.isOpen "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -1110,18 +1126,19 @@ public class Model {
 		+ " Resolutions.id, "
 		+ " Resolutions.name,"
 		+ " Bugs.lastChange,"
-		+ " Versions.version,"
+		+ " Bugs.version,"
 		+ " Versions.name,"
-		+ " OperatingSystem.version,"
-		+ " OperatingSystem.name,"
+		+ " OperatingSystems.id,"
+		+ " OperatingSystems.name,"
 		+ " Bugs.status, "
 		+ " Status.name,"
 		+ " Bugs.platform,"
 		+ " Platforms.name,"
 		+ " Bugs.targetMilestone,"
-		+ " Milestones.name."
+		+ " Milestones.name,"
 		+ " Bugs.classification,"
-		+ " BugClasses.name "
+		+ " BugClasses.name,"
+		+ " Bugs.isOpen "
 		+ "FROM"
 		+ " Bugs "
 		+ "LEFT JOIN Identities Identity"
@@ -1140,8 +1157,8 @@ public class Model {
 		+ " ON Versions.id = Bugs.version "
 		+ "JOIN Resolutions"
 		+ " ON Resolutions.id = Bugs.resolution "
-		+ "JOIN OperatingSystem"
-		+ " ON OperatingSystem.id = Bugs.operatingSystem "
+		+ "JOIN OperatingSystems"
+		+ " ON OperatingSystems.id = Bugs.operatingSystem "
 		+ "JOIN Platforms"
 		+ " ON Platforms.id = Bugs.platform "
 		+ "JOIN Milestones"
@@ -1370,6 +1387,10 @@ public class Model {
 		+ " Comments.bug = ?"
 		+ " AND Comments.pos = ?";
 
+	private static final String SELECT_SENTIMENT_STATES =
+		"SELECT "
+		+ "(SELECT count(*) FROM Comments, Bugs, Components, BugCommentSentiment WHERE Comments.bug = Bugs.id AND Bugs.component = Components.id AND BugCommentSentiment.commentId = Comments.id AND project = ?)";
+
 	private static final String SELECT_FULL_HISTORY =
 		"SELECT"
 		+ " BugHistory.id,"
@@ -1591,6 +1612,15 @@ public class Model {
 		+ "(mail, name, user, context, identifier)"
 		+ "VALUES (?,?,?,?,?)";
 
+	private static final String INSERT_OR_REPLACE_SOCIAL_STATS =
+		"INSERT OR REPLACE INTO SocialStats (src, dest, quotations, patchesReviewed)"
+		+ "VALUES ("
+		+ " ?,"
+		+ " ?,"
+		+ " COALESCE((SELECT quotations FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?,"
+		+ " COALESCE((SELECT patchesReviewed FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?"
+		+ ")";
+	
 	private static final String INTERACTION_INSERTION =
 		"INSERT INTO Interactions"
 		+ "(start, end, quotes, pos, neg, date, closed)"
@@ -1628,8 +1658,8 @@ public class Model {
 
 	private static final String BUG_INSERTION =
 		"INSERT INTO Bugs "
-		+ "(identifier, identity, component, title, creation, priority, severity, status, resolution, lastChange, version, operatingSystem, platform, targetMilestone, classification)"
-		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+		+ "(identifier, identity, component, title, creation, priority, severity, status, resolution, lastChange, version, operatingSystem, platform, targetMilestone, classification, isOpen)"
+		+ "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
 	private static final String BUG_CC_INSERTION =
 		"INSERT INTO BugCc"
@@ -1967,8 +1997,6 @@ public class Model {
 		+ "sentimentId,"
 		+ "pos,"
 
-		+ "target,"
-
 		+ "negative,"
 		+ "somewhatNegative,"
 		+ "neutral,"
@@ -1991,7 +2019,6 @@ public class Model {
 		+ "sentenceCount"
 		+ ") VALUES ("
 		+ "?,?,"
-		+ "?,"
 		+ "?,?,?,?,?,"
 		+ "?,?,?,?,?,"
 		+ "?,?,?,?,?,"
@@ -2000,8 +2027,6 @@ public class Model {
 
 	private static final String SENTIMENT_INSERTION =
 		"INSERT INTO Sentiment ("
-		+ "commentId,"
-
 		+ "negative,"
 		+ "somewhatNegative,"
 		+ "neutral,"
@@ -2023,12 +2048,16 @@ public class Model {
 		+ "wordCount,"
 		+ "sentences"
 		+ ") VALUES ("
-		+ "?,"
 		+ "?,?,?,?,?,"
 		+ "?,?,?,?,?,"
 		+ "?,?,?,?,?,"
 		+ "?,?"
 		+ ")";
+
+	private static final String BUG_COMMENT_SENTIMENT_INSERTION =
+		"INSERT INTO BugCommentSentiment"
+		+ "(sentimentId, commentId)"
+		+ "VALUES (?, ?)";
 
 	private static final String SENTIMENT_SENTENCE_INSERTION =
 		"INSERT INTO SentenceSentiment ("
@@ -2095,25 +2124,6 @@ public class Model {
 	private static final String DELETE_BUG_QA_CONTACTS =
 		"DELETE FROM BugQaContacts WHERE bug = ?";
 	
-	private static final String DELETE_SENTENCE_SENTIMENTS =
-		"DELETE FROM SentenceSentiment "
-		+ "WHERE groupId IN "
-		+ "(SELECT b.id FROM BlockSentiment b WHERE b.sentimentId IN "
-		+ "(SELECT cmnt.id FROM Comments cmnt, Bugs bg, Components cmp "
-		+ "WHERE cmnt.bug = bg.id AND bg.component = cmp.id AND cmp.project = ?))";
-
-	private static final String DELETE_BLOCK_SENTIMENTS =
-		"DELETE FROM BlockSentiment "
-		+ "WHERE sentimentId IN "
-		+ "(SELECT cmnt.id FROM Comments cmnt, Bugs bg, Components cmp "
-		+ "WHERE cmnt.bug = bg.id AND bg.component = cmp.id AND cmp.project = ?)";
-
-	private static final String DELETE_SENTIMENTS =
-		"DELETE FROM Sentiment "
-		+ "WHERE commentId IN "
-		+ "(SELECT cmnt.id FROM Comments cmnt, Bugs bg, Components cmp "
-		+ "WHERE cmnt.bug = bg.id AND bg.component = cmp.id AND cmp.project = ?)";
-
 	private static final String DELETE_BUGFIX_COMMITS =
 		"DELETE FROM BugfixCommit WHERE commitId IN (SELECT id FROM Commits c WHERE project = ?)";
 
@@ -2487,6 +2497,30 @@ public class Model {
 		pool.emitIdentityAdded (identity);
 	}
 	
+	public void addSocialStats (Identity src, Identity dest, int quotations, int patchesReviewed) throws SQLException {
+		assert (src != null && src.getId () != null);
+		assert (dest != null && dest.getId () != null);
+		assert (quotations >= 0);
+		assert (patchesReviewed >= 0);
+
+		PreparedStatement stmt = conn.prepareStatement (INSERT_OR_REPLACE_SOCIAL_STATS);
+		stmt.setInt (1, src.getId ());
+		
+		stmt.setInt (2, dest.getId ());
+
+		stmt.setInt (3, src.getId ());
+		stmt.setInt (4, dest.getId ());
+		stmt.setInt (5, quotations);
+
+		stmt.setInt (6, src.getId ());
+		stmt.setInt (7, dest.getId ());
+		stmt.setInt (8, patchesReviewed);
+		
+		stmt.executeUpdate();
+		stmt.close ();
+
+		pool.emitSocialStatsAdded (src, dest, quotations);
+	}
 	
 	public Interaction addInteraction (User from, User to, boolean closed, int quotes, float pos, float neg, Date date) throws SQLException {
 		Interaction relation = new Interaction (null, from, to, closed, quotes, pos, neg, date);
@@ -3189,9 +3223,10 @@ public class Model {
 	public Bug addBug (Integer identifier, Identity identity, Component component, String title, 
 			Date creation, Date lastChange, Priority priority, Severity severity, Status status, 
 			Resolution resolution, Version version, Milestone targetMilestone, 
-			OperatingSystem operatingSystem, Platform platform, BugClass classification) throws SQLException
+			OperatingSystem operatingSystem, Platform platform, BugClass classification,
+			Boolean isOpen) throws SQLException
 	{
-		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, status, resolution, version, targetMilestone, operatingSystem, platform, classification);
+		Bug bug = new Bug (null, identifier, identity, component, title, creation, lastChange, priority, severity, status, resolution, version, targetMilestone, operatingSystem, platform, classification, isOpen);
 		add (bug);
 
 		return bug;
@@ -3246,6 +3281,7 @@ public class Model {
 		} else {
 			stmt.setNull (15, Types.INTEGER);
 		}
+		stmt.setBoolean (16, bug.getIsOpen ());
 		stmt.executeUpdate();
 
 		bug.setId (getLastInsertedId (stmt));
@@ -4682,13 +4718,10 @@ public class Model {
 		stmt.close ();
 	}
 	
-	private void addSentimentBlock (int parentId, int blockPos, SentimentBlock<Identity> sentiment) throws SQLException {
+	private void addSentimentBlock (int parentId, int blockPos, SentimentBlock sentiment) throws SQLException {
 		assert (blockPos >= 0);
 		assert (parentId >= 0);
 		assert (sentiment != null);
-
-		Identity target = sentiment.getData ();
-		assert (target == null || target.getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (SENTIMENT_BLOCK_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
@@ -4697,32 +4730,26 @@ public class Model {
 		stmt.setInt (2, blockPos);
 
 
-		if (target != null) {
-			stmt.setInt (3, target.getId ());
-		} else {
-			stmt.setNull (3, Types.INTEGER);
-		}
+		stmt.setInt (3, sentiment.getNegativeCount ());
+		stmt.setInt (4, sentiment.getSomewhatNegativeCount ());
+		stmt.setInt (5, sentiment.getNeutralCount ());
+		stmt.setInt (6, sentiment.getSomewhatPositiveCount ());
+		stmt.setInt (7, sentiment.getPositiveCount ());
 
-		stmt.setInt (4, sentiment.getNegativeCount ());
-		stmt.setInt (5, sentiment.getSomewhatNegativeCount ());
-		stmt.setInt (6, sentiment.getNeutralCount ());
-		stmt.setInt (7, sentiment.getSomewhatPositiveCount ());
-		stmt.setInt (8, sentiment.getPositiveCount ());
+		stmt.setDouble (8, sentiment.getNegativeMean ());
+		stmt.setDouble (9, sentiment.getSomewhatNegativeMean ());
+		stmt.setDouble (10, sentiment.getNeutralMean ());
+		stmt.setDouble (11, sentiment.getSomewhatPositiveMean ());
+		stmt.setDouble (12, sentiment.getPositiveMean ());
 
-		stmt.setDouble (9, sentiment.getNegativeMean ());
-		stmt.setDouble (10, sentiment.getSomewhatNegativeMean ());
-		stmt.setDouble (11, sentiment.getNeutralMean ());
-		stmt.setDouble (12, sentiment.getSomewhatPositiveMean ());
-		stmt.setDouble (13, sentiment.getPositiveMean ());
+		stmt.setDouble (13, sentiment.getNegativeWMean ());
+		stmt.setDouble (14, sentiment.getSomewhatNegativeWMean ());
+		stmt.setDouble (15, sentiment.getNeutralWMean ());
+		stmt.setDouble (16, sentiment.getSomewhatPositiveWMean ());
+		stmt.setDouble (17, sentiment.getPositiveWMean ());
 
-		stmt.setDouble (14, sentiment.getNegativeWMean ());
-		stmt.setDouble (15, sentiment.getSomewhatNegativeWMean ());
-		stmt.setDouble (16, sentiment.getNeutralWMean ());
-		stmt.setDouble (17, sentiment.getSomewhatPositiveWMean ());
-		stmt.setDouble (18, sentiment.getPositiveWMean ());
-
-		stmt.setInt (19, sentiment.getWordCount ());
-		stmt.setInt (20, sentiment.getSentenceCount ());
+		stmt.setInt (18, sentiment.getWordCount ());
+		stmt.setInt (19, sentiment.getSentenceCount ());
 		stmt.executeUpdate();
 
 		int newId = getLastInsertedId (stmt);
@@ -4731,72 +4758,64 @@ public class Model {
 		addSentenceSentiments (newId, sentiment.getSentenceSentiments ());
 	}
 	
-	public void addSentiment (Comment comment, Sentiment<Identity> sentiment) throws SQLException {
-		assert (comment != null);
+	public void addSentiment (Sentiment sentiment) throws SQLException {
 		assert (sentiment != null);
-		assert (comment.getId () != null);
 
 		PreparedStatement stmt = conn.prepareStatement (SENTIMENT_INSERTION,
 				Statement.RETURN_GENERATED_KEYS);
 
-		stmt.setInt (1, comment.getId ());
+		stmt.setInt (1, sentiment.getNegativeCount ());
+		stmt.setInt (2, sentiment.getSomewhatNegativeCount ());
+		stmt.setInt (3, sentiment.getNeutralCount ());
+		stmt.setInt (4, sentiment.getSomewhatPositiveCount ());
+		stmt.setInt (5, sentiment.getPositiveCount ());
 
-		stmt.setInt (2, sentiment.getNegativeCount ());
-		stmt.setInt (3, sentiment.getSomewhatNegativeCount ());
-		stmt.setInt (4, sentiment.getNeutralCount ());
-		stmt.setInt (5, sentiment.getSomewhatPositiveCount ());
-		stmt.setInt (6, sentiment.getPositiveCount ());
+		stmt.setDouble (6, sentiment.getNegativeMean ());
+		stmt.setDouble (7, sentiment.getSomewhatNegativeMean ());
+		stmt.setDouble (8, sentiment.getNeutralMean ());
+		stmt.setDouble (9, sentiment.getSomewhatPositiveMean ());
+		stmt.setDouble (10, sentiment.getPositiveMean ());
 
-		stmt.setDouble (7, sentiment.getNegativeMean ());
-		stmt.setDouble (8, sentiment.getSomewhatNegativeMean ());
-		stmt.setDouble (9, sentiment.getNeutralMean ());
-		stmt.setDouble (10, sentiment.getSomewhatPositiveMean ());
-		stmt.setDouble (11, sentiment.getPositiveMean ());
+		stmt.setDouble (11, sentiment.getNegativeWMean ());
+		stmt.setDouble (12, sentiment.getSomewhatNegativeWMean ());
+		stmt.setDouble (13, sentiment.getNeutralWMean ());
+		stmt.setDouble (14, sentiment.getSomewhatPositiveWMean ());
+		stmt.setDouble (15, sentiment.getPositiveWMean ());
 
-		stmt.setDouble (12, sentiment.getNegativeWMean ());
-		stmt.setDouble (13, sentiment.getSomewhatNegativeWMean ());
-		stmt.setDouble (14, sentiment.getNeutralWMean ());
-		stmt.setDouble (15, sentiment.getSomewhatPositiveWMean ());
-		stmt.setDouble (16, sentiment.getPositiveWMean ());
-
-		stmt.setInt (17, sentiment.getWordCount ());
-		stmt.setInt (18, sentiment.getSentenceCount ());
+		stmt.setInt (16, sentiment.getWordCount ());
+		stmt.setInt (17, sentiment.getSentenceCount ());
 		stmt.executeUpdate();
 
 		int newId = getLastInsertedId (stmt);
+		sentiment.setId (newId);
 		stmt.close ();
 
 		int i = 0;
-		for (SentimentBlock<Identity> block : sentiment.getBlocks ()) {
+		for (SentimentBlock block : sentiment.getBlocks ()) {
 			addSentimentBlock (newId, i, block);
 			i++;
 		}
 		
-		pool.emitSentimentAdded (comment, sentiment);
+		pool.emitSentimentAdded (sentiment);
 	}
 
-	public void removeSentiment (Project project) throws SQLException {
-		assert (project != null);
-		assert (project.getId () != null);
+	public void addBugCommentSentiment (Comment comment, Sentiment sentiment) throws SQLException {
+		assert (comment != null);
+		assert (comment.getId () != null);
+		assert (sentiment != null);
+		assert (sentiment.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_SENTENCE_SENTIMENTS);
-		stmt.setInt (1, project.getId ());
-		stmt.executeUpdate();
-		stmt.close ();		
+		PreparedStatement stmt = conn.prepareStatement (BUG_COMMENT_SENTIMENT_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
 
-
-		stmt = conn.prepareStatement (DELETE_BLOCK_SENTIMENTS);
-		stmt.setInt (1, project.getId ());
-		stmt.executeUpdate();
-		stmt.close ();		
-
-
-		stmt = conn.prepareStatement (DELETE_SENTIMENTS);
-		stmt.setInt (1, project.getId ());
+		stmt.setInt (1, sentiment.getId ());
+		stmt.setInt (2, comment.getId ());
 		stmt.executeUpdate();
 		stmt.close ();
-	}
 
+		pool.emitBugCommentSentimentAdded (comment, sentiment);
+	}
+	
 
 	//
 	// Get Data:
@@ -5031,7 +5050,8 @@ public class Model {
 				for (int i = 1; i <= 2 ; i++) {
 					int paramType = meta.getColumnType (i);
 					if (paramType != Types.INTEGER) {
-						
+						stmt.close ();
+						res.close ();
 						throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <int>), got ("
 							+ "<" + meta.getColumnTypeName (1) + ">, <" + meta.getColumnTypeName (2) + ">)",
 							queryConfig.getStart (), queryConfig.getEnd ());
@@ -5242,12 +5262,14 @@ public class Model {
 				if ((i == 1 && paramType != Types.INTEGER)
 					|| (i > 1 && paramType != Types.INTEGER && paramType != Types.DOUBLE && paramType != Types.FLOAT))
 				{
+					stmt.close ();
+					res.close ();
 					throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <double>, <double>, <double>, <double>, <double>, <double>, <double>), got ("
 						+ "<" + meta.getColumnTypeName (1) + ">, <" + meta.getColumnTypeName (2) + ">, "
 						+ "<" + meta.getColumnTypeName (3) + ">, <" + meta.getColumnTypeName (4) + ">, "
 						+ "<" + meta.getColumnTypeName (5) + ">, <" + meta.getColumnTypeName (6) + ">, "
 						+ "<" + meta.getColumnTypeName (7) + ">, <" + meta.getColumnTypeName (8) + ">)",
-					query.getStart (), query.getEnd ());
+						query.getStart (), query.getEnd ());
 				}
 			}
 
@@ -5356,10 +5378,12 @@ public class Model {
 			Platform platform = platforms.get (res.getInt (21));
 			Status status = statuses.get (res.getInt (14));
 			BugClass classification = classifications.get (res.getInt (23));
+			boolean isOpen = res.getBoolean (24);
 
 			Bug bug = new Bug (id, identifier, identity, component,
 				title, creation, lastChange, priority, severity, status, resolution,
-				version, milestone, operatingSystem, platform, classification);
+				version, milestone, operatingSystem, platform, classification,
+				isOpen);
 
 			do_next = callback.processResult (bug);
 		}
@@ -5436,11 +5460,14 @@ public class Model {
 				String classificationName = res.getString (32);
 				classification = new BugClass (classificationId, proj, classificationName);
 			}
-			
+
+			boolean isOpen = res.getBoolean (33);
+
 			return new Bug (id, identifier, identity, component,
 				title, creation, lastChange, priority, severity,
 				status, resolution, version, milestone, 
-				operatingSystem, platform, classification);
+				operatingSystem, platform, classification,
+				isOpen);
 		}
 
 		return null;
@@ -6125,6 +6152,24 @@ public class Model {
 		return history;
 	}
 
+	public int getSentimentState (Project proj) throws SQLException {
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		PreparedStatement stmt = conn.prepareStatement (SELECT_SENTIMENT_STATES);
+		stmt.setInt (1, proj.getId ());
+		ResultSet res = stmt.executeQuery ();
+
+		int commentCnt = 0;
+		if (res.next ()) {
+			commentCnt = res.getInt (1);
+		}
+	
+		res.close ();
+		stmt.close ();
+		return commentCnt;
+	}
+
 	public List<Comment> getComments (Project proj, Bug bug) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
@@ -6518,10 +6563,12 @@ public class Model {
 		stmt.executeUpdate (COMMIT_CATEGORIES_TABLE);
 		stmt.executeUpdate (DICTIONARY_TABLE);
 		stmt.executeUpdate (SENTENCE_SENTIMENT_TABLE);
+		stmt.executeUpdate (BUG_COMMENT_SENTIMENT_TABLE);
 		stmt.executeUpdate (BLOCK_SENTIMENT_TABLE);
 		stmt.executeUpdate (SENTIMENT_TABLE);
 		stmt.executeUpdate (SELECTED_USER_TABLE);
 		stmt.executeUpdate (ATTACHMENT_ISOBSOLETE_TABLE);
+		stmt.executeUpdate (SOCIAL_STATS_TABLE);
 		stmt.close ();
 	}
 }

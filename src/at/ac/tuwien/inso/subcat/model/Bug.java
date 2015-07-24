@@ -50,12 +50,13 @@ public class Bug {
 	private Platform platform;
 	private Status status;
 	private BugClass classification;
+	private Boolean isOpen;
 
 
 	public Bug (Integer id, Integer identifier, Identity identity, Component component,
 			String title, Date creation, Date lastChange, Priority priority, Severity severity,
 			Status status, Resolution resolution, Version version, Milestone milestone,
-			OperatingSystem os, Platform platform, BugClass classification) {
+			OperatingSystem os, Platform platform, BugClass classification, Boolean isOpen) {
 		assert (component != null);
 		assert (title != null);
 		assert (creation != null);
@@ -68,6 +69,7 @@ public class Bug {
 		assert (status != null);
 		assert (milestone != null);
 		assert (severity != null);
+		assert (isOpen != null);
 		
 		this.id = id;
 		this.identifier = identifier;
@@ -85,6 +87,7 @@ public class Bug {
 		this.platform = platform;
 		this.milestone = milestone;
 		this.classification = classification;
+		this.isOpen = isOpen;
 	}
 
 	public Integer getIdentifier () {
@@ -225,6 +228,10 @@ public class Bug {
 
 	public Resolution getResolution () {
 		return resolution;
+	}
+
+	public Boolean getIsOpen () {
+		return isOpen;
 	}
 	
 	@Override

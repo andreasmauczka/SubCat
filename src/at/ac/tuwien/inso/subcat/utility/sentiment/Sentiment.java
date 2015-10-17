@@ -33,11 +33,12 @@ package at.ac.tuwien.inso.subcat.utility.sentiment;
 import java.util.List;
 
 
-public class Sentiment<T> extends SentimentAggregate<T> {
-	private List<SentimentBlock<T>> blocks;
-	private T data;
+public class Sentiment extends SentimentAggregate {
+	private List<SentimentBlock> blocks;
+	private Integer id;
 	
-	public Sentiment (List<SentimentBlock<T>> lst) {
+
+	public Sentiment (List<SentimentBlock> lst) {
 		assert (lst != null);
 		assert (lst.size () > 0);
 
@@ -60,7 +61,7 @@ public class Sentiment<T> extends SentimentAggregate<T> {
 		int words = 0;
 
 
-		for (SentimentBlock<T> sent : lst) {
+		for (SentimentBlock sent : lst) {
 			int sentCount = sent.getSentenceCount ();
 			int sentWord = sent.words;
 			sentences += sentCount;
@@ -120,15 +121,15 @@ public class Sentiment<T> extends SentimentAggregate<T> {
 	}
 
 
-	public T getData () {
-		return data;
+	public Integer getId () {
+		return id;
 	}
 
-	public void setData (T data) {
-		this.data = data;
+	public void setId (Integer id) {
+		this.id = id;
 	}
-
-	public List<SentimentBlock<T>> getBlocks () {
+	
+	public List<SentimentBlock> getBlocks () {
 		return blocks;
 	}
 }

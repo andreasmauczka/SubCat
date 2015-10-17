@@ -167,9 +167,14 @@ public class PostProcessor {
 							@Override
 							public boolean processResult (Bug bug) throws SQLException, Exception {
 								Model model2 = pool.getModel ();
+								if (model2 == null) {
+									System.out.println ("MODEL == NULL");
+								}
+								
 								List<BugHistory> history = model2.getBugHistory (proj, bug);
 								List<Comment> comments = model2.getComments (proj, bug);
 								emitBug (bug, history, comments);
+								model2.close ();
 								return !stopped;
 							}				
 						});
@@ -432,9 +437,6 @@ public class PostProcessor {
 
 				interlinkingTask.setDistance (dist);
 				interlinkingTask.setHashFunc (func);
-
-				commentAnalysisStep.setDistance (dist);
-				commentAnalysisStep.setHashFunc (func);
 			}
 
 			PostProcessor processor = new PostProcessor (project, pool, settings);

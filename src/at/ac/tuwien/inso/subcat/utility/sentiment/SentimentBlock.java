@@ -33,7 +33,7 @@ package at.ac.tuwien.inso.subcat.utility.sentiment;
 import java.util.List;
 
 
-public class SentimentBlock<T> extends SentimentAggregate<T> {
+public class SentimentBlock extends SentimentAggregate {
 	private List<SentenceSentiment> sentences;
 
 	

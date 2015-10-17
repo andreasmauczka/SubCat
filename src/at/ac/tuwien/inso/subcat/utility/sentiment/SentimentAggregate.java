@@ -32,10 +32,8 @@
 package at.ac.tuwien.inso.subcat.utility.sentiment;
 
 
-public abstract class SentimentAggregate<T> {
-	private T data;
-	
-	protected int[] classes;
+public abstract class SentimentAggregate {
+		protected int[] classes;
 	
 	protected double positiveMean;
 	protected double somewhatPositiveMean;
@@ -165,13 +163,5 @@ public abstract class SentimentAggregate<T> {
 
 	public int getNegativeCount () {
 		return classes[0];
-	}
-
-	public T getData () {
-		return data;
-	}
-
-	public void setData (T data) {
-		this.data = data;
 	}
 }

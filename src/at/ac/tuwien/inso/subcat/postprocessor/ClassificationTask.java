@@ -29,11 +29,16 @@ public class ClassificationTask extends PostProcessorTask {
 	}
 
 	public void commit (PostProcessor processor, Commit commit) throws PostProcessorException {
+		Settings settings = processor.getSettings ();
+		if (settings.srcDictionaries.size () == 0) {
+			return ;
+		}
+		
+		Model model = null;
 		try {
-			Settings settings = processor.getSettings ();
-			Model model = processor.getModelPool ().getModel ();
+			model = processor.getModelPool ().getModel ();
 
-			if (commitCategories == null && settings.srcDictionaries.size () > 0) {
+			if (commitCategories == null) {
 				commitCategories = new HashMap<Dictionary, Map<Class, Category>> ();
 				prepareDictionary ("src", processor, model, commitCategories, settings.srcDictionaries);
 				model.addFlag (processor.getProject (), Model.FLAG_COMMIT_CATEGORIES);
@@ -51,13 +56,22 @@ public class ClassificationTask extends PostProcessorTask {
 			}
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);
+		} finally {
+			if (model != null) {
+				model.close ();
+			}
 		}
 	}
 
 	public void bug (PostProcessor processor, Bug bug, List<BugHistory> history, List<Comment> comments) throws PostProcessorException {
+		Settings settings = processor.getSettings ();
+		if (settings.bugDictionaries.size () == 0) {
+			return ;
+		}
+
+		Model model = null;
 		try {
-			Settings settings = processor.getSettings ();
-			Model model = processor.getModelPool ().getModel ();
+			model = processor.getModelPool ().getModel ();
 
 			if (bugCategories == null) {
 				bugCategories = new HashMap<Dictionary, Map<Class, Category>> ();
@@ -80,6 +94,10 @@ public class ClassificationTask extends PostProcessorTask {
 			}
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);
+		} finally {
+			if (model != null) {
+				model.close ();
+			}
 		}
 	}
 

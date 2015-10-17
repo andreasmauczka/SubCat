@@ -51,11 +51,7 @@ public class SentimentAnalyser<T> {
 	public SentimentAnalyser () {
 	}
 
-	public SentimentBlock<T> get (String str) {
-		return get (str, null);
-	}
-
-	public SentimentBlock<T> get (String str, T data) {
+	public SentimentBlock get (String str) {
 		if (pipeline == null) {
 			Properties props = new Properties();
 			props.setProperty("annotators", "tokenize, ssplit, parse, sentiment");
@@ -150,7 +146,7 @@ public class SentimentAnalyser<T> {
 		//System.out.println ("n:" + positiveMean  + "," +  somewhatPositiveMean  + "," + neutralMean + "," + somewhatNegativeMean + "," + negativeMean);
 		//System.out.println ("w:" + positiveWMean  + "," +  somewhatPositiveWMean  + "," + neutralWMean + "," + somewhatNegativeWMean + "," + negativeWMean);
 
-		SentimentBlock<T> block = new SentimentBlock<T> (
+		SentimentBlock block = new SentimentBlock (
 			sentiments,
 			classes,
 			positiveMean,
@@ -165,7 +161,6 @@ public class SentimentAnalyser<T> {
 			negativeWMean,
 			words);
 
-		block.setData (data);
 		return block;
 	}
 }

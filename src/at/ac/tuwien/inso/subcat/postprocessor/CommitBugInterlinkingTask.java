@@ -88,10 +88,6 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 			}
 		}
 	}
-	
-
-	private Model model;
-
 
 	public CommitBugInterlinkingTask () {
 		super (PostProcessorTask.COMMIT|PostProcessorTask.BEGIN|PostProcessorTask.END);
@@ -165,7 +161,7 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 		return new Token (TokenType.WORD, _str);
 	}
 
-	private void semanticLvl (Commit commit, Set<Integer> added, int bugId, int certainty) throws SQLException {
+	private void semanticLvl (Commit commit, Set<Integer> added, int bugId, int certainty, Model model) throws SQLException {
 		assert (added != null);
 		assert (certainty >= 0);
 		assert (bugId > 0);
@@ -187,42 +183,42 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 		}
 	}
 
-	private void processParagraph (Commit commit, Set<Integer> added, String content) throws SQLException {
+	private void processParagraph (Commit commit, Set<Integer> added, String content, Model model) throws SQLException {
 		assert (content != null);
 		assert (added != null);
 		
 		StringTokenizer st = new StringTokenizer (content);
 		int wordScore = 0;
-		
+
 		while (st.hasMoreTokens ()) {
 			Token token = getTokenType (st.nextToken ());
-
+	
 			switch (token.type) {
 			case LINK:
-				semanticLvl (commit, added, token.valueInt, Integer.MAX_VALUE);
+				semanticLvl (commit, added, token.valueInt, Integer.MAX_VALUE, model);
 				break;
-
+	
 			case BUG_KEYWORD:
 				wordScore++;
 				break;
-
+	
 			case NUMERIC:
-				semanticLvl (commit, added, token.valueInt, wordScore + 1);
+				semanticLvl (commit, added, token.valueInt, wordScore + 1, model);
 				break;
-
+	
 			case WORD:
-				// Do nothign
+				// Do nothing
 				break;
 			}
 		}
 	}
 	
-	private void processCommitMessage (Commit commit) throws SQLException {
+	private void processCommitMessage (Commit commit, Model model) throws SQLException {
 		assert (commit != null);
 
 		Set<Integer> added = new HashSet<Integer> ();
 		for (String para : pPara.split (commit.getTitle ())) {
-			this.processParagraph (commit, added, para);
+			this.processParagraph (commit, added, para, model);
 		}
 	}
 
@@ -230,30 +226,37 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 
 	@Override
 	public void begin (PostProcessor processor) throws PostProcessorException {
+		Model model = null;
 		try {
-			this.model = processor.getModelPool ().getModel ();
-			this.model.removeBugfixCommits (processor.getProject ());
+			model = processor.getModelPool ().getModel ();
+			model.removeBugfixCommits (processor.getProject ());
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);
+		} finally {
+			if (model != null) {
+				model.close ();
+			}
 		}
 	}
 	
 	@Override
 	public void commit (PostProcessor processor, Commit commit) throws PostProcessorException {
+		Model model = null;
 		try {
-			processCommitMessage (commit);
+			model = processor.getModelPool ().getModel ();			
+			processCommitMessage (commit, model);
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);
+		} finally {
+			if (model != null) {
+				model.close ();
+			}
 		}
 	}
 	
 	@Override
 	public void end (PostProcessor processor) throws PostProcessorException {
-		if (this.model != null) {
-			this.model.close ();
-		}
 	}
-
 	
 	@Override
 	public String getName () {

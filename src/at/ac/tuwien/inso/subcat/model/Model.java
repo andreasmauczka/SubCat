@@ -2217,18 +2217,29 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (SELECT_COUNTS);
-		stmt.setInt (1, proj.getId ());
-		stmt.setInt (2, proj.getId ());
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		ResultSet res = stmt.executeQuery ();
-		res.next ();
-
-		int commitCount = res.getInt (1);
-		int bugCount = res.getInt (2);
-		stmt.close ();
-
-		return new Stats (commitCount, bugCount);
+		try {
+			stmt = conn.prepareStatement (SELECT_COUNTS);
+			stmt.setInt (1, proj.getId ());
+			stmt.setInt (2, proj.getId ());
+			
+			res = stmt.executeQuery ();
+			res.next ();
+			
+			int commitCount = res.getInt (1);
+			int bugCount = res.getInt (2);
+			
+			return new Stats (commitCount, bugCount);
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void setAttachmentIsObsolete (Attachment attachment, Identity identity, Date date, boolean oldValue, boolean newValue) throws SQLException {
@@ -2239,16 +2250,23 @@ public class Model {
 		assert (identity.getId () != null);
 		assert (date != null);
 
-		PreparedStatement stmt = conn.prepareStatement (OBSOLETE_ATTACHMENT_INSERTION);
-		stmt.setInt (1, attachment.getId ());
-		stmt.setInt (2, identity.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setBoolean (4, oldValue);
-		stmt.setBoolean (5, newValue);
-		stmt.executeUpdate();
-		stmt.close ();
+		PreparedStatement stmt = null;
 
-		pool.emitAttachmentIsObsoleteAdded (attachment, identity, date, oldValue, newValue);
+		try {
+			stmt = conn.prepareStatement (OBSOLETE_ATTACHMENT_INSERTION);
+			stmt.setInt (1, attachment.getId ());
+			stmt.setInt (2, identity.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setBoolean (4, oldValue);
+			stmt.setBoolean (5, newValue);
+			stmt.executeUpdate();
+			
+			pool.emitAttachmentIsObsoleteAdded (attachment, identity, date, oldValue, newValue);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 
@@ -2272,22 +2290,29 @@ public class Model {
 		assert (ad.getAttachment ().getId () != null);
 		assert (ad.getCreator ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_DETAIL_INSERTION);
-		stmt.setInt (1, ad.getAttachment ().getId ());
-		stmt.setBytes (2, ad.getData ());
-		resSetDate (stmt, 3, ad.getCreationTime ());
-		resSetDate (stmt, 4, ad.getLastChangeTime ());
-		stmt.setString (5, ad.getFileName ());
-		stmt.setString (6, ad.getSummary ());
-		stmt.setBoolean (7, ad.getIsPrivate ());
-		stmt.setBoolean (8, ad.getIsObsolete ());
-		stmt.setBoolean (9, ad.getIsPatch ());
-		stmt.setInt (10, ad.getCreator ().getId ());
-		stmt.setString (11, ad.getContentType ());
-		stmt.executeUpdate();
-		stmt.close ();
+		PreparedStatement stmt = null;
 
-		pool.emitAttachmentDetailsAdded (ad);
+		try {
+			stmt = conn.prepareStatement (ATTACHMENT_DETAIL_INSERTION);
+			stmt.setInt (1, ad.getAttachment ().getId ());
+			stmt.setBytes (2, ad.getData ());
+			resSetDate (stmt, 3, ad.getCreationTime ());
+			resSetDate (stmt, 4, ad.getLastChangeTime ());
+			stmt.setString (5, ad.getFileName ());
+			stmt.setString (6, ad.getSummary ());
+			stmt.setBoolean (7, ad.getIsPrivate ());
+			stmt.setBoolean (8, ad.getIsObsolete ());
+			stmt.setBoolean (9, ad.getIsPatch ());
+			stmt.setInt (10, ad.getCreator ().getId ());
+			stmt.setString (11, ad.getContentType ());
+			stmt.executeUpdate();
+			
+			pool.emitAttachmentDetailsAdded (ad);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addFlag (Project proj, String flag) throws SQLException {
@@ -2296,12 +2321,19 @@ public class Model {
 		assert (proj.getId () != null);
 		assert (flag != null);
 
-		PreparedStatement stmt = conn.prepareStatement (PROJECT_FLAG_INSERTION);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, proj.getId ());
-		stmt.setString (2, flag);
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (PROJECT_FLAG_INSERTION);
+			
+			stmt.setInt (1, proj.getId ());
+			stmt.setString (2, flag);
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public List<String> getFlags (Project proj) throws SQLException {
@@ -2309,19 +2341,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_FLAGS);
-		stmt.setInt (1, proj.getId ());
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Collect data:
-		LinkedList<String> flags = new LinkedList<String> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			String flag = res.getString (1);	
-			flags.add (flag);
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_FLAGS);
+			stmt.setInt (1, proj.getId ());
+			
+			// Collect data:
+			LinkedList<String> flags = new LinkedList<String> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				String flag = res.getString (1);	
+				flags.add (flag);
+			}
+			
+			return flags;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-
-		return flags;
 	}
 
 	public Project addProject (Date date, Date lastBugDate, String bugTracker, String domain, String product, String revision) throws SQLException {
@@ -2335,12 +2379,19 @@ public class Model {
 		assert (status != null);
 		assert (status.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (UPDATE_DEFAULT_STATUS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, status.getId ());
-		stmt.setInt (2, status.getProject ().getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (UPDATE_DEFAULT_STATUS);
+			
+			stmt.setInt (1, status.getId ());
+			stmt.setInt (2, status.getProject ().getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public void add (Project project) throws SQLException {
@@ -2348,22 +2399,28 @@ public class Model {
 		assert (project != null);
 		assert (project.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (PROJECT_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		resSetDate (stmt, 1, project.getDate ());
-		stmt.setString (2, project.getDomain ());
-		stmt.setString (3, project.getProduct ());
-		stmt.setString (4, project.getRevision ());
-		resSetDate (stmt, 6, project.getLastBugMiningDate ());
-		stmt.setString (7, project.getBugTracker ());
-		stmt.executeUpdate();
-
-		project.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitProjectAdded (project);
+		try {
+			stmt = conn.prepareStatement (PROJECT_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			resSetDate (stmt, 1, project.getDate ());
+			stmt.setString (2, project.getDomain ());
+			stmt.setString (3, project.getProduct ());
+			stmt.setString (4, project.getRevision ());
+			resSetDate (stmt, 6, project.getLastBugMiningDate ());
+			stmt.setString (7, project.getBugTracker ());
+			stmt.executeUpdate();
+			
+			project.setId (getLastInsertedId (stmt));
+			
+			pool.emitProjectAdded (project);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void updateProject (Project project) throws SQLException {
@@ -2371,18 +2428,25 @@ public class Model {
 		assert (project != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (PROJECT_UPDATE);
-		resSetDate (stmt, 1, project.getDate ());
-		stmt.setString (2, project.getDomain ());
-		stmt.setString (3, project.getProduct ());
-		stmt.setString (4, project.getRevision ());
-		resSetDate (stmt, 5, project.getLastBugMiningDate ());
-		stmt.setString (6, project.getBugTracker ());
-		stmt.setInt (7, project.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		PreparedStatement stmt = null;
 
-		pool.emitProjectUpdated (project);
+		try {
+			stmt = conn.prepareStatement (PROJECT_UPDATE);
+			resSetDate (stmt, 1, project.getDate ());
+			stmt.setString (2, project.getDomain ());
+			stmt.setString (3, project.getProduct ());
+			stmt.setString (4, project.getRevision ());
+			resSetDate (stmt, 5, project.getLastBugMiningDate ());
+			stmt.setString (6, project.getBugTracker ());
+			stmt.setInt (7, project.getId ());
+			stmt.executeUpdate();
+			
+			pool.emitProjectUpdated (project);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void updateAttachmentDetail (AttachmentDetails ad) throws SQLException {
@@ -2391,22 +2455,29 @@ public class Model {
 		assert (ad.getAttachment ().getId () != null);
 		assert (ad.getCreator ().getId () != null);
 		
-		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_DETAIL_UPDATE);
-		stmt.setBytes (1, ad.getData ());
-		resSetDate (stmt, 2, ad.getCreationTime ());
-		resSetDate (stmt, 3, ad.getLastChangeTime ());
-		stmt.setString (4, ad.getFileName ());
-		stmt.setString (5, ad.getSummary ());
-		stmt.setBoolean (6, ad.getIsPrivate ());
-		stmt.setBoolean (7, ad.getIsObsolete ());
-		stmt.setBoolean (8, ad.getIsPatch ());
-		stmt.setInt (9, ad.getCreator ().getId ());
-		stmt.setString (10, ad.getContentType ());
-		stmt.setInt (11, ad.getAttachment ().getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		PreparedStatement stmt = null;
 
-		pool.emitAttachmentDetailsUpdated (ad);
+		try {
+			stmt = conn.prepareStatement (ATTACHMENT_DETAIL_UPDATE);
+			stmt.setBytes (1, ad.getData ());
+			resSetDate (stmt, 2, ad.getCreationTime ());
+			resSetDate (stmt, 3, ad.getLastChangeTime ());
+			stmt.setString (4, ad.getFileName ());
+			stmt.setString (5, ad.getSummary ());
+			stmt.setBoolean (6, ad.getIsPrivate ());
+			stmt.setBoolean (7, ad.getIsObsolete ());
+			stmt.setBoolean (8, ad.getIsPatch ());
+			stmt.setInt (9, ad.getCreator ().getId ());
+			stmt.setString (10, ad.getContentType ());
+			stmt.setInt (11, ad.getAttachment ().getId ());
+			stmt.executeUpdate();
+			
+			pool.emitAttachmentDetailsUpdated (ad);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public User addUser (Project project, String name) throws SQLException {
@@ -2422,30 +2493,43 @@ public class Model {
 		assert (project.getId () != null);
 		assert (user.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (USER_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString (2, user.getName ());
-		stmt.executeUpdate();
-
-		user.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitUserAdded (user);
+		try {
+			stmt = conn.prepareStatement (USER_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString (2, user.getName ());
+			stmt.executeUpdate();
+			
+			user.setId (getLastInsertedId (stmt));
+			
+			pool.emitUserAdded (user);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public void removeUsers (Project project) throws SQLException {
 		assert (project != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_USERS,
-			Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.executeUpdate();
-		stmt.close ();		
+		try {
+			stmt = conn.prepareStatement (DELETE_USERS,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public void setIdentityUser (Identity id, User user) throws SQLException {
@@ -2454,14 +2538,21 @@ public class Model {
 		assert (user.getId () != null);
 		assert (id.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (
-			"UPDATE Identities SET user = ? WHERE id = ?",
-			Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, user.getId ());
-		stmt.setInt (2, id.getId ());
-		stmt.executeUpdate();
-		stmt.close ();		
+		try {
+			stmt = conn.prepareStatement (
+					"UPDATE Identities SET user = ? WHERE id = ?",
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, user.getId ());
+			stmt.setInt (2, id.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public Identity addIdentity (Integer identifier, String context, String mail, String name, User user) throws SQLException {
@@ -2476,25 +2567,31 @@ public class Model {
 		assert (identity.getUser ().getId () != null);
 		assert (identity.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (IDENTITY_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setString (1, identity.getMail ());
-		stmt.setString (2, identity.getName ());
-		stmt.setInt (3, identity.getUser ().getId ());
-		stmt.setString (4, identity.getContext ());
-		if (identity.getIdentifier () != null) {
-			stmt.setInt (5, identity.getIdentifier ());
-		} else {
-			stmt.setNull (5, Types.INTEGER);
+		try {
+			stmt = conn.prepareStatement (IDENTITY_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setString (1, identity.getMail ());
+			stmt.setString (2, identity.getName ());
+			stmt.setInt (3, identity.getUser ().getId ());
+			stmt.setString (4, identity.getContext ());
+			if (identity.getIdentifier () != null) {
+				stmt.setInt (5, identity.getIdentifier ());
+			} else {
+				stmt.setNull (5, Types.INTEGER);
+			}
+			stmt.executeUpdate();
+			
+			identity.setId (getLastInsertedId (stmt));
+			
+			pool.emitIdentityAdded (identity);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-		stmt.executeUpdate();
-
-		identity.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitIdentityAdded (identity);
 	}
 	
 	public void addSocialStats (Identity src, Identity dest, int quotations, int patchesReviewed) throws SQLException {
@@ -2503,23 +2600,30 @@ public class Model {
 		assert (quotations >= 0);
 		assert (patchesReviewed >= 0);
 
-		PreparedStatement stmt = conn.prepareStatement (INSERT_OR_REPLACE_SOCIAL_STATS);
-		stmt.setInt (1, src.getId ());
-		
-		stmt.setInt (2, dest.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.setInt (3, src.getId ());
-		stmt.setInt (4, dest.getId ());
-		stmt.setInt (5, quotations);
-
-		stmt.setInt (6, src.getId ());
-		stmt.setInt (7, dest.getId ());
-		stmt.setInt (8, patchesReviewed);
-		
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitSocialStatsAdded (src, dest, quotations);
+		try {
+			stmt = conn.prepareStatement (INSERT_OR_REPLACE_SOCIAL_STATS);
+			stmt.setInt (1, src.getId ());
+			
+			stmt.setInt (2, dest.getId ());
+			
+			stmt.setInt (3, src.getId ());
+			stmt.setInt (4, dest.getId ());
+			stmt.setInt (5, quotations);
+			
+			stmt.setInt (6, src.getId ());
+			stmt.setInt (7, dest.getId ());
+			stmt.setInt (8, patchesReviewed);
+			
+			stmt.executeUpdate();
+			
+			pool.emitSocialStatsAdded (src, dest, quotations);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public Interaction addInteraction (User from, User to, boolean closed, int quotes, float pos, float neg, Date date) throws SQLException {
@@ -2534,23 +2638,29 @@ public class Model {
 		assert (relation.getFrom ().getId () != null);
 		assert (relation.getTo ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (INTERACTION_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, relation.getFrom ().getId ());
-		stmt.setInt (2, relation.getTo ().getId ());
-		stmt.setInt (3, relation.getQuotes ());
-		stmt.setFloat (4, relation.getPos ());
-		stmt.setFloat (5, relation.getNeg ());
-		resSetDate (stmt, 6, relation.getDate ());
-		stmt.setInt (7, (relation.isClosed ())? 1 : 0);
-		stmt.executeUpdate();
-
-		relation.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitInteraction (relation);
+		try {
+			stmt = conn.prepareStatement (INTERACTION_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, relation.getFrom ().getId ());
+			stmt.setInt (2, relation.getTo ().getId ());
+			stmt.setInt (3, relation.getQuotes ());
+			stmt.setFloat (4, relation.getPos ());
+			stmt.setFloat (5, relation.getNeg ());
+			resSetDate (stmt, 6, relation.getDate ());
+			stmt.setInt (7, (relation.isClosed ())? 1 : 0);
+			stmt.executeUpdate();
+			
+			relation.setId (getLastInsertedId (stmt));
+			
+			pool.emitInteraction (relation);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Severity addSeverity (Project project, String name) throws SQLException {
@@ -2566,18 +2676,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (severity.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (SEVERITY_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, severity.getName ());
-		stmt.executeUpdate();
-
-		severity.setId (getLastInsertedId (stmt));
-
-		stmt.close ();		
-
-		pool.emitSeverityAdded (severity);
+		try {
+			stmt = conn.prepareStatement (SEVERITY_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, severity.getName ());
+			stmt.executeUpdate();
+			
+			severity.setId (getLastInsertedId (stmt));
+			
+			pool.emitSeverityAdded (severity);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugDuplicationComment (Comment comment, Integer identifier) throws SQLException {
@@ -2586,13 +2702,20 @@ public class Model {
 		assert (comment.getId () != null);
 		assert (identifier != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DUPLICATION_COMMENT_INSERTION);
-		stmt.setInt (1, comment.getId ());
-		stmt.setInt (2, identifier);		
-		stmt.executeUpdate();
-		stmt.close ();		
+		PreparedStatement stmt = null;
 
-		pool.emitBugDuplicationCommentAdded (comment, identifier);
+		try {
+			stmt = conn.prepareStatement (BUG_DUPLICATION_COMMENT_INSERTION);
+			stmt.setInt (1, comment.getId ());
+			stmt.setInt (2, identifier);		
+			stmt.executeUpdate();
+			
+			pool.emitBugDuplicationCommentAdded (comment, identifier);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugAttachmentReviewComment (Comment comment, Attachment attachment) throws SQLException {
@@ -2602,13 +2725,20 @@ public class Model {
 		assert (attachment != null);
 		assert (attachment.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_ATTACHMENT_REVIEW_COMMENT_INSERTION);
-		stmt.setInt (1, comment.getId ());
-		stmt.setInt (2, attachment.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		PreparedStatement stmt = null;
 
-		pool.emitBugAttachmentReviewCommentAdded (comment, attachment);
+		try {
+			stmt = conn.prepareStatement (BUG_ATTACHMENT_REVIEW_COMMENT_INSERTION);
+			stmt.setInt (1, comment.getId ());
+			stmt.setInt (2, attachment.getId ());
+			stmt.executeUpdate();
+			
+			pool.emitBugAttachmentReviewCommentAdded (comment, attachment);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public BugClass addBugClass (Project project, String name) throws SQLException {
@@ -2624,18 +2754,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (bc.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_CLASS_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, bc.getName ());
-		stmt.executeUpdate();
-
-		bc.setId (getLastInsertedId (stmt));
-
-		stmt.close ();		
-
-		pool.emitBugClassAdded (bc);
+		try {
+			stmt = conn.prepareStatement (BUG_CLASS_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, bc.getName ());
+			stmt.executeUpdate();
+			
+			bc.setId (getLastInsertedId (stmt));
+			
+			pool.emitBugClassAdded (bc);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public BugFlagStatus addBugFlagStatus (Project project, String name) throws SQLException {
@@ -2651,18 +2787,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (status.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_FLAG_STATUS_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, status.getName ());
-		stmt.executeUpdate();
-
-		status.setId (getLastInsertedId (stmt));
-
-		stmt.close ();		
-
-		pool.emitBugFlagStatusAdded (status);
+		try {
+			stmt = conn.prepareStatement (BUG_FLAG_STATUS_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, status.getName ());
+			stmt.executeUpdate();
+			
+			status.setId (getLastInsertedId (stmt));
+			
+			pool.emitBugFlagStatusAdded (status);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public BugFlag addBugFlag (Project proj, Integer identifier, String name, Integer typeId) throws SQLException {
@@ -2678,20 +2820,26 @@ public class Model {
 		assert (project.getId () != null);
 		assert (flag.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_FLAG_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setInt (2, flag.getIdentifier ());
-		stmt.setString (3, flag.getName ());
-		stmt.setInt (4, flag.getTypeId ());
-		stmt.executeUpdate();
-
-		flag.setId (getLastInsertedId (stmt));
-
-		stmt.close ();		
-
-		pool.emitBugFlagAdded (flag);
+		try {
+			stmt = conn.prepareStatement (BUG_FLAG_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setInt (2, flag.getIdentifier ());
+			stmt.setString (3, flag.getName ());
+			stmt.setInt (4, flag.getTypeId ());
+			stmt.executeUpdate();
+			
+			flag.setId (getLastInsertedId (stmt));
+			
+			pool.emitBugFlagAdded (flag);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugFlagAssignments (Bug bug, BugFlagAssignment[] flags) throws SQLException {
@@ -2723,33 +2871,39 @@ public class Model {
 		assert (bug.getId () != null);
 		assert (flags != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_FLAG_ASSIGNMENT_INSERTION);
+		PreparedStatement stmt = null;
 
-		for (BugFlagAssignment flag : flags) {
-			assert (flag != null);
-			assert (flag.getFlag () != null);
-			assert (flag.getStatus () != null);
-			assert (flag.getSetter () != null);
-			assert (flag.getFlag ().getId () != null);
-			assert (flag.getStatus ().getId () != null);
-			assert (flag.getSetter ().getId () != null);
-
-			stmt.setInt (1, bug.getId ());
-			stmt.setInt (2, flag.getFlag ().getId ());
-			resSetDate (stmt, 3, flag.getCreationDate ());
-			resSetDate (stmt, 4, flag.getModificationDate ());
-			stmt.setInt (5, flag.getStatus ().getId ());
-			stmt.setInt (6, flag.getSetter ().getId ());
-			if (flag.getRequestee () != null) {
-				stmt.setInt (7, flag.getRequestee ().getId ());
-			} else {
-				stmt.setNull (7, Types.INTEGER);
+		try {
+			stmt = conn.prepareStatement (BUG_FLAG_ASSIGNMENT_INSERTION);
+			
+			for (BugFlagAssignment flag : flags) {
+				assert (flag != null);
+				assert (flag.getFlag () != null);
+				assert (flag.getStatus () != null);
+				assert (flag.getSetter () != null);
+				assert (flag.getFlag ().getId () != null);
+				assert (flag.getStatus ().getId () != null);
+				assert (flag.getSetter ().getId () != null);
+				
+				stmt.setInt (1, bug.getId ());
+				stmt.setInt (2, flag.getFlag ().getId ());
+				resSetDate (stmt, 3, flag.getCreationDate ());
+				resSetDate (stmt, 4, flag.getModificationDate ());
+				stmt.setInt (5, flag.getStatus ().getId ());
+				stmt.setInt (6, flag.getSetter ().getId ());
+				if (flag.getRequestee () != null) {
+					stmt.setInt (7, flag.getRequestee ().getId ());
+				} else {
+					stmt.setNull (7, Types.INTEGER);
+				}
+				
+				stmt.executeUpdate ();
 			}
-
-			stmt.executeUpdate ();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-
-		stmt.close ();
 	}
 
 	private void _removeBugFlagAssignments (Bug bug) throws SQLException {
@@ -2757,11 +2911,18 @@ public class Model {
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_FLAG_ASSIGNMENTS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, bug.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (DELETE_BUG_FLAG_ASSIGNMENTS);
+			
+			stmt.setInt (1, bug.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public void addBugAttachmentFlagAssignments (Attachment attachment, BugFlagAssignment[] flags) throws SQLException {
@@ -2793,33 +2954,39 @@ public class Model {
 		assert (attachment.getId () != null);
 		assert (flags != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_ATTACHMENT_FLAG_ASSIGNMENT_INSERTION);
+		PreparedStatement stmt = null;
 
-		for (BugFlagAssignment flag : flags) {
-			assert (flag != null);
-			assert (flag.getFlag () != null);
-			assert (flag.getStatus () != null);
-			assert (flag.getSetter () != null);
-			assert (flag.getFlag ().getId () != null);
-			assert (flag.getStatus ().getId () != null);
-			assert (flag.getSetter ().getId () != null);
-
-			stmt.setInt (1, attachment.getId ());
-			stmt.setInt (2, flag.getFlag ().getId ());
-			resSetDate (stmt, 3, flag.getCreationDate ());
-			resSetDate (stmt, 4, flag.getModificationDate ());
-			stmt.setInt (5, flag.getStatus ().getId ());
-			stmt.setInt (6, flag.getSetter ().getId ());
-			if (flag.getRequestee () != null) {
-				stmt.setInt (7, flag.getRequestee ().getId ());
-			} else {
-				stmt.setNull (7, Types.INTEGER);
+		try {
+			stmt = conn.prepareStatement (BUG_ATTACHMENT_FLAG_ASSIGNMENT_INSERTION);
+			
+			for (BugFlagAssignment flag : flags) {
+				assert (flag != null);
+				assert (flag.getFlag () != null);
+				assert (flag.getStatus () != null);
+				assert (flag.getSetter () != null);
+				assert (flag.getFlag ().getId () != null);
+				assert (flag.getStatus ().getId () != null);
+				assert (flag.getSetter ().getId () != null);
+				
+				stmt.setInt (1, attachment.getId ());
+				stmt.setInt (2, flag.getFlag ().getId ());
+				resSetDate (stmt, 3, flag.getCreationDate ());
+				resSetDate (stmt, 4, flag.getModificationDate ());
+				stmt.setInt (5, flag.getStatus ().getId ());
+				stmt.setInt (6, flag.getSetter ().getId ());
+				if (flag.getRequestee () != null) {
+					stmt.setInt (7, flag.getRequestee ().getId ());
+				} else {
+					stmt.setNull (7, Types.INTEGER);
+				}
+				
+				stmt.executeUpdate ();
 			}
-
-			stmt.executeUpdate ();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-
-		stmt.close ();
 	}
 
 	private void _removeBugAttachmentFlagAssignments (Attachment attachment) throws SQLException {
@@ -2827,11 +2994,18 @@ public class Model {
 		assert (attachment != null);
 		assert (attachment.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_ATTACHMENT_FLAG_ASSIGNMENTS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, attachment.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (DELETE_BUG_ATTACHMENT_FLAG_ASSIGNMENTS);
+			
+			stmt.setInt (1, attachment.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}	
 	
 	public Resolution addResolution (Project project, String name) throws SQLException {
@@ -2847,18 +3021,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (resolution.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (RESOLUTION_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, resolution.getName ());
-		stmt.executeUpdate();
-
-		resolution.setId (getLastInsertedId (stmt));
-
-		stmt.close ();		
-
-		pool.emitResolutionAdded (resolution);
+		try {
+			stmt = conn.prepareStatement (RESOLUTION_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, resolution.getName ());
+			stmt.executeUpdate();
+			
+			resolution.setId (getLastInsertedId (stmt));
+			
+			pool.emitResolutionAdded (resolution);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public Platform addPlatform (Project project, String name) throws SQLException {
@@ -2874,18 +3054,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (pf.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (PLATFORM_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, pf.getName ());
-		stmt.executeUpdate();
-
-		pf.setId (getLastInsertedId (stmt));
-
-		stmt.close ();		
-
-		pool.emitPlatformAdded (pf);
+		try {
+			stmt = conn.prepareStatement (PLATFORM_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, pf.getName ());
+			stmt.executeUpdate();
+			
+			pf.setId (getLastInsertedId (stmt));
+			
+			pool.emitPlatformAdded (pf);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public OperatingSystem addOperatingSystem (Project project, String name) throws SQLException {
@@ -2901,18 +3087,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (os.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (OPERATING_SYSTEM_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, os.getName ());
-		stmt.executeUpdate();
-
-		os.setId (getLastInsertedId (stmt));
-
-		stmt.close ();		
-
-		pool.emitOperatingSystemAdded (os);
+		try {
+			stmt = conn.prepareStatement (OPERATING_SYSTEM_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, os.getName ());
+			stmt.executeUpdate();
+			
+			os.setId (getLastInsertedId (stmt));
+			
+			pool.emitOperatingSystemAdded (os);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Keyword addKeyword (Project project, String name) throws SQLException {
@@ -2928,18 +3120,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (keyword.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (KEYWORD_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, keyword.getName ());
-		stmt.executeUpdate();
-
-		keyword.setId (getLastInsertedId (stmt));
-
-		stmt.close ();		
-
-		pool.emitKeywordAdded (keyword);
+		try {
+			stmt = conn.prepareStatement (KEYWORD_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, keyword.getName ());
+			stmt.executeUpdate();
+			
+			keyword.setId (getLastInsertedId (stmt));
+			
+			pool.emitKeywordAdded (keyword);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Priority addPriority (Project project, String name) throws SQLException {
@@ -2955,18 +3153,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (priority.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (PRIORITY_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, priority.getName ());
-		stmt.executeUpdate();
-
-		priority.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitPriorityAdded (priority);
+		try {
+			stmt = conn.prepareStatement (PRIORITY_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, priority.getName ());
+			stmt.executeUpdate();
+			
+			priority.setId (getLastInsertedId (stmt));
+			
+			pool.emitPriorityAdded (priority);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 
@@ -2981,18 +3185,24 @@ public class Model {
 		assert (category != null);
 		assert (category.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (CATEGORY_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setString(1, category.getName ());
-		stmt.setInt (2, category.getDictionary ().getId ());
-		stmt.executeUpdate();
-
-		category.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitCategoryAdded (category);
+		try {
+			stmt = conn.prepareStatement (CATEGORY_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setString(1, category.getName ());
+			stmt.setInt (2, category.getDictionary ().getId ());
+			stmt.executeUpdate();
+			
+			category.setId (getLastInsertedId (stmt));
+			
+			pool.emitCategoryAdded (category);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugCategory (Bug bug, Category category) throws SQLException {
@@ -3001,16 +3211,22 @@ public class Model {
 		assert (bug.getId () != null);
 		assert (category.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_CATEGORY_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, category.getId ());
-		stmt.executeUpdate();
-
-		stmt.close ();
-
-		pool.emitBugCategoryAdded (bug, category);
+		try {
+			stmt = conn.prepareStatement (BUG_CATEGORY_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, category.getId ());
+			stmt.executeUpdate();
+			
+			pool.emitBugCategoryAdded (bug, category);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addCommitCategory (Commit commit, Category category) throws SQLException {
@@ -3019,16 +3235,22 @@ public class Model {
 		assert (commit.getId () != null);
 		assert (category.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (COMMIT_CATEGORY_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, commit.getId ());
-		stmt.setInt (2, category.getId ());
-		stmt.executeUpdate();
-
-		stmt.close ();
-
-		pool.emitCommitCategoryAdded (commit, category);
+		try {
+			stmt = conn.prepareStatement (COMMIT_CATEGORY_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, commit.getId ());
+			stmt.setInt (2, category.getId ());
+			stmt.executeUpdate();
+			
+			pool.emitCommitCategoryAdded (commit, category);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Component addComponent (Project project, String name) throws SQLException {
@@ -3044,18 +3266,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (component.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (COMPONENT_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, component.getName ());
-		stmt.executeUpdate();
-
-		component.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitComponentAdded (component);
+		try {
+			stmt = conn.prepareStatement (COMPONENT_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, component.getName ());
+			stmt.executeUpdate();
+			
+			component.setId (getLastInsertedId (stmt));
+			
+			pool.emitComponentAdded (component);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Version addVersion (Project project, String name) throws SQLException {
@@ -3071,18 +3299,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (version.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (VERSION_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, version.getName ());
-		stmt.executeUpdate();
-
-		version.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitVersionAdded (version);
+		try {
+			stmt = conn.prepareStatement (VERSION_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, version.getName ());
+			stmt.executeUpdate();
+			
+			version.setId (getLastInsertedId (stmt));
+			
+			pool.emitVersionAdded (version);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public BugGroup addBugGroup (Project project, String name) throws SQLException {
@@ -3098,18 +3332,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (grp.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_GROUP_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, grp.getName ());
-		stmt.executeUpdate();
-
-		grp.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitBugGroupAdded (grp);
+		try {
+			stmt = conn.prepareStatement (BUG_GROUP_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, grp.getName ());
+			stmt.executeUpdate();
+			
+			grp.setId (getLastInsertedId (stmt));
+			
+			pool.emitBugGroupAdded (grp);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Milestone addMilestone (Project project, String name) throws SQLException {
@@ -3125,18 +3365,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (ms.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (MILESTONE_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, ms.getName ());
-		stmt.executeUpdate();
-
-		ms.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitMilestoneAdded (ms);
+		try {
+			stmt = conn.prepareStatement (MILESTONE_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, ms.getName ());
+			stmt.executeUpdate();
+			
+			ms.setId (getLastInsertedId (stmt));
+			
+			pool.emitMilestoneAdded (ms);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Attachment addAttachment (Integer identifier, Comment comment) throws SQLException {
@@ -3153,18 +3399,24 @@ public class Model {
 		assert (attachment.getComment () != null);
 		assert (attachment.getComment ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, attachment.getIdentifier ());
-		stmt.setInt (2, attachment.getComment ().getId ());
-		stmt.executeUpdate();
-
-		attachment.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitAttachmentAdded (attachment);
+		try {
+			stmt = conn.prepareStatement (ATTACHMENT_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, attachment.getIdentifier ());
+			stmt.setInt (2, attachment.getComment ().getId ());
+			stmt.executeUpdate();
+			
+			attachment.setId (getLastInsertedId (stmt));
+			
+			pool.emitAttachmentAdded (attachment);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void updateAttachment (Attachment attachment) throws SQLException {
@@ -3175,14 +3427,21 @@ public class Model {
 		assert (attachment.getComment () != null);
 		assert (attachment.getComment ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_UPDATE);
-		stmt.setInt (1, attachment.getIdentifier ());
-		stmt.setInt (2, attachment.getComment ().getId ());
-		stmt.setInt (3, attachment.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		PreparedStatement stmt = null;
 
-		pool.emitAttachmentUpdated (attachment);
+		try {
+			stmt = conn.prepareStatement (ATTACHMENT_UPDATE);
+			stmt.setInt (1, attachment.getIdentifier ());
+			stmt.setInt (2, attachment.getComment ().getId ());
+			stmt.setInt (3, attachment.getId ());
+			stmt.executeUpdate();
+			
+			pool.emitAttachmentUpdated (attachment);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public AttachmentStatusHistory addAttachmentStatusHistory (Attachment attachment, Identity identity, Date date, AttachmentStatus oldStatus, AttachmentStatus newStatus) throws SQLException {
@@ -3203,21 +3462,27 @@ public class Model {
 		assert (history.getNewStatus ().getId () != null);
 		assert (history.getIdentity ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_STATUS_HISTORY_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, history.getAttachment ().getId ());
-		stmt.setInt (2, history.getIdentity ().getId ());
-		resSetDate (stmt, 3, history.getDate ());
-		stmt.setInt (4, history.getOldStatus ().getId ());
-		stmt.setInt (5, history.getNewStatus ().getId ());
-		stmt.executeUpdate();
-
-		history.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitAttachmentStatusHistoryAdded (history);
+		try {
+			stmt = conn.prepareStatement (ATTACHMENT_STATUS_HISTORY_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			
+			stmt.setInt (1, history.getAttachment ().getId ());
+			stmt.setInt (2, history.getIdentity ().getId ());
+			resSetDate (stmt, 3, history.getDate ());
+			stmt.setInt (4, history.getOldStatus ().getId ());
+			stmt.setInt (5, history.getNewStatus ().getId ());
+			stmt.executeUpdate();
+			
+			history.setId (getLastInsertedId (stmt));
+			
+			pool.emitAttachmentStatusHistoryAdded (history);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Bug addBug (Integer identifier, Identity identity, Component component, String title, 
@@ -3255,40 +3520,46 @@ public class Model {
 		assert (bug.getTargetMilestone () != null);
 		assert (bug.getTargetMilestone ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
-
-		stmt.setInt (1, bug.getIdentifier ());
-		if (bug.getIdentity () != null) {
-			stmt.setInt (2, bug.getIdentity ().getId ());
-		} else {
-			stmt.setNull (2, Types.INTEGER);
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (BUG_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, bug.getIdentifier ());
+			if (bug.getIdentity () != null) {
+				stmt.setInt (2, bug.getIdentity ().getId ());
+			} else {
+				stmt.setNull (2, Types.INTEGER);
+			}
+			stmt.setInt (3, bug.getComponent ().getId ());
+			stmt.setString (4, bug.getTitle ());
+			resSetDate (stmt, 5, bug.getCreation ());
+			stmt.setInt (6, bug.getPriority ().getId ());
+			stmt.setInt (7, bug.getSeverity ().getId ());
+			stmt.setInt (8, bug.getStatus ().getId ());
+			stmt.setInt (9, bug.getResolution ().getId ());
+			resSetDate (stmt, 10, bug.getLastChange ());
+			stmt.setInt (11, bug.getVersion ().getId ());
+			stmt.setInt (12, bug.getOperatingSystem ().getId ());
+			stmt.setInt (13, bug.getPlatform ().getId ());
+			stmt.setInt (14, bug.getTargetMilestone ().getId ());
+			if (bug.getClassification () != null) {
+				stmt.setInt (15, bug.getClassification ().getId ());
+			} else {
+				stmt.setNull (15, Types.INTEGER);
+			}
+			stmt.setBoolean (16, bug.getIsOpen ());
+			stmt.executeUpdate();
+	
+			bug.setId (getLastInsertedId (stmt));
+	
+			pool.emitBugAdded (bug);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-		stmt.setInt (3, bug.getComponent ().getId ());
-		stmt.setString (4, bug.getTitle ());
-		resSetDate (stmt, 5, bug.getCreation ());
-		stmt.setInt (6, bug.getPriority ().getId ());
-		stmt.setInt (7, bug.getSeverity ().getId ());
-		stmt.setInt (8, bug.getStatus ().getId ());
-		stmt.setInt (9, bug.getResolution ().getId ());
-		resSetDate (stmt, 10, bug.getLastChange ());
-		stmt.setInt (11, bug.getVersion ().getId ());
-		stmt.setInt (12, bug.getOperatingSystem ().getId ());
-		stmt.setInt (13, bug.getPlatform ().getId ());
-		stmt.setInt (14, bug.getTargetMilestone ().getId ());
-		if (bug.getClassification () != null) {
-			stmt.setInt (15, bug.getClassification ().getId ());
-		} else {
-			stmt.setNull (15, Types.INTEGER);
-		}
-		stmt.setBoolean (16, bug.getIsOpen ());
-		stmt.executeUpdate();
-
-		bug.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitBugAdded (bug);
 	}
 
 	public void addBugDeadline (Bug bug, Date deadline) throws SQLException {
@@ -3306,13 +3577,20 @@ public class Model {
 		assert (bug.getId () != null);
 		assert (deadline != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DEADLINE_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, bug.getId ());
-		resSetDate (stmt, 2, deadline);
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (BUG_DEADLINE_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, bug.getId ());
+			resSetDate (stmt, 2, deadline);
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	private void _addBugGroupMemberships (Bug bug, BugGroup[] groups) throws SQLException {
@@ -3321,18 +3599,24 @@ public class Model {
 		assert (bug.getId () != null);
 		assert (groups != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_GROUP_MEMBERSHIP_INSERTION);
-
-		for (BugGroup grp : groups) {
-			assert (grp != null);
-			assert (grp.getId () != null);
-
-			stmt.setInt (1, bug.getId ());
-			stmt.setInt (2, grp.getId ());
-			stmt.executeUpdate ();
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (BUG_GROUP_MEMBERSHIP_INSERTION);
+	
+			for (BugGroup grp : groups) {
+				assert (grp != null);
+				assert (grp.getId () != null);
+	
+				stmt.setInt (1, bug.getId ());
+				stmt.setInt (2, grp.getId ());
+				stmt.executeUpdate ();
+			}
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-
-		stmt.close ();
 	}
 
 	private void _removeBugGroupMemberships (Bug bug) throws SQLException {
@@ -3340,11 +3624,18 @@ public class Model {
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_GROUP_MEMBERSHIPS);
-
-		stmt.setInt (1, bug.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (DELETE_BUG_GROUP_MEMBERSHIPS);
+	
+			stmt.setInt (1, bug.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugGroupMemberships (Bug bug, BugGroup[] groups) throws SQLException {
@@ -3376,17 +3667,23 @@ public class Model {
 		assert (bug.getId () != null);
 		assert (links != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_SEE_ALSO_INSERTION);
+		PreparedStatement stmt = null;
 
-		for (String link : links) {
-			assert (link != null);
-
-			stmt.setInt (1, bug.getId ());
-			stmt.setString (2, link);
-			stmt.executeUpdate ();
+		try {
+			stmt = conn.prepareStatement (BUG_SEE_ALSO_INSERTION);
+	
+			for (String link : links) {
+				assert (link != null);
+	
+				stmt.setInt (1, bug.getId ());
+				stmt.setString (2, link);
+				stmt.executeUpdate ();
+			}
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-
-		stmt.close ();
 	}
 
 	private void _removeBugSeeAlso (Bug bug) throws SQLException {
@@ -3394,11 +3691,18 @@ public class Model {
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_SEE_ALSO);
-
-		stmt.setInt (1, bug.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (DELETE_BUG_SEE_ALSO);
+	
+			stmt.setInt (1, bug.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugSeeAlso (Bug bug, String[] links) throws SQLException {
@@ -3430,18 +3734,24 @@ public class Model {
 		assert (bug.getId () != null);
 		assert (identities != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_CC_INSERTION);
-
-		for (Identity id : identities) {
-			assert (id != null);
-			assert (id.getId () != null);
-
-			stmt.setInt (1, bug.getId ());
-			stmt.setInt (2, id.getId ());
-			stmt.executeUpdate ();
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (BUG_CC_INSERTION);
+	
+			for (Identity id : identities) {
+				assert (id != null);
+				assert (id.getId () != null);
+	
+				stmt.setInt (1, bug.getId ());
+				stmt.setInt (2, id.getId ());
+				stmt.executeUpdate ();
+			}
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-
-		stmt.close ();
 	}
 
 	private void _removeBugCc (Bug bug) throws SQLException {
@@ -3449,11 +3759,18 @@ public class Model {
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_CC);
-
-		stmt.setInt (1, bug.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (DELETE_BUG_CC);
+	
+			stmt.setInt (1, bug.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugCc (Bug bug, Identity[] identities) throws SQLException {
@@ -3485,18 +3802,24 @@ public class Model {
 		assert (bug.getId () != null);
 		assert (keywords != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_KEYWORD_INSERTION);
-
-		for (Keyword kw : keywords) {
-			assert (kw != null);
-			assert (kw.getId () != null);
-
-			stmt.setInt (1, bug.getId ());
-			stmt.setInt (2, kw.getId ());
-			stmt.executeUpdate ();
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (BUG_KEYWORD_INSERTION);
+	
+			for (Keyword kw : keywords) {
+				assert (kw != null);
+				assert (kw.getId () != null);
+	
+				stmt.setInt (1, bug.getId ());
+				stmt.setInt (2, kw.getId ());
+				stmt.executeUpdate ();
+			}
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-
-		stmt.close ();
 	}
 
 	private void _removeBugKeywords (Bug bug) throws SQLException {
@@ -3504,11 +3827,18 @@ public class Model {
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_KEYWORDS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, bug.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (DELETE_BUG_KEYWORDS);
+	
+			stmt.setInt (1, bug.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugKeywords (Bug bug, Keyword[] keywords) throws SQLException {
@@ -3540,15 +3870,21 @@ public class Model {
 		assert (bug.getId () != null);
 		assert (dependsOn != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDS_ON_INSERTION);
+		PreparedStatement stmt = null;
 
-		for (Integer id : dependsOn) {
-			stmt.setInt (1, bug.getId ());
-			stmt.setInt (2, id);
-			stmt.executeUpdate ();
+		try {
+			stmt = conn.prepareStatement (BUG_DEPENDS_ON_INSERTION);
+	
+			for (Integer id : dependsOn) {
+				stmt.setInt (1, bug.getId ());
+				stmt.setInt (2, id);
+				stmt.executeUpdate ();
+			}
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-
-		stmt.close ();
 	}
 
 	private void _removeBugDependsOn (Bug bug) throws SQLException {
@@ -3556,11 +3892,18 @@ public class Model {
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_DEPENDS_ON);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, bug.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (DELETE_BUG_DEPENDS_ON);
+	
+			stmt.setInt (1, bug.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugDependsOn (Bug bug, Integer[] dependsOn) throws SQLException {
@@ -3592,13 +3935,20 @@ public class Model {
 		assert (bug.getId () != null);
 		assert (duplication != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DUPLICATION_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, duplication);
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (BUG_DUPLICATION_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, duplication);
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	private void _removeBugDuplication (Bug bug) throws SQLException {
@@ -3606,12 +3956,19 @@ public class Model {
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_DUPLICATIONS,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, bug.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (DELETE_BUG_DUPLICATIONS,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, bug.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugDuplication (Bug bug, Integer duplication) throws SQLException {
@@ -3641,12 +3998,19 @@ public class Model {
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_DEADLINE,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, bug.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (DELETE_BUG_DEADLINE,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, bug.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void updateBugDeadline (Bug bug, Date deadline) throws SQLException {
@@ -3668,15 +4032,21 @@ public class Model {
 		assert (bug.getId () != null);
 		assert (blocks != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_INSERTION);
-
-		for (Integer id : blocks) {
-			stmt.setInt (1, bug.getId ());
-			stmt.setInt (2, id);
-			stmt.executeUpdate ();
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (BUG_BLOCKS_INSERTION);
+	
+			for (Integer id : blocks) {
+				stmt.setInt (1, bug.getId ());
+				stmt.setInt (2, id);
+				stmt.executeUpdate ();
+			}
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-
-		stmt.close ();
 	}
 
 	private void _removeBugBlocks (Bug bug) throws SQLException {
@@ -3684,11 +4054,18 @@ public class Model {
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_BLOCKS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, bug.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (DELETE_BUG_BLOCKS);
+	
+			stmt.setInt (1, bug.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugBlocks (Bug bug, Integer[] blocks) throws SQLException {
@@ -3741,35 +4118,42 @@ public class Model {
 		assert (bug.getClassification () == null || bug.getClassification ().getId () != null);
 
 		
-		PreparedStatement stmt = conn.prepareStatement (BUG_UPDATE);
-		stmt.setInt (1, bug.getIdentifier ());
-		if (bug.getIdentity () != null) {
-			stmt.setInt (2, bug.getIdentity ().getId ());
-		} else {
-			stmt.setNull (2, Types.INTEGER);
+		PreparedStatement stmt = null;
+
+		try {
+			stmt = conn.prepareStatement (BUG_UPDATE);
+			stmt.setInt (1, bug.getIdentifier ());
+			if (bug.getIdentity () != null) {
+				stmt.setInt (2, bug.getIdentity ().getId ());
+			} else {
+				stmt.setNull (2, Types.INTEGER);
+			}
+			stmt.setInt (3, bug.getComponent ().getId ());
+			stmt.setString (4, bug.getTitle ());
+			resSetDate (stmt, 5, bug.getCreation ());
+			stmt.setInt (6, bug.getPriority ().getId ());
+			stmt.setInt (7, bug.getSeverity ().getId ());
+			stmt.setInt (8, bug.getStatus ().getId ());
+			stmt.setInt (9, bug.getResolution ().getId ());
+			resSetDate (stmt, 10, bug.getLastChange ());
+			stmt.setInt (11, bug.getVersion ().getId ());
+			stmt.setInt (12, bug.getOperatingSystem ().getId ());
+			stmt.setInt (13, bug.getPlatform ().getId ());
+			stmt.setInt (14, bug.getTargetMilestone ().getId ());
+			if (bug.getClassification () != null) {
+				stmt.setInt (15, bug.getClassification ().getId ());
+			} else {
+				stmt.setInt (15, Types.INTEGER);
+			}
+			stmt.setInt (16, bug.getId ());
+			stmt.executeUpdate();
+			
+			pool.emitBugUpdated (bug);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-		stmt.setInt (3, bug.getComponent ().getId ());
-		stmt.setString (4, bug.getTitle ());
-		resSetDate (stmt, 5, bug.getCreation ());
-		stmt.setInt (6, bug.getPriority ().getId ());
-		stmt.setInt (7, bug.getSeverity ().getId ());
-		stmt.setInt (8, bug.getStatus ().getId ());
-		stmt.setInt (9, bug.getResolution ().getId ());
-		resSetDate (stmt, 10, bug.getLastChange ());
-		stmt.setInt (11, bug.getVersion ().getId ());
-		stmt.setInt (12, bug.getOperatingSystem ().getId ());
-		stmt.setInt (13, bug.getPlatform ().getId ());
-		stmt.setInt (14, bug.getTargetMilestone ().getId ());
-		if (bug.getClassification () != null) {
-			stmt.setInt (15, bug.getClassification ().getId ());
-		} else {
-			stmt.setInt (15, Types.INTEGER);
-		}
-		stmt.setInt (16, bug.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
-		
-		pool.emitBugUpdated (bug);
 	}
 
 	public void addBugQaContact (Bug bug, Identity identity, BugGroup group) throws SQLException {
@@ -3802,11 +4186,17 @@ public class Model {
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUG_QA_CONTACTS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, bug.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (DELETE_BUG_QA_CONTACTS);	
+			stmt.setInt (1, bug.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	private void _addBugQaContact (Bug bug, Identity identity, BugGroup group) throws SQLException {
@@ -3817,23 +4207,30 @@ public class Model {
 		assert (identity == null || identity.getId () != null);
 		assert (group == null || group.getId () != null);
 		
-		PreparedStatement stmt = conn.prepareStatement (BUG_QA_CONTACT_INSERTION);
-
-		stmt.setInt (1, bug.getId ());
-		if (identity != null) {
-			stmt.setInt (2, identity.getId ());
-		} else {
-			stmt.setNull (2, Types.INTEGER);
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (BUG_QA_CONTACT_INSERTION);
+	
+			stmt.setInt (1, bug.getId ());
+			if (identity != null) {
+				stmt.setInt (2, identity.getId ());
+			} else {
+				stmt.setNull (2, Types.INTEGER);
+			}
+	
+			if (group != null) {
+				stmt.setInt (3, group.getId ());
+			} else {
+				stmt.setNull (3, Types.INTEGER);
+			}
+	
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-
-		if (group != null) {
-			stmt.setInt (3, group.getId ());
-		} else {
-			stmt.setNull (3, Types.INTEGER);
-		}
-
-		stmt.executeUpdate();
-		stmt.close ();
 	}
 	
 	public void addBugAlias (Bug bug, Identity addedBy, Date date, String alias) throws SQLException {
@@ -3844,16 +4241,23 @@ public class Model {
 		assert (date != null);
 		assert (alias != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_ALIAS_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setString (4, alias);
-
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitBugAliasAdded (bug, addedBy, date, alias);
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (BUG_ALIAS_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setString (4, alias);
+	
+			stmt.executeUpdate();
+	
+			pool.emitBugAliasAdded (bug, addedBy, date, alias);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addPriorityHistory (Bug bug, Identity addedBy, Date date, Priority oldPriority, Priority newPriority) throws SQLException {
@@ -3867,17 +4271,24 @@ public class Model {
 		assert (newPriority != null);
 		assert (newPriority.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (PRIORITY_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setInt (4, oldPriority.getId ());
-		stmt.setInt (5, newPriority.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitPriorityHistoryAdded (bug, addedBy, date, oldPriority, newPriority);
+		try {
+			stmt = conn.prepareStatement (PRIORITY_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setInt (4, oldPriority.getId ());
+			stmt.setInt (5, newPriority.getId ());
+	
+			stmt.executeUpdate();
+	
+			pool.emitPriorityHistoryAdded (bug, addedBy, date, oldPriority, newPriority);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addAssigendToHistory (Bug bug, Identity addedBy, Date date, String identifierAdded, BugGroup groupAdded, Identity identityAdded, String identifierRemoved, BugGroup groupRemoved, Identity identityRemoved) throws SQLException {
@@ -3891,39 +4302,46 @@ public class Model {
 		assert (groupRemoved == null || groupRemoved.getId () != null);
 		assert (identityRemoved == null || identityRemoved.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (ASSIGNED_TO_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-
-		stmt.setString (4, identifierAdded);
-		if (groupAdded != null) {
-			stmt.setInt (5, groupAdded.getId ());			
-		} else {
-			stmt.setNull (5, Types.INTEGER);
-		}
-		if (identityAdded != null) {
-			stmt.setInt (6, identityAdded.getId ());			
-		} else {
-			stmt.setNull (6, Types.INTEGER);
-		}
-
-		stmt.setString (7, identifierRemoved);
-		if (groupRemoved != null) {
-			stmt.setInt (8, groupRemoved.getId ());			
-		} else {
-			stmt.setNull (8, Types.INTEGER);
-		}
-		if (identityRemoved != null) {
-			stmt.setInt (9, identityRemoved.getId ());			
-		} else {
-			stmt.setNull (9, Types.INTEGER);
-		}
+		PreparedStatement stmt = null;
 		
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitAssignedToHistoryAdded (bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityAdded);
+		try {
+			stmt = conn.prepareStatement (ASSIGNED_TO_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+	
+			stmt.setString (4, identifierAdded);
+			if (groupAdded != null) {
+				stmt.setInt (5, groupAdded.getId ());			
+			} else {
+				stmt.setNull (5, Types.INTEGER);
+			}
+			if (identityAdded != null) {
+				stmt.setInt (6, identityAdded.getId ());			
+			} else {
+				stmt.setNull (6, Types.INTEGER);
+			}
+	
+			stmt.setString (7, identifierRemoved);
+			if (groupRemoved != null) {
+				stmt.setInt (8, groupRemoved.getId ());			
+			} else {
+				stmt.setNull (8, Types.INTEGER);
+			}
+			if (identityRemoved != null) {
+				stmt.setInt (9, identityRemoved.getId ());			
+			} else {
+				stmt.setNull (9, Types.INTEGER);
+			}
+			
+			stmt.executeUpdate();
+	
+			pool.emitAssignedToHistoryAdded (bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityAdded);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}	
 
 	public void addQaContactHistory (Bug bug, Identity addedBy, Date date, String identifierAdded, BugGroup groupAdded, Identity identityAdded, String identifierRemoved, BugGroup groupRemoved, Identity identityRemoved) throws SQLException {
@@ -3937,39 +4355,46 @@ public class Model {
 		assert (groupRemoved == null || groupRemoved.getId () != null);
 		assert (identityRemoved == null || identityRemoved.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (QA_CONTACT_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-
-		stmt.setString (4, identifierAdded);
-		if (groupAdded != null) {
-			stmt.setInt (5, groupAdded.getId ());			
-		} else {
-			stmt.setNull (5, Types.INTEGER);
-		}
-		if (identityAdded != null) {
-			stmt.setInt (6, identityAdded.getId ());			
-		} else {
-			stmt.setNull (6, Types.INTEGER);
-		}
-
-		stmt.setString (7, identifierRemoved);
-		if (groupRemoved != null) {
-			stmt.setInt (8, groupRemoved.getId ());			
-		} else {
-			stmt.setNull (8, Types.INTEGER);
-		}
-		if (identityRemoved != null) {
-			stmt.setInt (9, identityRemoved.getId ());			
-		} else {
-			stmt.setNull (9, Types.INTEGER);
-		}
+		PreparedStatement stmt = null;
 		
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitQaContactHistoryAdded (bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityAdded);
+		try {
+			stmt = conn.prepareStatement (QA_CONTACT_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+	
+			stmt.setString (4, identifierAdded);
+			if (groupAdded != null) {
+				stmt.setInt (5, groupAdded.getId ());			
+			} else {
+				stmt.setNull (5, Types.INTEGER);
+			}
+			if (identityAdded != null) {
+				stmt.setInt (6, identityAdded.getId ());			
+			} else {
+				stmt.setNull (6, Types.INTEGER);
+			}
+	
+			stmt.setString (7, identifierRemoved);
+			if (groupRemoved != null) {
+				stmt.setInt (8, groupRemoved.getId ());			
+			} else {
+				stmt.setNull (8, Types.INTEGER);
+			}
+			if (identityRemoved != null) {
+				stmt.setInt (9, identityRemoved.getId ());			
+			} else {
+				stmt.setNull (9, Types.INTEGER);
+			}
+			
+			stmt.executeUpdate();
+	
+			pool.emitQaContactHistoryAdded (bug, addedBy, date, identifierAdded, groupAdded, identityAdded, identifierRemoved, groupRemoved, identityAdded);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}	
 
 	public void addVersionHistory (Bug bug, Identity addedBy, Date date, Version oldVersion, Version newVersion) throws SQLException {
@@ -3983,17 +4408,23 @@ public class Model {
 		assert (newVersion != null);
 		assert (newVersion.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (VERSION_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setInt (4, oldVersion.getId ());
-		stmt.setInt (5, newVersion.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitVersionHistoryAdded (bug, addedBy, date, oldVersion, newVersion);
+		try {
+			stmt = conn.prepareStatement (VERSION_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setInt (4, oldVersion.getId ());
+			stmt.setInt (5, newVersion.getId ());
+			stmt.executeUpdate();
+	
+			pool.emitVersionHistoryAdded (bug, addedBy, date, oldVersion, newVersion);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addMilestoneHistory (Bug bug, Identity addedBy, Date date, Milestone oldMilestone, Milestone newMilestone) throws SQLException {
@@ -4007,17 +4438,24 @@ public class Model {
 		assert (newMilestone != null);
 		assert (newMilestone.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (MILESTONE_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setInt (4, oldMilestone.getId ());
-		stmt.setInt (5, newMilestone.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitMilestoneHistoryAdded (bug, addedBy, date, oldMilestone, newMilestone);
+		try {
+			stmt = conn.prepareStatement (MILESTONE_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setInt (4, oldMilestone.getId ());
+			stmt.setInt (5, newMilestone.getId ());
+	
+			stmt.executeUpdate();
+	
+			pool.emitMilestoneHistoryAdded (bug, addedBy, date, oldMilestone, newMilestone);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addResolutionHistory (Bug bug, Identity addedBy, Date date, Resolution resolution) throws SQLException {
@@ -4029,16 +4467,23 @@ public class Model {
 		assert (resolution != null);
 		assert (resolution.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (RESOLUTION_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setInt (4, resolution.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitResolutionHistoryAdded (bug, addedBy, date, resolution);
+		try {
+			stmt = conn.prepareStatement (RESOLUTION_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setInt (4, resolution.getId ());
+	
+			stmt.executeUpdate();
+	
+			pool.emitResolutionHistoryAdded (bug, addedBy, date, resolution);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addConfirmedHistory (Bug bug, Identity addedBy, Date date, boolean removed) throws SQLException {
@@ -4048,16 +4493,22 @@ public class Model {
 		assert (addedBy.getId () != null);
 		assert (date != null);
 
-		PreparedStatement stmt = conn.prepareStatement (CONFIRMED_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setBoolean (4, removed);
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitConfirmedHistoryAdded (bug, addedBy, date, removed);
+		try {
+			stmt = conn.prepareStatement (CONFIRMED_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setBoolean (4, removed);
+			stmt.executeUpdate();
+	
+			pool.emitConfirmedHistoryAdded (bug, addedBy, date, removed);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addSeverityHistory (Bug bug, Identity addedBy, Date date, Severity oldSeverity, Severity newSeverity) throws SQLException {
@@ -4071,17 +4522,23 @@ public class Model {
 		assert (newSeverity != null);
 		assert (newSeverity.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (SEVERITY_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setInt (4, oldSeverity.getId ());
-		stmt.setInt (5, newSeverity.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitSeverityHistoryAdded (bug, addedBy, date, oldSeverity, newSeverity);
+		try {
+			stmt = conn.prepareStatement (SEVERITY_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setInt (4, oldSeverity.getId ());
+			stmt.setInt (5, newSeverity.getId ());
+			stmt.executeUpdate();
+	
+			pool.emitSeverityHistoryAdded (bug, addedBy, date, oldSeverity, newSeverity);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addOperatingSystemHistory (Bug bug, Identity addedBy, Date date, OperatingSystem oldOs, OperatingSystem newOs) throws SQLException {
@@ -4095,17 +4552,23 @@ public class Model {
 		assert (newOs != null);
 		assert (newOs.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (OPERATING_SYSTEM_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setInt (4, oldOs.getId ());
-		stmt.setInt (5, newOs.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitOperatingSystemHistoryAdded (bug, addedBy, date, oldOs, newOs);
+		try {
+			stmt = conn.prepareStatement (OPERATING_SYSTEM_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setInt (4, oldOs.getId ());
+			stmt.setInt (5, newOs.getId ());
+			stmt.executeUpdate();
+	
+			pool.emitOperatingSystemHistoryAdded (bug, addedBy, date, oldOs, newOs);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addKeywordHistory (Bug bug, Identity addedBy, Date date, Keyword keyword, boolean removed) throws SQLException {
@@ -4117,17 +4580,23 @@ public class Model {
 		assert (keyword != null);
 		assert (keyword.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (KEYWORD_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setInt (4, keyword.getId ());
-		stmt.setBoolean (5, removed);
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitKeywordHistoryAdded (bug, addedBy, date, keyword, removed);
+		try {
+			stmt = conn.prepareStatement (KEYWORD_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setInt (4, keyword.getId ());
+			stmt.setBoolean (5, removed);
+			stmt.executeUpdate();
+	
+			pool.emitKeywordHistoryAdded (bug, addedBy, date, keyword, removed);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addStatusHistory (Bug bug, Identity addedBy, Date date, Status oldStatus, Status newStatus) throws SQLException {
@@ -4141,17 +4610,23 @@ public class Model {
 		assert (newStatus != null);
 		assert (newStatus.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (STATUS_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, addedBy.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setInt (4, oldStatus.getId ());
-		stmt.setInt (5, newStatus.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitStatusHistoryAdded (bug, addedBy, date, oldStatus, newStatus);
+		try {
+			stmt = conn.prepareStatement (STATUS_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, addedBy.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setInt (4, oldStatus.getId ());
+			stmt.setInt (5, newStatus.getId ());
+			stmt.executeUpdate();
+	
+			pool.emitStatusHistoryAdded (bug, addedBy, date, oldStatus, newStatus);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Dictionary addDictionary (String name, String context, Project project) throws SQLException {
@@ -4166,19 +4641,25 @@ public class Model {
 		assert (dict.getProject () != null);
 		assert (dict.getProject ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DICTIONARY_INSERT,
-				Statement.RETURN_GENERATED_KEYS);
-
-		stmt.setString (1, dict.getName ());
-		stmt.setInt (2, dict.getProject ().getId ());
-		stmt.setString (3, dict.getContext ());
-		stmt.executeUpdate();
-
-		dict.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitDictionaryAdded (dict);
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (DICTIONARY_INSERT,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setString (1, dict.getName ());
+			stmt.setInt (2, dict.getProject ().getId ());
+			stmt.setString (3, dict.getContext ());
+			stmt.executeUpdate();
+	
+			dict.setId (getLastInsertedId (stmt));
+	
+			pool.emitDictionaryAdded (dict);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public BugHistory addBugHistory (Bug bug, Identity identity, Date date, String fieldName, String oldValue, String newValue) throws SQLException {
@@ -4194,22 +4675,28 @@ public class Model {
 		assert (history.getBug ().getId () != null);
 		assert (history.getIdentity ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_HISTORY_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, history.getBug ().getId ());
-		stmt.setInt (2, history.getIdentity ().getId ());
-		resSetDate (stmt, 3, history.getDate ());
-		stmt.setString (4, history.getFieldName ());
-		stmt.setString (5, history.getOldValue ());
-		stmt.setString (6, history.getNewValue ());
-		stmt.executeUpdate();
-
-		history.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitBugHistoryAdded (history);
+		try {
+			stmt = conn.prepareStatement (BUG_HISTORY_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, history.getBug ().getId ());
+			stmt.setInt (2, history.getIdentity ().getId ());
+			resSetDate (stmt, 3, history.getDate ());
+			stmt.setString (4, history.getFieldName ());
+			stmt.setString (5, history.getOldValue ());
+			stmt.setString (6, history.getNewValue ());
+			stmt.executeUpdate();
+	
+			history.setId (getLastInsertedId (stmt));
+	
+			pool.emitBugHistoryAdded (history);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addAttachmentHistory (Attachment attachment, Identity identity, Date date, String fieldName, String oldValue, String newValue) throws SQLException {
@@ -4221,20 +4708,26 @@ public class Model {
 		assert (date != null);
 		assert (fieldName != null);
 
-		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_HISTORY_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
-
-		stmt.setInt (1, attachment.getId ());
-		stmt.setInt (2, identity.getId ());
-		resSetDate (stmt, 3, date);
-		stmt.setString (4, fieldName);
-		stmt.setString (5, oldValue);
-		stmt.setString (6, newValue);
-		stmt.executeUpdate();
-
-		stmt.close ();
-
-		pool.emitAttachmentHistoryAdded (attachment, identity, date, fieldName, oldValue, newValue);
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (ATTACHMENT_HISTORY_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, attachment.getId ());
+			stmt.setInt (2, identity.getId ());
+			resSetDate (stmt, 3, date);
+			stmt.setString (4, fieldName);
+			stmt.setString (5, oldValue);
+			stmt.setString (6, newValue);
+			stmt.executeUpdate();
+	
+			pool.emitAttachmentHistoryAdded (attachment, identity, date, fieldName, oldValue, newValue);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void addBugCcHistory (Bug bug, Date date, Identity addedBy, Identity cc, String ccMail, boolean removed) throws SQLException {
@@ -4247,21 +4740,28 @@ public class Model {
 		assert (cc == null || cc.getId () != null);
 		assert (ccMail != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_CC_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		resSetDate (stmt, 2, date);
-		stmt.setInt (3, addedBy.getId ());
-		if (cc != null) {
-			stmt.setInt (4, cc.getId ());
-		} else {
-			stmt.setNull (4, Types.INTEGER);
+		PreparedStatement stmt = null;
+		
+		try {
+			stmt = conn.prepareStatement (BUG_CC_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			resSetDate (stmt, 2, date);
+			stmt.setInt (3, addedBy.getId ());
+			if (cc != null) {
+				stmt.setInt (4, cc.getId ());
+			} else {
+				stmt.setNull (4, Types.INTEGER);
+			}
+			stmt.setString (5, ccMail);
+			stmt.setBoolean (6, removed);
+			stmt.executeUpdate();
+	
+			pool.emitBugCcHistoryAdded (bug, date, addedBy, cc, ccMail, removed);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-		stmt.setString (5, ccMail);
-		stmt.setBoolean (6, removed);
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitBugCcHistoryAdded (bug, date, addedBy, cc, ccMail, removed);
 	}
 
 	public void addBugBlocks (Bug bug, Date date, Identity addedBy, Bug blocks, int bugIdentifier, boolean removed) throws SQLException {
@@ -4274,23 +4774,29 @@ public class Model {
 		assert (blocks == null || blocks.getId () != null);
 		assert (bugIdentifier > 0);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		resSetDate (stmt, 2, date);
-		stmt.setInt (3, addedBy.getId ());
-		if (blocks != null) {
-			stmt.setInt (4, blocks.getId ());
-		} else {
-			stmt.setNull (4, Types.INTEGER);
+		PreparedStatement stmt = null;
+
+		try {
+			stmt = conn.prepareStatement (BUG_BLOCKS_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			resSetDate (stmt, 2, date);
+			stmt.setInt (3, addedBy.getId ());
+			if (blocks != null) {
+				stmt.setInt (4, blocks.getId ());
+			} else {
+				stmt.setNull (4, Types.INTEGER);
+			}
+			stmt.setInt (5, bugIdentifier);
+			stmt.setBoolean (6, removed);
+			stmt.executeUpdate();
+	
+			pool.emitBugBlocksAdded (bug, date, addedBy, removed);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-		stmt.setInt (5, bugIdentifier);
-		stmt.setBoolean (6, removed);
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitBugBlocksAdded (bug, date, addedBy, removed);
 	}
-
 	public void addBugDependency (Bug bug, Date date, Identity addedBy, Bug blocks, int bugIdentifier, boolean removed) throws SQLException {
 		assert (conn != null);
 		assert (bug != null);
@@ -4301,21 +4807,28 @@ public class Model {
 		assert (blocks == null || blocks.getId () != null);
 		assert (bugIdentifier > 0);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDENCY_HISTORY_INSERTION);
-		stmt.setInt (1, bug.getId ());
-		resSetDate (stmt, 2, date);
-		stmt.setInt (3, addedBy.getId ());
-		if (blocks != null) {
-			stmt.setInt (4, blocks.getId ());
-		} else {
-			stmt.setNull (4, Types.INTEGER);
-		}
-		stmt.setInt (5, bugIdentifier);
-		stmt.setBoolean (6, removed);
-		stmt.executeUpdate();
-		stmt.close ();
+		PreparedStatement stmt = null;
 
-		pool.emitBugBlocksAdded (bug, date, addedBy, removed);
+		try {
+			stmt = conn.prepareStatement (BUG_DEPENDENCY_HISTORY_INSERTION);
+			stmt.setInt (1, bug.getId ());
+			resSetDate (stmt, 2, date);
+			stmt.setInt (3, addedBy.getId ());
+			if (blocks != null) {
+				stmt.setInt (4, blocks.getId ());
+			} else {
+				stmt.setNull (4, Types.INTEGER);
+			}
+			stmt.setInt (5, bugIdentifier);
+			stmt.setBoolean (6, removed);
+			stmt.executeUpdate();
+	
+			pool.emitBugBlocksAdded (bug, date, addedBy, removed);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void resolveBugBlocksHistoryBugs (Project project) throws SQLException {
@@ -4323,12 +4836,19 @@ public class Model {
 		assert (project != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_HISTORY_RESOLVE_BUGS);
-		stmt.setInt (1, project.getId ());
-		stmt.setInt (2, project.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (BUG_BLOCKS_HISTORY_RESOLVE_BUGS);
+			stmt.setInt (1, project.getId ());
+			stmt.setInt (2, project.getId ());
+	
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void resolveDuplicationCommentyBugs (Project project) throws SQLException {
@@ -4336,12 +4856,19 @@ public class Model {
 		assert (project != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DUPLICATION_COMMENT_RESOLVE_BUGS);
-		stmt.setInt (1, project.getId ());
-		stmt.setInt (2, project.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (BUG_DUPLICATION_COMMENT_RESOLVE_BUGS);
+			stmt.setInt (1, project.getId ());
+			stmt.setInt (2, project.getId ());
+	
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void resolveBugBlocksBugs (Project project) throws SQLException {
@@ -4349,12 +4876,19 @@ public class Model {
 		assert (project != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_BLOCKS_RESOLVE_BUGS);
-		stmt.setInt (1, project.getId ());
-		stmt.setInt (2, project.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (BUG_BLOCKS_RESOLVE_BUGS);
+			stmt.setInt (1, project.getId ());
+			stmt.setInt (2, project.getId ());
+
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void resolveBugDependsOnBugs (Project project) throws SQLException {
@@ -4362,12 +4896,19 @@ public class Model {
 		assert (project != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDS_ON_RESOLVE_BUGS);
-		stmt.setInt (1, project.getId ());
-		stmt.setInt (2, project.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (BUG_DEPENDS_ON_RESOLVE_BUGS);
+			stmt.setInt (1, project.getId ());
+			stmt.setInt (2, project.getId ());
+	
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void resolveBugDuplicationsBugs (Project project) throws SQLException {
@@ -4375,12 +4916,19 @@ public class Model {
 		assert (project != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DUPLICATIONS_RESOLVE_BUGS);
-		stmt.setInt (1, project.getId ());
-		stmt.setInt (2, project.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (BUG_DUPLICATIONS_RESOLVE_BUGS);
+			stmt.setInt (1, project.getId ());
+			stmt.setInt (2, project.getId ());
+	
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void resolveBugDependencyHistory (Project project) throws SQLException {
@@ -4388,12 +4936,19 @@ public class Model {
 		assert (project != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_DEPENDENCY_HISTORY_RESOLVE_BUGS);
-		stmt.setInt (1, project.getId ());
-		stmt.setInt (2, project.getId ());
+		PreparedStatement stmt = null;
 
-		stmt.executeUpdate();
-		stmt.close ();
+		try {
+			stmt = conn.prepareStatement (BUG_DEPENDENCY_HISTORY_RESOLVE_BUGS);
+			stmt.setInt (1, project.getId ());
+			stmt.setInt (2, project.getId ());
+	
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Comment addComment (int index, Bug bug, Date creation, Identity identity, String content) throws SQLException {
@@ -4407,21 +4962,27 @@ public class Model {
 		assert (cmnt != null);
 		assert (cmnt.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (COMMENT_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, cmnt.getBug ().getId ());
-		stmt.setInt (2, cmnt.getIndex ());
-		resSetDate (stmt, 3, cmnt.getCreationDate ());
-		stmt.setInt (4, cmnt.getIdentity ().getId ());
-		stmt.setString (5, cmnt.getContent ());
-		stmt.executeUpdate();
-
-		cmnt.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitCommentAdded (cmnt);
+		try {
+			stmt = conn.prepareStatement (COMMENT_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, cmnt.getBug ().getId ());
+			stmt.setInt (2, cmnt.getIndex ());
+			resSetDate (stmt, 3, cmnt.getCreationDate ());
+			stmt.setInt (4, cmnt.getIdentity ().getId ());
+			stmt.setString (5, cmnt.getContent ());
+			stmt.executeUpdate();
+	
+			cmnt.setId (getLastInsertedId (stmt));
+	
+			pool.emitCommentAdded (cmnt);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public AttachmentStatus addAttachmentStatus (Project project, String name) throws SQLException {
@@ -4437,18 +4998,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (status.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (ATTACHMENT_STATUS_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, status.getName ());
-		stmt.executeUpdate();
-
-		status.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitAttachmentStatusAdded (status);
+		try {
+			stmt = conn.prepareStatement (ATTACHMENT_STATUS_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, status.getName ());
+			stmt.executeUpdate();
+	
+			status.setId (getLastInsertedId (stmt));
+	
+			pool.emitAttachmentStatusAdded (status);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Status addStatus (Project project, String name) throws SQLException {
@@ -4464,18 +5031,24 @@ public class Model {
 		assert (project.getId () != null);
 		assert (status.getId () == null);
 
-		PreparedStatement stmt = conn.prepareStatement (STATUS_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, project.getId ());
-		stmt.setString(2, status.getName ());
-		stmt.executeUpdate();
-
-		status.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitStatusAdded (status);
+		try {
+			stmt = conn.prepareStatement (STATUS_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, project.getId ());
+			stmt.setString(2, status.getName ());
+			stmt.executeUpdate();
+	
+			status.setId (getLastInsertedId (stmt));
+	
+			pool.emitStatusAdded (status);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 		
@@ -4500,24 +5073,30 @@ public class Model {
 		assert (commit.getCommitter ().getId () != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (COMMIT_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
-		stmt.setInt (1, project.getId ());
-		stmt.setInt (2, commit.getAuthor ().getId ());
-		stmt.setInt (3, commit.getCommitter ().getId ());
-		resSetDate (stmt, 4, commit.getDate ());
-		stmt.setString (5, commit.getTitle ());
-		stmt.setInt (6, commit.getLinesAdded ());
-		stmt.setInt (7, commit.getLinesRemoved ());
-		stmt.setInt (8, commit.getChangedFiles ());
-		stmt.setString (9, commit.getIdentifier ());
-		stmt.executeUpdate();
+		PreparedStatement stmt = null;
 
-		commit.setId (getLastInsertedId (stmt));
-
-		stmt.close ();
-
-		pool.emitCommitAdded (commit);
+		try {
+			stmt = conn.prepareStatement (COMMIT_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+			stmt.setInt (1, project.getId ());
+			stmt.setInt (2, commit.getAuthor ().getId ());
+			stmt.setInt (3, commit.getCommitter ().getId ());
+			resSetDate (stmt, 4, commit.getDate ());
+			stmt.setString (5, commit.getTitle ());
+			stmt.setInt (6, commit.getLinesAdded ());
+			stmt.setInt (7, commit.getLinesRemoved ());
+			stmt.setInt (8, commit.getChangedFiles ());
+			stmt.setString (9, commit.getIdentifier ());
+			stmt.executeUpdate();
+	
+			commit.setId (getLastInsertedId (stmt));
+	
+			pool.emitCommitAdded (commit);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 		
 	
@@ -4534,15 +5113,22 @@ public class Model {
 		assert (copy.getOriginal ().getId () != null);
 		assert (copy.getCommit ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (FILE_COPY_INSERTION);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, copy.getFile ().getId ());
-		stmt.setInt (2, copy.getCommit ().getId ());
-		stmt.setInt (3, copy.getOriginal ().getId ());
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitManagedFileCopyAdded (copy);
+		try {
+			stmt = conn.prepareStatement (FILE_COPY_INSERTION);
+	
+			stmt.setInt (1, copy.getFile ().getId ());
+			stmt.setInt (2, copy.getCommit ().getId ());
+			stmt.setInt (3, copy.getOriginal ().getId ());
+			stmt.executeUpdate();
+	
+			pool.emitManagedFileCopyAdded (copy);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	// TODO: calculate lines-added, lines-removed, chunks-changed
@@ -4561,17 +5147,24 @@ public class Model {
 		assert (file.getTouched () == 1);
 		assert (file.getProject ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (FILE_INSERTION);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, file.getProject ().getId ());
-		stmt.setString (2, file.getName ());
-		stmt.setInt (3, file.getLinesAdded ());
-		stmt.executeUpdate();
-		stmt.close ();
-
-		file.setId (getLastInsertedId (stmt));
-
-		pool.emitManagedFileAdded (file);
+		try {
+			stmt = conn.prepareStatement (FILE_INSERTION);
+	
+			stmt.setInt (1, file.getProject ().getId ());
+			stmt.setString (2, file.getName ());
+			stmt.setInt (3, file.getLinesAdded ());
+			stmt.executeUpdate();
+	
+			file.setId (getLastInsertedId (stmt));
+	
+			pool.emitManagedFileAdded (file);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	
@@ -4587,15 +5180,21 @@ public class Model {
 		assert (deletion.getCommit ().getId () != null);
 		assert (deletion.getFile ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (FILE_DELETION_INSERTION);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, deletion.getFile ().getId ());
-		stmt.setInt (2, deletion.getCommit ().getId ());
-		stmt.executeUpdate();
-
-		stmt.close ();
-
-		pool.emitFileDeletionAdded (deletion);
+		try {
+			stmt = conn.prepareStatement (FILE_DELETION_INSERTION);
+	
+			stmt.setInt (1, deletion.getFile ().getId ());
+			stmt.setInt (2, deletion.getCommit ().getId ());
+			stmt.executeUpdate();
+	
+			pool.emitFileDeletionAdded (deletion);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 
@@ -4612,23 +5211,27 @@ public class Model {
 		assert (rename.getFile ().getId () != null);
 		assert (rename.getOldName () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (UPDATE_FILE_NAME);
-		stmt.setString (1, newName);
-		stmt.setInt (2, rename.getFile ().getId ());
-		stmt.executeUpdate();
+		PreparedStatement stmt = null;
 
-		stmt.close ();
-
-
-		stmt = conn.prepareStatement (FILE_RENAME_INSERTION);
-		stmt.setInt (1, rename.getFile ().getId ());
-		stmt.setInt (2, rename.getCommit ().getId ());
-		stmt.setString (3, rename.getOldName ());
-		stmt.executeUpdate();
-
-		stmt.close ();
-
-		pool.emitFileRenameAdded (rename);
+		try {
+			stmt = conn.prepareStatement (UPDATE_FILE_NAME);
+			stmt.setString (1, newName);
+			stmt.setInt (2, rename.getFile ().getId ());
+			stmt.executeUpdate();
+			stmt.close ();
+	
+			stmt = conn.prepareStatement (FILE_RENAME_INSERTION);
+			stmt.setInt (1, rename.getFile ().getId ());
+			stmt.setInt (2, rename.getCommit ().getId ());
+			stmt.setString (3, rename.getOldName ());
+			stmt.executeUpdate();
+	
+			pool.emitFileRenameAdded (rename);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	
@@ -4644,21 +5247,26 @@ public class Model {
 		assert (change.getCommit ().getId () != null);
 		assert (change.getFile ().getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (FILE_CHANGE_INSERTION);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, change.getCommit ().getId ());
-		stmt.setInt (2, change.getFile ().getId ());
-		stmt.setInt (3, change.getLinesAdded ());
-		stmt.setInt (4, change.getLinesRemoved ());
-		stmt.setInt (5, change.getEmptyLinesAdded ());
-		stmt.setInt (6, change.getEmptyLinesRemoved ());
-		stmt.setInt (7, change.getChangedChunks ());
-		stmt.executeUpdate();
-
-		stmt.close ();
-
-
-		pool.emitFileChangeAdded (change);
+		try {
+			stmt = conn.prepareStatement (FILE_CHANGE_INSERTION);
+	
+			stmt.setInt (1, change.getCommit ().getId ());
+			stmt.setInt (2, change.getFile ().getId ());
+			stmt.setInt (3, change.getLinesAdded ());
+			stmt.setInt (4, change.getLinesRemoved ());
+			stmt.setInt (5, change.getEmptyLinesAdded ());
+			stmt.setInt (6, change.getEmptyLinesRemoved ());
+			stmt.setInt (7, change.getChangedChunks ());
+			stmt.executeUpdate();
+	
+			pool.emitFileChangeAdded (change);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	
@@ -4672,50 +5280,68 @@ public class Model {
 		assert (conn != null);
 		assert (bugfix != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUGFIX_COMMIT_INSERTION);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, bugfix.getBug ().getId ());
-		stmt.setInt (2, bugfix.getCommit ().getId ());
-		stmt.executeUpdate();
-
-		stmt.close ();
-
-		pool.emitBugfixCommitAdded (bugfix);
+		try {
+			stmt = conn.prepareStatement (BUGFIX_COMMIT_INSERTION);
+	
+			stmt.setInt (1, bugfix.getBug ().getId ());
+			stmt.setInt (2, bugfix.getCommit ().getId ());
+			stmt.executeUpdate();
+	
+			pool.emitBugfixCommitAdded (bugfix);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void removeBugfixCommits (Project project) throws SQLException {
 		assert (project != null);
 		assert (project.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (DELETE_BUGFIX_COMMITS);
-		stmt.setInt (1, project.getId ());
-		stmt.executeUpdate();
-		stmt.close ();		
+		PreparedStatement stmt = null;
+
+		try {
+			stmt = conn.prepareStatement (DELETE_BUGFIX_COMMITS);
+			stmt.setInt (1, project.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	private void addSentenceSentiments (int blockId, List<SentenceSentiment> sentences) throws SQLException {
 		assert (blockId >= 0);
 		assert (sentences != null);
 
-		PreparedStatement stmt = conn.prepareStatement (SENTIMENT_SENTENCE_INSERTION,
-			Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		
-		int pos = 0;
-		for (SentenceSentiment sent : sentences) {
-			stmt.setInt (1, blockId);
-			stmt.setInt (2, pos);
-			stmt.setDouble (3, sent.getNegative ());
-			stmt.setDouble (4, sent.getSomewhatNegative ());
-			stmt.setDouble (5, sent.getNeutral ());
-			stmt.setDouble (6, sent.getSomewhatPositive ());
-			stmt.setDouble (7, sent.getPositive ());
-			stmt.setInt (8, sent.getWordCount ());
-			stmt.execute ();
-			pos++;
+		try {
+			stmt = conn.prepareStatement (SENTIMENT_SENTENCE_INSERTION,
+				Statement.RETURN_GENERATED_KEYS);
+
+			int pos = 0;
+			for (SentenceSentiment sent : sentences) {
+				stmt.setInt (1, blockId);
+				stmt.setInt (2, pos);
+				stmt.setDouble (3, sent.getNegative ());
+				stmt.setDouble (4, sent.getSomewhatNegative ());
+				stmt.setDouble (5, sent.getNeutral ());
+				stmt.setDouble (6, sent.getSomewhatPositive ());
+				stmt.setDouble (7, sent.getPositive ());
+				stmt.setInt (8, sent.getWordCount ());
+				stmt.execute ();
+				pos++;
+			}
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-
-		stmt.close ();
 	}
 	
 	private void addSentimentBlock (int parentId, int blockPos, SentimentBlock sentiment) throws SQLException {
@@ -4723,80 +5349,94 @@ public class Model {
 		assert (parentId >= 0);
 		assert (sentiment != null);
 
-		PreparedStatement stmt = conn.prepareStatement (SENTIMENT_BLOCK_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, parentId);
-		stmt.setInt (2, blockPos);
-
-
-		stmt.setInt (3, sentiment.getNegativeCount ());
-		stmt.setInt (4, sentiment.getSomewhatNegativeCount ());
-		stmt.setInt (5, sentiment.getNeutralCount ());
-		stmt.setInt (6, sentiment.getSomewhatPositiveCount ());
-		stmt.setInt (7, sentiment.getPositiveCount ());
-
-		stmt.setDouble (8, sentiment.getNegativeMean ());
-		stmt.setDouble (9, sentiment.getSomewhatNegativeMean ());
-		stmt.setDouble (10, sentiment.getNeutralMean ());
-		stmt.setDouble (11, sentiment.getSomewhatPositiveMean ());
-		stmt.setDouble (12, sentiment.getPositiveMean ());
-
-		stmt.setDouble (13, sentiment.getNegativeWMean ());
-		stmt.setDouble (14, sentiment.getSomewhatNegativeWMean ());
-		stmt.setDouble (15, sentiment.getNeutralWMean ());
-		stmt.setDouble (16, sentiment.getSomewhatPositiveWMean ());
-		stmt.setDouble (17, sentiment.getPositiveWMean ());
-
-		stmt.setInt (18, sentiment.getWordCount ());
-		stmt.setInt (19, sentiment.getSentenceCount ());
-		stmt.executeUpdate();
-
-		int newId = getLastInsertedId (stmt);
-		stmt.close ();
-
-		addSentenceSentiments (newId, sentiment.getSentenceSentiments ());
+		try {
+			stmt = conn.prepareStatement (SENTIMENT_BLOCK_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, parentId);
+			stmt.setInt (2, blockPos);
+	
+	
+			stmt.setInt (3, sentiment.getNegativeCount ());
+			stmt.setInt (4, sentiment.getSomewhatNegativeCount ());
+			stmt.setInt (5, sentiment.getNeutralCount ());
+			stmt.setInt (6, sentiment.getSomewhatPositiveCount ());
+			stmt.setInt (7, sentiment.getPositiveCount ());
+	
+			stmt.setDouble (8, sentiment.getNegativeMean ());
+			stmt.setDouble (9, sentiment.getSomewhatNegativeMean ());
+			stmt.setDouble (10, sentiment.getNeutralMean ());
+			stmt.setDouble (11, sentiment.getSomewhatPositiveMean ());
+			stmt.setDouble (12, sentiment.getPositiveMean ());
+	
+			stmt.setDouble (13, sentiment.getNegativeWMean ());
+			stmt.setDouble (14, sentiment.getSomewhatNegativeWMean ());
+			stmt.setDouble (15, sentiment.getNeutralWMean ());
+			stmt.setDouble (16, sentiment.getSomewhatPositiveWMean ());
+			stmt.setDouble (17, sentiment.getPositiveWMean ());
+	
+			stmt.setInt (18, sentiment.getWordCount ());
+			stmt.setInt (19, sentiment.getSentenceCount ());
+			stmt.executeUpdate();
+	
+			int newId = getLastInsertedId (stmt);
+	
+			addSentenceSentiments (newId, sentiment.getSentenceSentiments ());
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public void addSentiment (Sentiment sentiment) throws SQLException {
 		assert (sentiment != null);
 
-		PreparedStatement stmt = conn.prepareStatement (SENTIMENT_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, sentiment.getNegativeCount ());
-		stmt.setInt (2, sentiment.getSomewhatNegativeCount ());
-		stmt.setInt (3, sentiment.getNeutralCount ());
-		stmt.setInt (4, sentiment.getSomewhatPositiveCount ());
-		stmt.setInt (5, sentiment.getPositiveCount ());
-
-		stmt.setDouble (6, sentiment.getNegativeMean ());
-		stmt.setDouble (7, sentiment.getSomewhatNegativeMean ());
-		stmt.setDouble (8, sentiment.getNeutralMean ());
-		stmt.setDouble (9, sentiment.getSomewhatPositiveMean ());
-		stmt.setDouble (10, sentiment.getPositiveMean ());
-
-		stmt.setDouble (11, sentiment.getNegativeWMean ());
-		stmt.setDouble (12, sentiment.getSomewhatNegativeWMean ());
-		stmt.setDouble (13, sentiment.getNeutralWMean ());
-		stmt.setDouble (14, sentiment.getSomewhatPositiveWMean ());
-		stmt.setDouble (15, sentiment.getPositiveWMean ());
-
-		stmt.setInt (16, sentiment.getWordCount ());
-		stmt.setInt (17, sentiment.getSentenceCount ());
-		stmt.executeUpdate();
-
-		int newId = getLastInsertedId (stmt);
-		sentiment.setId (newId);
-		stmt.close ();
-
-		int i = 0;
-		for (SentimentBlock block : sentiment.getBlocks ()) {
-			addSentimentBlock (newId, i, block);
-			i++;
+		try {
+			stmt = conn.prepareStatement (SENTIMENT_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, sentiment.getNegativeCount ());
+			stmt.setInt (2, sentiment.getSomewhatNegativeCount ());
+			stmt.setInt (3, sentiment.getNeutralCount ());
+			stmt.setInt (4, sentiment.getSomewhatPositiveCount ());
+			stmt.setInt (5, sentiment.getPositiveCount ());
+	
+			stmt.setDouble (6, sentiment.getNegativeMean ());
+			stmt.setDouble (7, sentiment.getSomewhatNegativeMean ());
+			stmt.setDouble (8, sentiment.getNeutralMean ());
+			stmt.setDouble (9, sentiment.getSomewhatPositiveMean ());
+			stmt.setDouble (10, sentiment.getPositiveMean ());
+	
+			stmt.setDouble (11, sentiment.getNegativeWMean ());
+			stmt.setDouble (12, sentiment.getSomewhatNegativeWMean ());
+			stmt.setDouble (13, sentiment.getNeutralWMean ());
+			stmt.setDouble (14, sentiment.getSomewhatPositiveWMean ());
+			stmt.setDouble (15, sentiment.getPositiveWMean ());
+	
+			stmt.setInt (16, sentiment.getWordCount ());
+			stmt.setInt (17, sentiment.getSentenceCount ());
+			stmt.executeUpdate();
+	
+			int newId = getLastInsertedId (stmt);
+			sentiment.setId (newId);
+	
+			int i = 0;
+			for (SentimentBlock block : sentiment.getBlocks ()) {
+				addSentimentBlock (newId, i, block);
+				i++;
+			}
+			
+			pool.emitSentimentAdded (sentiment);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
-		
-		pool.emitSentimentAdded (sentiment);
 	}
 
 	public void addBugCommentSentiment (Comment comment, Sentiment sentiment) throws SQLException {
@@ -4805,15 +5445,23 @@ public class Model {
 		assert (sentiment != null);
 		assert (sentiment.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (BUG_COMMENT_SENTIMENT_INSERTION,
-				Statement.RETURN_GENERATED_KEYS);
+		PreparedStatement stmt = null;
 
-		stmt.setInt (1, sentiment.getId ());
-		stmt.setInt (2, comment.getId ());
-		stmt.executeUpdate();
-		stmt.close ();
-
-		pool.emitBugCommentSentimentAdded (comment, sentiment);
+		try {
+			stmt = conn.prepareStatement (BUG_COMMENT_SENTIMENT_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
+	
+			stmt.setInt (1, sentiment.getId ());
+			stmt.setInt (2, comment.getId ());
+			stmt.executeUpdate();
+			stmt.close ();
+	
+			pool.emitBugCommentSentimentAdded (comment, sentiment);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 
@@ -4936,59 +5584,74 @@ public class Model {
 		assert (conn != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_BUG_STATS);
-		stmt.setInt (1, identifier);
-		stmt.setInt (2, proj.getId ());
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Collect bug stats:
-		ResultSet res = stmt.executeQuery ();
-		if (!res.next ()) {
-			return null;
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_BUG_STATS);
+			stmt.setInt (1, identifier);
+			stmt.setInt (2, proj.getId ());
+	
+			// Collect bug stats:
+			res = stmt.executeQuery ();
+			if (!res.next ()) {
+				return null;
+			}
+	
+			res.close ();
+			stmt.close ();
+			
+			int bugId = res.getInt (1);
+			int cmntCnt = res.getInt (2);
+			int histCnt = res.getInt (3);
+			int attCnt  = res.getInt (4);
+			int ccCnt  = res.getInt (5);
+			int blocksCnt  = res.getInt (6);
+			int aliasCnt = res.getInt (7);
+			int severityHistoryCnt = res.getInt (8);
+			int priorityCnt = res.getInt (9);
+			int statusCnt = res.getInt (10);
+			int resolutionCnt = res.getInt (11);
+			int confirmedCnt = res.getInt (12);
+			int versionHistoCnt = res.getInt (13);
+			int operatingSystemCnt = res.getInt (14);
+			int dependsCnt = res.getInt (15);
+			int keywordCnt = res.getInt (16);
+			int milestoneCnt = res.getInt (17);
+			int assignedToCnt = res.getInt (18);
+			int qaContactCnt = res.getInt (19);
+
+	
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ATTACHMENT_STATS);
+			stmt.setInt (1, bugId);
+	
+			// Collect attachment stats:
+			res = stmt.executeQuery ();
+			HashMap<Integer, BugAttachmentStats> attStats = new HashMap<Integer, BugAttachmentStats> ();
+			while (res.next ()) {
+				int attId = res.getInt (1);
+				int attIdentifier = res.getInt (2);
+				int attObsCnt = res.getInt (3); 
+				int attStatHistCnt = res.getInt (4);
+				int attHistCnt = res.getInt (5);
+	
+				// BugAttachmentStats (int attId, int attIdentifier, int attObsCnt, int statHistCnt, int attHistCnt)
+				attStats.put (attIdentifier, new BugAttachmentStats (attId, attIdentifier, attObsCnt, attStatHistCnt, attHistCnt));
+			}
+	
+			return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt,
+					statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, operatingSystemCnt, dependsCnt, keywordCnt,
+					milestoneCnt, assignedToCnt, qaContactCnt, attStats);
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-
-		int bugId = res.getInt (1);
-		int cmntCnt = res.getInt (2);
-		int histCnt = res.getInt (3);
-		int attCnt  = res.getInt (4);
-		int ccCnt  = res.getInt (5);
-		int blocksCnt  = res.getInt (6);
-		int aliasCnt = res.getInt (7);
-		int severityHistoryCnt = res.getInt (8);
-		int priorityCnt = res.getInt (9);
-		int statusCnt = res.getInt (10);
-		int resolutionCnt = res.getInt (11);
-		int confirmedCnt = res.getInt (12);
-		int versionHistoCnt = res.getInt (13);
-		int operatingSystemCnt = res.getInt (14);
-		int dependsCnt = res.getInt (15);
-		int keywordCnt = res.getInt (16);
-		int milestoneCnt = res.getInt (17);
-		int assignedToCnt = res.getInt (18);
-		int qaContactCnt = res.getInt (19);
-
-
-		// Statement:
-		stmt = conn.prepareStatement (SELECT_ATTACHMENT_STATS);
-		stmt.setInt (1, bugId);
-
-		// Collect attachment stats:
-		res = stmt.executeQuery ();
-		HashMap<Integer, BugAttachmentStats> attStats = new HashMap<Integer, BugAttachmentStats> ();
-		while (res.next ()) {
-			int attId = res.getInt (1);
-			int attIdentifier = res.getInt (2);
-			int attObsCnt = res.getInt (3); 
-			int attStatHistCnt = res.getInt (4);
-			int attHistCnt = res.getInt (5);
-
-			// BugAttachmentStats (int attId, int attIdentifier, int attObsCnt, int statHistCnt, int attHistCnt)
-			attStats.put (attIdentifier, new BugAttachmentStats (attId, attIdentifier, attObsCnt, attStatHistCnt, attHistCnt));
-		}
-
-		return new BugStats (bugId, cmntCnt, histCnt, attCnt, ccCnt, blocksCnt, aliasCnt, severityHistoryCnt, priorityCnt,
-				statusCnt, resolutionCnt, confirmedCnt, versionHistoCnt, operatingSystemCnt, dependsCnt, keywordCnt,
-				milestoneCnt, assignedToCnt, qaContactCnt, attStats);
 	}
 	
 	public DistributionChartConfigData getDistributionChartData (DistributionChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -5026,13 +5689,16 @@ public class Model {
 		assert (vars != null);
 
 		Query queryConfig = trendChartPlotConfig.getDataQuery ();
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
 		try {
-			PreparedStatement stmt = buildPreparedStmt (queryConfig, vars, conn);
+			stmt = buildPreparedStmt (queryConfig, vars, conn);
 			TrendChartData data = new TrendChartData ();
 
 
 			// Execution:
-			ResultSet res = stmt.executeQuery ();
+			res = stmt.executeQuery ();
 	
 			
 			// Result Checks:
@@ -5071,6 +5737,13 @@ public class Model {
 		} catch (IllegalArgumentException e) {
 			throw new SemanticException ("semantic error: " + e.getMessage (),
 					queryConfig.getStart (), queryConfig.getEnd ());
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (stmt != null) {
+				stmt.close ();
+			}
 		}
 	}
 	
@@ -5088,52 +5761,64 @@ public class Model {
 		
 		return data;
 	}
-	
+
 	private DropDownData getDropDownData (DropDownConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
 		assert (conn != null);
 		assert (config != null);
 		assert (vars != null);
 
-		Query queryConfig = config.getQuery();
-		PreparedStatement stmt = buildPreparedStmt (queryConfig, vars, conn);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Execution:
-		ResultSet res = stmt.executeQuery ();
-		DropDownData data = new DropDownData (config);
-
-
-		// Result Checks:
-		ResultSetMetaData meta = res.getMetaData ();
-		int colCount = meta.getColumnCount ();
-		if (colCount != 2) {
-			throw new SemanticException ("semantic error: invalid column count, expected: (<int>, <text>)",
-					queryConfig.getStart (), queryConfig.getEnd ());
+		try {
+			Query queryConfig = config.getQuery();
+			stmt = buildPreparedStmt (queryConfig, vars, conn);
+	
+			// Execution:
+			res = stmt.executeQuery ();
+			DropDownData data = new DropDownData (config);
+	
+	
+			// Result Checks:
+			ResultSetMetaData meta = res.getMetaData ();
+			int colCount = meta.getColumnCount ();
+			if (colCount != 2) {
+				throw new SemanticException ("semantic error: invalid column count, expected: (<int>, <text>)",
+						queryConfig.getStart (), queryConfig.getEnd ());
+			}
+	
+			int paramType = meta.getColumnType (1);
+			if (paramType != Types.INTEGER) {
+				throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <text>), got ("
+						+ "<" + meta.getColumnTypeName (1) + ">, <" + meta.getColumnTypeName (2) + ">)",
+						queryConfig.getStart (), queryConfig.getEnd ());
+			}
+	
+			paramType = meta.getColumnType (2);
+			if (paramType != Types.VARCHAR && paramType != Types.NCHAR && paramType != Types.NVARCHAR) {
+				throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <text>), got ("
+						+ "<" + meta.getColumnTypeName (1) + ">, <" + meta.getColumnTypeName (2) + ">)",
+						queryConfig.getStart (), queryConfig.getEnd ());
+			}
+	
+	
+			// Data Collection:
+			while (res.next()) {
+				int id = res.getInt (1);
+				String name = res.getString (2);
+	
+				data.add (id, name);
+			}
+	
+			return data;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-
-		int paramType = meta.getColumnType (1);
-		if (paramType != Types.INTEGER) {
-			throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <text>), got ("
-					+ "<" + meta.getColumnTypeName (1) + ">, <" + meta.getColumnTypeName (2) + ">)",
-					queryConfig.getStart (), queryConfig.getEnd ());
-		}
-
-		paramType = meta.getColumnType (2);
-		if (paramType != Types.VARCHAR && paramType != Types.NCHAR && paramType != Types.NVARCHAR) {
-			throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <text>), got ("
-					+ "<" + meta.getColumnTypeName (1) + ">, <" + meta.getColumnTypeName (2) + ">)",
-					queryConfig.getStart (), queryConfig.getEnd ());
-		}
-
-
-		// Data Collection:
-		while (res.next()) {
-			int id = res.getInt (1);
-			String name = res.getString (2);
-
-			data.add (id, name);
-		}
-
-		return data;
 	}
 	
 	private OptionListConfigData getOptionListData (OptionListConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -5141,46 +5826,58 @@ public class Model {
 		assert (config != null);
 		assert (vars != null);
 
-		Query queryConfig = config.getQuery();
-		PreparedStatement stmt = buildPreparedStmt (queryConfig, vars, conn);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Execution:
-		ResultSet res = stmt.executeQuery ();
-		OptionListConfigData data = new OptionListConfigData (config);
-
-
-		// Result Checks:
-		ResultSetMetaData meta = res.getMetaData ();
-		int colCount = meta.getColumnCount ();
-		if (colCount != 2) {
-			throw new SemanticException ("semantic error: invalid column count, expected: (<int>, <text>)",
-					queryConfig.getStart (), queryConfig.getEnd ());
+		try {
+			Query queryConfig = config.getQuery();
+			stmt = buildPreparedStmt (queryConfig, vars, conn);
+	
+			// Execution:
+			res = stmt.executeQuery ();
+			OptionListConfigData data = new OptionListConfigData (config);
+	
+	
+			// Result Checks:
+			ResultSetMetaData meta = res.getMetaData ();
+			int colCount = meta.getColumnCount ();
+			if (colCount != 2) {
+				throw new SemanticException ("semantic error: invalid column count, expected: (<int>, <text>)",
+						queryConfig.getStart (), queryConfig.getEnd ());
+			}
+	
+			int paramType = meta.getColumnType (1);
+			if (paramType != Types.INTEGER) {
+				throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <text>), got ("
+						+ "<" + meta.getColumnTypeName(1) + ">, <" + meta.getColumnTypeName(2) + ">)",
+						queryConfig.getStart (), queryConfig.getEnd ());
+			}
+	
+			paramType = meta.getColumnType (2);
+			if (paramType != Types.VARCHAR && paramType != Types.NCHAR && paramType != Types.NVARCHAR) {
+				throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <text>), got ("
+						+ "<" + meta.getColumnTypeName(1) + ">, <" + meta.getColumnTypeName(2) + ">)",
+						queryConfig.getStart (), queryConfig.getEnd ());
+			}
+	
+	
+			// Data Collection:
+			while (res.next()) {
+				int id = res.getInt (1);
+				String name = res.getString (2);
+	
+				data.add (id, name);
+			}
+	
+			return data;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-
-		int paramType = meta.getColumnType (1);
-		if (paramType != Types.INTEGER) {
-			throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <text>), got ("
-					+ "<" + meta.getColumnTypeName(1) + ">, <" + meta.getColumnTypeName(2) + ">)",
-					queryConfig.getStart (), queryConfig.getEnd ());
-		}
-
-		paramType = meta.getColumnType (2);
-		if (paramType != Types.VARCHAR && paramType != Types.NCHAR && paramType != Types.NVARCHAR) {
-			throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <text>), got ("
-					+ "<" + meta.getColumnTypeName(1) + ">, <" + meta.getColumnTypeName(2) + ">)",
-					queryConfig.getStart (), queryConfig.getEnd ());
-		}
-
-
-		// Data Collection:
-		while (res.next()) {
-			int id = res.getInt (1);
-			String name = res.getString (2);
-
-			data.add (id, name);
-		}
-
-		return data;
 	}
 	
 	public PieChartData getPieChart (PieChartConfig config, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -5188,46 +5885,58 @@ public class Model {
 		assert (config != null);
 		assert (vars != null);
 
-		Query queryConfig = config.getQuery();
-		PreparedStatement stmt = buildPreparedStmt (queryConfig, vars, conn);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Execution:
-		ResultSet res = stmt.executeQuery ();
-		PieChartData data = new PieChartData (config.getName (), config.getShowTotal ());
-
-
-		// Result checks:
-		ResultSetMetaData meta = res.getMetaData ();
-		int colCount = meta.getColumnCount ();
-		if (colCount != 2) {
-			throw new SemanticException ("semantic error: invalid column count, expected: (<text>, <int>)",
-					queryConfig.getStart (), queryConfig.getEnd ());
+		try {
+			Query queryConfig = config.getQuery();
+			stmt = buildPreparedStmt (queryConfig, vars, conn);
+	
+			// Execution:
+			res = stmt.executeQuery ();
+			PieChartData data = new PieChartData (config.getName (), config.getShowTotal ());
+	
+	
+			// Result checks:
+			ResultSetMetaData meta = res.getMetaData ();
+			int colCount = meta.getColumnCount ();
+			if (colCount != 2) {
+				throw new SemanticException ("semantic error: invalid column count, expected: (<text>, <int>)",
+						queryConfig.getStart (), queryConfig.getEnd ());
+			}
+	
+			int paramType = meta.getColumnType (1);
+			if (paramType != Types.VARCHAR && paramType != Types.NCHAR && paramType != Types.NVARCHAR) {
+				throw new SemanticException ("semantic error: invalid column type, expected: (<text>, <int>), got ("
+						+ "<" + meta.getColumnTypeName(1) + ">, <" + meta.getColumnTypeName(2) + ">)",
+						queryConfig.getStart (), queryConfig.getEnd ());
+			}
+	
+			paramType = meta.getColumnType (2);
+			if (paramType != Types.INTEGER) {
+				throw new SemanticException ("semantic error: invalid column type, expected: (<text>, <int>), got ("
+						+ "<" + meta.getColumnTypeName(1) + "> , <" + meta.getColumnTypeName(2) + ">)",
+						queryConfig.getStart (), queryConfig.getEnd ());
+			}
+	
+	
+			// Data collection:
+			while (res.next()) {
+				String name = res.getString (1);
+				int val = res.getInt (2);
+	
+				data.setFraction (name, val);
+			}
+	
+			return data;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-
-		int paramType = meta.getColumnType (1);
-		if (paramType != Types.VARCHAR && paramType != Types.NCHAR && paramType != Types.NVARCHAR) {
-			throw new SemanticException ("semantic error: invalid column type, expected: (<text>, <int>), got ("
-					+ "<" + meta.getColumnTypeName(1) + ">, <" + meta.getColumnTypeName(2) + ">)",
-					queryConfig.getStart (), queryConfig.getEnd ());
-		}
-
-		paramType = meta.getColumnType (2);
-		if (paramType != Types.INTEGER) {
-			throw new SemanticException ("semantic error: invalid column type, expected: (<text>, <int>), got ("
-					+ "<" + meta.getColumnTypeName(1) + "> , <" + meta.getColumnTypeName(2) + ">)",
-					queryConfig.getStart (), queryConfig.getEnd ());
-		}
-
-
-		// Data collection:
-		while (res.next()) {
-			String name = res.getString (1);
-			int val = res.getInt (2);
-
-			data.setFraction (name, val);
-		}
-
-		return data;
 	}
 	
 	public DistributionChartData getDistributionChartData (Query query, Map<String, Object> vars) throws SemanticException, SQLException {
@@ -5236,65 +5945,77 @@ public class Model {
 		assert (vars != null);
 
 
-		double[][] data = new double[12][7];
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		PreparedStatement stmt = buildPreparedStmt (query, vars, conn);
-
-		// Execution:
-		ResultSet res = stmt.executeQuery ();
+		try {
+			double[][] data = new double[12][7];
 	
-			
-		// Result Checks:
-		ResultSetMetaData meta = res.getMetaData ();
-		int colCount = meta.getColumnCount ();
-		if (colCount != 8) {
-			throw new SemanticException ("semantic error: invalid column count, expected: (<int>, <double>, <double>, <double>, <double>, <double>, <double>, <double>)",
-				query.getStart (), query.getEnd ());
-		}
+			stmt = buildPreparedStmt (query, vars, conn);
 	
-		if (res.next()) {
-			// The check is only vaild in case
-			// the result set is not empty.
-				
-			for (int i = 1; i <= 8 ; i++) {
-				int paramType = meta.getColumnType (i);
-					
-				if ((i == 1 && paramType != Types.INTEGER)
-					|| (i > 1 && paramType != Types.INTEGER && paramType != Types.DOUBLE && paramType != Types.FLOAT))
-				{
-					stmt.close ();
-					res.close ();
-					throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <double>, <double>, <double>, <double>, <double>, <double>, <double>), got ("
-						+ "<" + meta.getColumnTypeName (1) + ">, <" + meta.getColumnTypeName (2) + ">, "
-						+ "<" + meta.getColumnTypeName (3) + ">, <" + meta.getColumnTypeName (4) + ">, "
-						+ "<" + meta.getColumnTypeName (5) + ">, <" + meta.getColumnTypeName (6) + ">, "
-						+ "<" + meta.getColumnTypeName (7) + ">, <" + meta.getColumnTypeName (8) + ">)",
-						query.getStart (), query.getEnd ());
-				}
-			}
-
-				
-			// Data Collection:
-			do {
-				int month = res.getInt (1);
-				if (month < 1 || month > 12) {
-					throw new SemanticException ("semantic error: invalid value '" + month + "' for month", query.getStart (), query.getEnd ());
-				}
-
-				month--;
-					
-				data[month][0] = res.getDouble (2);
-				data[month][1] = res.getDouble (3);
-				data[month][2] = res.getDouble (4);
-				data[month][3] = res.getDouble (5);
-				data[month][4] = res.getDouble (6);
-				data[month][5] = res.getDouble (7);
-				data[month][6] = res.getDouble (8);
-	
-			} while (res.next());
-		}
+			// Execution:
+			res = stmt.executeQuery ();
 		
-		return new DistributionChartData (data);
+				
+			// Result Checks:
+			ResultSetMetaData meta = res.getMetaData ();
+			int colCount = meta.getColumnCount ();
+			if (colCount != 8) {
+				throw new SemanticException ("semantic error: invalid column count, expected: (<int>, <double>, <double>, <double>, <double>, <double>, <double>, <double>)",
+					query.getStart (), query.getEnd ());
+			}
+		
+			if (res.next()) {
+				// The check is only vaild in case
+				// the result set is not empty.
+					
+				for (int i = 1; i <= 8 ; i++) {
+					int paramType = meta.getColumnType (i);
+						
+					if ((i == 1 && paramType != Types.INTEGER)
+						|| (i > 1 && paramType != Types.INTEGER && paramType != Types.DOUBLE && paramType != Types.FLOAT))
+					{
+						stmt.close ();
+						res.close ();
+						throw new SemanticException ("semantic error: invalid column type, expected: (<int>, <double>, <double>, <double>, <double>, <double>, <double>, <double>), got ("
+							+ "<" + meta.getColumnTypeName (1) + ">, <" + meta.getColumnTypeName (2) + ">, "
+							+ "<" + meta.getColumnTypeName (3) + ">, <" + meta.getColumnTypeName (4) + ">, "
+							+ "<" + meta.getColumnTypeName (5) + ">, <" + meta.getColumnTypeName (6) + ">, "
+							+ "<" + meta.getColumnTypeName (7) + ">, <" + meta.getColumnTypeName (8) + ">)",
+							query.getStart (), query.getEnd ());
+					}
+				}
+	
+					
+				// Data Collection:
+				do {
+					int month = res.getInt (1);
+					if (month < 1 || month > 12) {
+						throw new SemanticException ("semantic error: invalid value '" + month + "' for month", query.getStart (), query.getEnd ());
+					}
+	
+					month--;
+						
+					data[month][0] = res.getDouble (2);
+					data[month][1] = res.getDouble (3);
+					data[month][2] = res.getDouble (4);
+					data[month][3] = res.getDouble (5);
+					data[month][4] = res.getDouble (6);
+					data[month][5] = res.getDouble (7);
+					data[month][6] = res.getDouble (8);
+		
+				} while (res.next());
+			}
+			
+			return new DistributionChartData (data);
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void foreachCommit (Project proj, ObjectCallback<Commit> callback) throws SQLException, Exception {
@@ -5303,30 +6024,42 @@ public class Model {
 		assert (proj.getId () != null);
 		assert (callback != null);
 
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_COMMITS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Execution:
-		ResultSet res = stmt.executeQuery ();
-		boolean do_next = true;
-		while (res.next () && do_next) {
-			Integer id = res.getInt (1);
-			Date date = resGetDate (res, 2);
-			String title = res.getString (3);
-			Integer linesAdded = res.getInt (4);
-			Integer linesRemoved = res.getInt (5);
-			User authorUser = userFromResult (res, proj, 9, 10);
-			Identity author = identityFromResult (res, authorUser, 20, 6, 17, 7, 8);
-			User committerUser = userFromResult (res, proj, 14, 15);
-			Identity committer = identityFromResult (res, committerUser, 21, 11, 18, 12, 13);
-			Integer changedFiles = res.getInt (14);
-			String identifier = res.getString (19);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			stmt = conn.prepareStatement (SELECT_ALL_COMMITS);
+			stmt.setInt (1, proj.getId ());
 		
-			Commit commit = new Commit (id, identifier, proj, author, committer, date, title, changedFiles, linesAdded, linesRemoved);
-			do_next = callback.processResult (commit);
+			// Execution:
+			res = stmt.executeQuery ();
+			boolean do_next = true;
+			while (res.next () && do_next) {
+				Integer id = res.getInt (1);
+				Date date = resGetDate (res, 2);
+				String title = res.getString (3);
+				Integer linesAdded = res.getInt (4);
+				Integer linesRemoved = res.getInt (5);
+				User authorUser = userFromResult (res, proj, 9, 10);
+				Identity author = identityFromResult (res, authorUser, 20, 6, 17, 7, 8);
+				User committerUser = userFromResult (res, proj, 14, 15);
+				Identity committer = identityFromResult (res, committerUser, 21, 11, 18, 12, 13);
+				Integer changedFiles = res.getInt (14);
+				String identifier = res.getString (19);
+			
+				Commit commit = new Commit (id, identifier, proj, author, committer, date, title, changedFiles, linesAdded, linesRemoved);
+				do_next = callback.processResult (commit);
+			}
+		
+			res.close ();
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		res.close ();
 	}
 
 	public void foreachBug (Project proj, ObjectCallback<Bug> callback) throws SQLException, Exception {
@@ -5349,46 +6082,58 @@ public class Model {
 		Map<Integer, BugClass> classifications = getBugClasses (proj);
 
 
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUGS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Execution:
-		ResultSet res = stmt.executeQuery ();
-		boolean do_next = true;
-		while (res.next () && do_next) {
-			User user = null;
-			Identity identity = null;
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-			Integer id = res.getInt (1);
-			Integer identifier = res.getInt (2);
-			if (res.getInt (3) != 0) {
-				user = userFromResult (res, proj, 6, 7);
-				identity = identityFromResult (res, user, 16, 3, 15, 4, 5);
+		try {
+			stmt = conn.prepareStatement (SELECT_ALL_BUGS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Execution:
+			res = stmt.executeQuery ();
+			boolean do_next = true;
+			while (res.next () && do_next) {
+				User user = null;
+				Identity identity = null;
+	
+				Integer id = res.getInt (1);
+				Integer identifier = res.getInt (2);
+				if (res.getInt (3) != 0) {
+					user = userFromResult (res, proj, 6, 7);
+					identity = identityFromResult (res, user, 16, 3, 15, 4, 5);
+				}
+				Component component = components.get (res.getInt (8));
+				String title = res.getString (9);
+				Date creation = resGetDate (res, 10);
+				Priority priority = priorities.get (res.getInt (11));
+				Severity severity = severities.get (res.getInt (12));
+				Resolution resolution = resolutions.get (res.getInt (17));
+				Date lastChange = resGetDate (res, 18);
+				Version version = versions.get (res.getInt (19));
+				Milestone milestone = milestones.get (res.getInt (22));
+				OperatingSystem operatingSystem = operatingSystems.get (res.getInt (20));
+				Platform platform = platforms.get (res.getInt (21));
+				Status status = statuses.get (res.getInt (14));
+				BugClass classification = classifications.get (res.getInt (23));
+				boolean isOpen = res.getBoolean (24);
+	
+				Bug bug = new Bug (id, identifier, identity, component,
+					title, creation, lastChange, priority, severity, status, resolution,
+					version, milestone, operatingSystem, platform, classification,
+					isOpen);
+	
+				do_next = callback.processResult (bug);
 			}
-			Component component = components.get (res.getInt (8));
-			String title = res.getString (9);
-			Date creation = resGetDate (res, 10);
-			Priority priority = priorities.get (res.getInt (11));
-			Severity severity = severities.get (res.getInt (12));
-			Resolution resolution = resolutions.get (res.getInt (17));
-			Date lastChange = resGetDate (res, 18);
-			Version version = versions.get (res.getInt (19));
-			Milestone milestone = milestones.get (res.getInt (22));
-			OperatingSystem operatingSystem = operatingSystems.get (res.getInt (20));
-			Platform platform = platforms.get (res.getInt (21));
-			Status status = statuses.get (res.getInt (14));
-			BugClass classification = classifications.get (res.getInt (23));
-			boolean isOpen = res.getBoolean (24);
-
-			Bug bug = new Bug (id, identifier, identity, component,
-				title, creation, lastChange, priority, severity, status, resolution,
-				version, milestone, operatingSystem, platform, classification,
-				isOpen);
-
-			do_next = callback.processResult (bug);
+		
+			res.close ();
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		res.close ();
 	}
 
 	public Bug getBug (Project proj, Integer identifier) throws SQLException {
@@ -5397,80 +6142,92 @@ public class Model {
 		assert (proj.getId () != null);
 		assert (identifier != null);
 
-		PreparedStatement stmt = conn.prepareStatement (SELECT_BUG);
-		stmt.setInt (1, proj.getId ());
-		stmt.setInt (2, identifier);
-		
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Execution:
-		ResultSet res = stmt.executeQuery ();
-		if (res.next ()) {
-			int id = res.getInt (1);
-			String title = res.getString (8);
-			Date creation = resGetDate (res, 9);
-
-			User user = null;
-			Identity identity = null;
-			if (res.getInt (2) != 0) {
-				user = userFromResult (res, proj, 5, 6);
-				identity = identityFromResult (res, user, 17, 2, 12, 3, 4);
-			}
-
-			int compId = res.getInt (7);
-			String compName = res.getString (13);
-			Component component = new Component (compId, proj, compName);
-
-			int prioId = res.getInt (10);
-			String prioName = res.getString (14);
-			Priority priority = new Priority (prioId, proj, prioName);
-
-			int sevId = res.getInt (11);
-			String sevName = res.getString (15);
-			Severity severity = new Severity (sevId, proj, sevName);
-
-			int resId = res.getInt (18);
-			String resName = res.getString (19);
-			Resolution resolution = new Resolution (resId, proj, resName);
-
-			Date lastChange = resGetDate (res, 20);
-
-			int versId = res.getInt (21);
-			String versName = res.getString (22);
-			Version version = new Version (versId, proj, versName);
-
-			int osId = res.getInt (23);
-			String osName = res.getString (24);
-			OperatingSystem operatingSystem = new OperatingSystem (osId, proj, osName);
-
-			int statId = res.getInt (25);
-			String statName = res.getString (26);
-			Status status = new Status (statId, proj, statName);
-
-			int platId = res.getInt (27);
-			String platName = res.getString (28);
-			Platform platform = new Platform (platId, proj, platName);
-
-			int mileId = res.getInt (29);
-			String mileName = res.getString (30);
-			Milestone milestone = new Milestone (mileId, proj, mileName);
+		try {
+			stmt = conn.prepareStatement (SELECT_BUG);
+			stmt.setInt (1, proj.getId ());
+			stmt.setInt (2, identifier);
 			
-			BugClass classification = null;
-			int classificationId = res.getInt (31);
-			if (!res.wasNull ()) {
-				String classificationName = res.getString (32);
-				classification = new BugClass (classificationId, proj, classificationName);
+	
+			// Execution:
+			res = stmt.executeQuery ();
+			if (res.next ()) {
+				int id = res.getInt (1);
+				String title = res.getString (8);
+				Date creation = resGetDate (res, 9);
+	
+				User user = null;
+				Identity identity = null;
+				if (res.getInt (2) != 0) {
+					user = userFromResult (res, proj, 5, 6);
+					identity = identityFromResult (res, user, 17, 2, 12, 3, 4);
+				}
+	
+				int compId = res.getInt (7);
+				String compName = res.getString (13);
+				Component component = new Component (compId, proj, compName);
+	
+				int prioId = res.getInt (10);
+				String prioName = res.getString (14);
+				Priority priority = new Priority (prioId, proj, prioName);
+	
+				int sevId = res.getInt (11);
+				String sevName = res.getString (15);
+				Severity severity = new Severity (sevId, proj, sevName);
+	
+				int resId = res.getInt (18);
+				String resName = res.getString (19);
+				Resolution resolution = new Resolution (resId, proj, resName);
+	
+				Date lastChange = resGetDate (res, 20);
+	
+				int versId = res.getInt (21);
+				String versName = res.getString (22);
+				Version version = new Version (versId, proj, versName);
+	
+				int osId = res.getInt (23);
+				String osName = res.getString (24);
+				OperatingSystem operatingSystem = new OperatingSystem (osId, proj, osName);
+	
+				int statId = res.getInt (25);
+				String statName = res.getString (26);
+				Status status = new Status (statId, proj, statName);
+	
+				int platId = res.getInt (27);
+				String platName = res.getString (28);
+				Platform platform = new Platform (platId, proj, platName);
+	
+				int mileId = res.getInt (29);
+				String mileName = res.getString (30);
+				Milestone milestone = new Milestone (mileId, proj, mileName);
+				
+				BugClass classification = null;
+				int classificationId = res.getInt (31);
+				if (!res.wasNull ()) {
+					String classificationName = res.getString (32);
+					classification = new BugClass (classificationId, proj, classificationName);
+				}
+	
+				boolean isOpen = res.getBoolean (33);
+	
+				return new Bug (id, identifier, identity, component,
+					title, creation, lastChange, priority, severity,
+					status, resolution, version, milestone, 
+					operatingSystem, platform, classification,
+					isOpen);
 			}
-
-			boolean isOpen = res.getBoolean (33);
-
-			return new Bug (id, identifier, identity, component,
-				title, creation, lastChange, priority, severity,
-				status, resolution, version, milestone, 
-				operatingSystem, platform, classification,
-				isOpen);
+	
+			return null;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-
-		return null;
 	}
 	
 	private User userFromResult (ResultSet res, Project proj, int idCol, int nameCol) throws SQLException {
@@ -5494,11 +6251,23 @@ public class Model {
 		assert (vars != null);
 		assert (callback != null);
 
-		PreparedStatement stmt = buildPreparedStmt (query, vars, conn);
-	
-		// Execution:
-		ResultSet res = stmt.executeQuery ();
-		callback.processResult (res);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			stmt = buildPreparedStmt (query, vars, conn);
+		
+			// Execution:
+			res = stmt.executeQuery ();
+			callback.processResult (res);
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public void rawForeach (String query, Map<String, Object> vars, ResultCallback callback) throws SQLException, Exception {
@@ -5506,11 +6275,23 @@ public class Model {
 		assert (query != null);
 		assert (callback != null);
 
-		PreparedStatement stmt = buildPreparedStmt (query, vars, conn);
-		
-		// Execution:
-		ResultSet res = stmt.executeQuery ();
-		callback.processResult (res);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			stmt = buildPreparedStmt (query, vars, conn);
+			
+			// Execution:
+			res = stmt.executeQuery ();
+			callback.processResult (res);
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Map<Integer, Category> getCategories (Dictionary dictionary) throws SQLException {
@@ -5518,19 +6299,31 @@ public class Model {
 		assert (dictionary != null);
 		assert (dictionary.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_CATEGORIES);
-		stmt.setInt (1, dictionary.getId ());
-	
-		// Collect data:
-		HashMap<Integer, Category> categories = new HashMap<Integer, Category> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Category category = new Category (res.getInt (1), res.getString (2), dictionary);
-			categories.put (category.getId (), category);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_CATEGORIES);
+			stmt.setInt (1, dictionary.getId ());
+		
+			// Collect data:
+			HashMap<Integer, Category> categories = new HashMap<Integer, Category> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Category category = new Category (res.getInt (1), res.getString (2), dictionary);
+				categories.put (category.getId (), category);
+			}
+		
+			return categories;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return categories;
 	}
 
 	public Map<Integer, Component> getComponents (Project proj) throws SQLException {
@@ -5538,19 +6331,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_COMPONENTS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, Component> components = new HashMap<Integer, Component> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Component category = new Component (res.getInt (1), proj, res.getString (2));
-			components.put (category.getId (), category);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_COMPONENTS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, Component> components = new HashMap<Integer, Component> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Component category = new Component (res.getInt (1), proj, res.getString (2));
+				components.put (category.getId (), category);
+			}
+		
+			return components;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return components;
 	}
 
 	public Map<Integer, Resolution> getResolutions (Project proj) throws SQLException {
@@ -5558,19 +6363,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_RESOLUTIONS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, Resolution> resolutions = new HashMap<Integer, Resolution> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Resolution category = new Resolution (res.getInt (1), proj, res.getString (2));
-			resolutions.put (category.getId (), category);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_RESOLUTIONS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, Resolution> resolutions = new HashMap<Integer, Resolution> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Resolution category = new Resolution (res.getInt (1), proj, res.getString (2));
+				resolutions.put (category.getId (), category);
+			}
+		
+			return resolutions;		
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return resolutions;		
 	}
 
 	public Map<Integer, Version> getVersions (Project proj) throws SQLException {
@@ -5578,19 +6395,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_VERSIONS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, Version> versions = new HashMap<Integer, Version> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Version version = new Version (res.getInt (1), proj, res.getString (2));
-			versions.put (version.getId (), version);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_VERSIONS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, Version> versions = new HashMap<Integer, Version> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Version version = new Version (res.getInt (1), proj, res.getString (2));
+				versions.put (version.getId (), version);
+			}
+		
+			return versions;		
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return versions;		
 	}
 
 	public Map<Integer, BugGroup> getBugGroups (Project proj) throws SQLException {
@@ -5598,19 +6427,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_GROUPS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, BugGroup> groups = new HashMap<Integer, BugGroup> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			BugGroup grp = new BugGroup (res.getInt (1), proj, res.getString (2));
-			groups.put (grp.getId (), grp);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_BUG_GROUPS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, BugGroup> groups = new HashMap<Integer, BugGroup> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				BugGroup grp = new BugGroup (res.getInt (1), proj, res.getString (2));
+				groups.put (grp.getId (), grp);
+			}
+		
+			return groups;		
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return groups;		
 	}
 
 	public Map<Integer, Milestone> getMilestones (Project proj) throws SQLException {
@@ -5618,19 +6459,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_MILESTONES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, Milestone> milestones = new HashMap<Integer, Milestone> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Milestone ms = new Milestone (res.getInt (1), proj, res.getString (2));
-			milestones.put (ms.getId (), ms);
-		}
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		return milestones;		
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_MILESTONES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, Milestone> milestones = new HashMap<Integer, Milestone> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Milestone ms = new Milestone (res.getInt (1), proj, res.getString (2));
+				milestones.put (ms.getId (), ms);
+			}
+	
+			return milestones;		
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Map<String, Component> getComponentsByName (Project proj) throws SQLException {
@@ -5638,19 +6491,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_COMPONENTS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<String, Component> components = new HashMap<String, Component> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Component category = new Component (res.getInt (1), proj, res.getString (2));
-			components.put (category.getName (), category);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_COMPONENTS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<String, Component> components = new HashMap<String, Component> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Component category = new Component (res.getInt (1), proj, res.getString (2));
+				components.put (category.getName (), category);
+			}
+		
+			return components;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return components;
 	}
 	
 	public Map<String, OperatingSystem> getOperatingSystemsByName (Project proj) throws SQLException {
@@ -5658,19 +6523,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_OPERATING_SYSTEMS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<String, OperatingSystem> opsys = new HashMap<String, OperatingSystem> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			OperatingSystem os = new OperatingSystem (res.getInt (1), proj, res.getString (2));
-			opsys.put (os.getName (), os);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_OPERATING_SYSTEMS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<String, OperatingSystem> opsys = new HashMap<String, OperatingSystem> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				OperatingSystem os = new OperatingSystem (res.getInt (1), proj, res.getString (2));
+				opsys.put (os.getName (), os);
+			}
+		
+			return opsys;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return opsys;
 	}
 
 	public Map<String, Platform> getPlatformsByName (Project proj) throws SQLException {
@@ -5678,19 +6555,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_PLATFORMS);
-		stmt.setInt (1, proj.getId ());
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Collect data:
-		HashMap<String, Platform> platforms = new HashMap<String, Platform> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Platform pf = new Platform (res.getInt (1), proj, res.getString (2));
-			platforms.put (pf.getName (), pf);
-		}
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_PLATFORMS);
+			stmt.setInt (1, proj.getId ());
 	
-		return platforms;
+			// Collect data:
+			HashMap<String, Platform> platforms = new HashMap<String, Platform> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Platform pf = new Platform (res.getInt (1), proj, res.getString (2));
+				platforms.put (pf.getName (), pf);
+			}
+		
+			return platforms;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Map<String, Keyword> getKeywordsByName (Project proj) throws SQLException {
@@ -5698,19 +6587,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_KEYWORDS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<String, Keyword> kwds = new HashMap<String, Keyword> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Keyword kw = new Keyword (res.getInt (1), proj, res.getString (2));
-			kwds.put (kw.getName (), kw);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_KEYWORDS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<String, Keyword> kwds = new HashMap<String, Keyword> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Keyword kw = new Keyword (res.getInt (1), proj, res.getString (2));
+				kwds.put (kw.getName (), kw);
+			}
+		
+			return kwds;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return kwds;
 	}
 
 	public Map<String, BugClass> getBugClassesByName (Project proj) throws SQLException {
@@ -5718,19 +6619,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_BUG_CLASSES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<String, BugClass> classes = new HashMap<String, BugClass> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			BugClass cl = new BugClass (res.getInt (1), proj, res.getString (2));
-			classes.put (cl.getName (), cl);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_BUG_CLASSES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<String, BugClass> classes = new HashMap<String, BugClass> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				BugClass cl = new BugClass (res.getInt (1), proj, res.getString (2));
+				classes.put (cl.getName (), cl);
+			}
+		
+			return classes;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return classes;
 	}
 
 	public Map<String, Version> getVersionsByName (Project proj) throws SQLException {
@@ -5738,19 +6651,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_VERSIONS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<String, Version> versions = new HashMap<String, Version> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Version version = new Version (res.getInt (1), proj, res.getString (2));
-			versions.put (version.getName (), version);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_VERSIONS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<String, Version> versions = new HashMap<String, Version> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Version version = new Version (res.getInt (1), proj, res.getString (2));
+				versions.put (version.getName (), version);
+			}
+		
+			return versions;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return versions;
 	}
 
 	public Map<String, BugGroup> getBugGroupsByName (Project proj) throws SQLException {
@@ -5758,19 +6683,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_GROUPS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<String, BugGroup> groups = new HashMap<String, BugGroup> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			BugGroup grp = new BugGroup (res.getInt (1), proj, res.getString (2));
-			groups.put (grp.getName (), grp);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_BUG_GROUPS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<String, BugGroup> groups = new HashMap<String, BugGroup> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				BugGroup grp = new BugGroup (res.getInt (1), proj, res.getString (2));
+				groups.put (grp.getName (), grp);
+			}
+		
+			return groups;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return groups;
 	}
 
 	public Map<String, Milestone> getMilestonesByName (Project proj) throws SQLException {
@@ -5778,19 +6715,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_MILESTONES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<String, Milestone> milestones = new HashMap<String, Milestone> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Milestone ms = new Milestone (res.getInt (1), proj, res.getString (2));
-			milestones.put (ms.getName (), ms);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_MILESTONES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<String, Milestone> milestones = new HashMap<String, Milestone> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Milestone ms = new Milestone (res.getInt (1), proj, res.getString (2));
+				milestones.put (ms.getName (), ms);
+			}
+		
+			return milestones;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return milestones;
 	}
 
 	public Map<String, AttachmentStatus> getAttachmentStatusByName (Project proj) throws SQLException {
@@ -5798,19 +6747,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ATTACHMENT_STATES);
-		stmt.setInt (1, proj.getId ());
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Collect data:
-		HashMap<String, AttachmentStatus> stats = new HashMap<String, AttachmentStatus> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			AttachmentStatus stat = new AttachmentStatus (res.getInt (1), proj, res.getString (2));
-			stats.put (stat.getName (), stat);
-		}
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ATTACHMENT_STATES);
+			stmt.setInt (1, proj.getId ());
 	
-		return stats;
+			// Collect data:
+			HashMap<String, AttachmentStatus> stats = new HashMap<String, AttachmentStatus> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				AttachmentStatus stat = new AttachmentStatus (res.getInt (1), proj, res.getString (2));
+				stats.put (stat.getName (), stat);
+			}
+		
+			return stats;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	} 
 
 	public Map<Integer, Severity> getSeverities (Project proj) throws SQLException {
@@ -5818,19 +6779,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_SEVERITIES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, Severity> severities = new HashMap<Integer, Severity> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Severity severity = new Severity (res.getInt (1), proj, res.getString (2));
-			severities.put (severity.getId (), severity);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_SEVERITIES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, Severity> severities = new HashMap<Integer, Severity> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Severity severity = new Severity (res.getInt (1), proj, res.getString (2));
+				severities.put (severity.getId (), severity);
+			}
+		
+			return severities;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return severities;
 	}
 
 	public Map<Integer, BugFlagStatus> getBugFlagStates (Project proj) throws SQLException {
@@ -5838,19 +6811,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS_STATES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, BugFlagStatus> states = new HashMap<Integer, BugFlagStatus> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			BugFlagStatus state = new BugFlagStatus (res.getInt (1), proj, res.getString (2));
-			states.put (state.getId (), state);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS_STATES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, BugFlagStatus> states = new HashMap<Integer, BugFlagStatus> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				BugFlagStatus state = new BugFlagStatus (res.getInt (1), proj, res.getString (2));
+				states.put (state.getId (), state);
+			}
+		
+			return states;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return states;
 	}
 
 	public Map<Integer, BugFlag> getBugFlags (Project proj) throws SQLException {
@@ -5858,25 +6843,37 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, BugFlag> flags = new HashMap<Integer, BugFlag> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Integer id  = res.getInt (1);
-			Integer identifier = res.getInt (2);
-			String name = res.getString (3);
-			Integer typeId = res.getInt (4);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-			
-			BugFlag flag = new BugFlag (id, proj, identifier, name, typeId);
-			flags.put (flag.getId (), flag);
-		}
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, BugFlag> flags = new HashMap<Integer, BugFlag> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Integer id  = res.getInt (1);
+				Integer identifier = res.getInt (2);
+				String name = res.getString (3);
+				Integer typeId = res.getInt (4);
 	
-		return flags;
+				
+				BugFlag flag = new BugFlag (id, proj, identifier, name, typeId);
+				flags.put (flag.getId (), flag);
+			}
+		
+			return flags;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Map<Integer, OperatingSystem> getOperatingSystems (Project proj) throws SQLException {
@@ -5884,19 +6881,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_OPERATING_SYSTEMS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, OperatingSystem> opsys = new HashMap<Integer, OperatingSystem> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			OperatingSystem os = new OperatingSystem (res.getInt (1), proj, res.getString (2));
-			opsys.put (os.getId (), os);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_OPERATING_SYSTEMS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, OperatingSystem> opsys = new HashMap<Integer, OperatingSystem> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				OperatingSystem os = new OperatingSystem (res.getInt (1), proj, res.getString (2));
+				opsys.put (os.getId (), os);
+			}
+		
+			return opsys;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return opsys;
 	}
 
 	public Map<Integer, Platform> getPlatforms (Project proj) throws SQLException {
@@ -5904,19 +6913,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_PLATFORMS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, Platform> platforms = new HashMap<Integer, Platform> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Platform pf = new Platform (res.getInt (1), proj, res.getString (2));
-			platforms.put (pf.getId (), pf);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_PLATFORMS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, Platform> platforms = new HashMap<Integer, Platform> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Platform pf = new Platform (res.getInt (1), proj, res.getString (2));
+				platforms.put (pf.getId (), pf);
+			}
+		
+			return platforms;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return platforms;
 	}
 
 	public Map<Integer, Keyword> getKeywords (Project proj) throws SQLException {
@@ -5924,19 +6945,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_KEYWORDS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, Keyword> kwds = new HashMap<Integer, Keyword> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Keyword kw = new Keyword (res.getInt (1), proj, res.getString (2));
-			kwds.put (kw.getId (), kw);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_KEYWORDS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, Keyword> kwds = new HashMap<Integer, Keyword> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Keyword kw = new Keyword (res.getInt (1), proj, res.getString (2));
+				kwds.put (kw.getId (), kw);
+			}
+		
+			return kwds;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return kwds;
 	}
 
 	public Map<Integer, BugClass> getBugClasses (Project proj) throws SQLException {
@@ -5944,19 +6977,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_BUG_CLASSES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, BugClass> classes = new HashMap<Integer, BugClass> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			BugClass cl = new BugClass (res.getInt (1), proj, res.getString (2));
-			classes.put (cl.getId (), cl);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_BUG_CLASSES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, BugClass> classes = new HashMap<Integer, BugClass> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				BugClass cl = new BugClass (res.getInt (1), proj, res.getString (2));
+				classes.put (cl.getId (), cl);
+			}
+		
+			return classes;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return classes;
 	}
 
 	public Map<String, Severity> getSeveritiesByName (Project proj) throws SQLException {
@@ -5964,19 +7009,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_SEVERITIES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<String, Severity> severities = new HashMap<String, Severity> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Severity severity = new Severity (res.getInt (1), proj, res.getString (2));
-			severities.put (severity.getName (), severity);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_SEVERITIES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<String, Severity> severities = new HashMap<String, Severity> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Severity severity = new Severity (res.getInt (1), proj, res.getString (2));
+				severities.put (severity.getName (), severity);
+			}
+		
+			return severities;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return severities;
 	}
 
 	public Map<String, BugFlagStatus> getBugFlagStatesByName (Project proj) throws SQLException {
@@ -5984,19 +7041,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS_STATES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<String, BugFlagStatus> states = new HashMap<String, BugFlagStatus> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			BugFlagStatus state = new BugFlagStatus (res.getInt (1), proj, res.getString (2));
-			states.put (state.getName (), state);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS_STATES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<String, BugFlagStatus> states = new HashMap<String, BugFlagStatus> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				BugFlagStatus state = new BugFlagStatus (res.getInt (1), proj, res.getString (2));
+				states.put (state.getName (), state);
+			}
+		
+			return states;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return states;
 	}
 
 	public Map<Integer, BugFlag> getBugFlagsByIdentifier (Project proj) throws SQLException {
@@ -6004,24 +7073,36 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, BugFlag> flags = new HashMap<Integer, BugFlag> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Integer id  = res.getInt (1);
-			Integer identifier = res.getInt (2);
-			String name = res.getString (3);
-			Integer typeId = res.getInt (4);
-			
-			BugFlag flag = new BugFlag (id, proj, identifier, name, typeId);
-			flags.put (flag.getIdentifier (), flag);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_BUG_FLAGS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, BugFlag> flags = new HashMap<Integer, BugFlag> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Integer id  = res.getInt (1);
+				Integer identifier = res.getInt (2);
+				String name = res.getString (3);
+				Integer typeId = res.getInt (4);
+				
+				BugFlag flag = new BugFlag (id, proj, identifier, name, typeId);
+				flags.put (flag.getIdentifier (), flag);
+			}
+		
+			return flags;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return flags;
 	}
 
 	public Map<Integer, Status> getStatuses (Project proj) throws SQLException {
@@ -6029,19 +7110,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_STATUSES);
-		stmt.setInt (1, proj.getId ());
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Collect data:
-		HashMap<Integer, Status> statuses = new HashMap<Integer, Status> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Status status = new Status (res.getInt (1), proj, res.getString (2));
-			statuses.put (status.getId (), status);
-		}
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_STATUSES);
+			stmt.setInt (1, proj.getId ());
 	
-		return statuses;
+			// Collect data:
+			HashMap<Integer, Status> statuses = new HashMap<Integer, Status> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Status status = new Status (res.getInt (1), proj, res.getString (2));
+				statuses.put (status.getId (), status);
+			}
+		
+			return statuses;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Map<String, Status> getStatusesByName (Project proj) throws SQLException {
@@ -6049,19 +7142,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_STATUSES);
-		stmt.setInt (1, proj.getId ());
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Collect data:
-		HashMap<String, Status> statuses = new HashMap<String, Status> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Status status = new Status (res.getInt (1), proj, res.getString (2));
-			statuses.put (status.getName (), status);
-		}
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_STATUSES);
+			stmt.setInt (1, proj.getId ());
 	
-		return statuses;
+			// Collect data:
+			HashMap<String, Status> statuses = new HashMap<String, Status> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Status status = new Status (res.getInt (1), proj, res.getString (2));
+				statuses.put (status.getName (), status);
+			}
+		
+			return statuses;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Map<Integer, Priority> getPriorities (Project proj) throws SQLException {
@@ -6069,19 +7174,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_PRIORITIES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<Integer, Priority> priorities = new HashMap<Integer, Priority> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Priority priority = new Priority (res.getInt (1), proj, res.getString (2));
-			priorities.put (priority.getId (), priority);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_PRIORITIES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<Integer, Priority> priorities = new HashMap<Integer, Priority> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Priority priority = new Priority (res.getInt (1), proj, res.getString (2));
+				priorities.put (priority.getId (), priority);
+			}
+		
+			return priorities;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return priorities;
 	}
 
 	public Map<String, Priority> getPrioritiesByName (Project proj) throws SQLException {
@@ -6089,19 +7206,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_PRIORITIES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		HashMap<String, Priority> priorities = new HashMap<String, Priority> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Priority priority = new Priority (res.getInt (1), proj, res.getString (2));
-			priorities.put (priority.getName (), priority);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_PRIORITIES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			HashMap<String, Priority> priorities = new HashMap<String, Priority> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Priority priority = new Priority (res.getInt (1), proj, res.getString (2));
+				priorities.put (priority.getName (), priority);
+			}
+		
+			return priorities;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return priorities;
 	}
 
 	public Map<String, Resolution> getResolutionsByName (Project proj) throws SQLException {
@@ -6109,19 +7238,31 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_RESOLUTIONS);
-		stmt.setInt (1, proj.getId ());
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Collect data:
-		HashMap<String, Resolution> resolutions = new HashMap<String, Resolution> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Resolution resolution = new Resolution (res.getInt (1), proj, res.getString (2));
-			resolutions.put (resolution.getName (), resolution);
-		}
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_RESOLUTIONS);
+			stmt.setInt (1, proj.getId ());
 	
-		return resolutions;
+			// Collect data:
+			HashMap<String, Resolution> resolutions = new HashMap<String, Resolution> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Resolution resolution = new Resolution (res.getInt (1), proj, res.getString (2));
+				resolutions.put (resolution.getName (), resolution);
+			}
+		
+			return resolutions;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public List<BugHistory> getBugHistory (Project proj, Bug bug) throws SQLException {
@@ -6129,45 +7270,67 @@ public class Model {
 		assert (bug != null);
 		assert (bug.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_FULL_HISTORY);
-		stmt.setInt (1, bug.getId ());
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Collect data:
-		LinkedList<BugHistory> history = new LinkedList<BugHistory> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Integer id = res.getInt (1);
-			User user = userFromResult (res, proj, 5, 6);
-			Identity identity = identityFromResult (res, user, 12, 2, 11, 3, 4);
-			Date creation = resGetDate (res, 7);
-			String field = res.getString (8);
-			String oldValue = res.getString (9);
-			String newValue = res.getString (10);
-
-			BugHistory entry = new BugHistory (id, bug, identity, creation, field, oldValue, newValue);
-			history.add (entry);
-		}
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_FULL_HISTORY);
+			stmt.setInt (1, bug.getId ());
 	
-		return history;
+			// Collect data:
+			LinkedList<BugHistory> history = new LinkedList<BugHistory> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Integer id = res.getInt (1);
+				User user = userFromResult (res, proj, 5, 6);
+				Identity identity = identityFromResult (res, user, 12, 2, 11, 3, 4);
+				Date creation = resGetDate (res, 7);
+				String field = res.getString (8);
+				String oldValue = res.getString (9);
+				String newValue = res.getString (10);
+	
+				BugHistory entry = new BugHistory (id, bug, identity, creation, field, oldValue, newValue);
+				history.add (entry);
+			}
+		
+			return history;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public int getSentimentState (Project proj) throws SQLException {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		PreparedStatement stmt = conn.prepareStatement (SELECT_SENTIMENT_STATES);
-		stmt.setInt (1, proj.getId ());
-		ResultSet res = stmt.executeQuery ();
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		int commentCnt = 0;
-		if (res.next ()) {
-			commentCnt = res.getInt (1);
-		}
+		try {
+			stmt = conn.prepareStatement (SELECT_SENTIMENT_STATES);
+			stmt.setInt (1, proj.getId ());
+			res = stmt.executeQuery ();
 	
-		res.close ();
-		stmt.close ();
-		return commentCnt;
+			int commentCnt = 0;
+			if (res.next ()) {
+				commentCnt = res.getInt (1);
+			}
+
+			return commentCnt;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public List<Comment> getComments (Project proj, Bug bug) throws SQLException {
@@ -6177,26 +7340,38 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_COMMENTS);
-		stmt.setInt (1, bug.getId ());
-	
-		// Collect data:
-		LinkedList<Comment> comments = new LinkedList<Comment> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Integer id = res.getInt (1);
-			Integer index = res.getInt (2);
-			Date creation = resGetDate (res, 3);
-			User user = userFromResult (res, proj, 7, 8);
-			Identity identity = identityFromResult (res, user, 11, 4, 10, 5, 6);
-			String content = res.getString (9);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-			Comment comment = new Comment (id, index, bug, creation, identity, content);
-			comments.add (comment);
-		}
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_COMMENTS);
+			stmt.setInt (1, bug.getId ());
+		
+			// Collect data:
+			LinkedList<Comment> comments = new LinkedList<Comment> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Integer id = res.getInt (1);
+				Integer index = res.getInt (2);
+				Date creation = resGetDate (res, 3);
+				User user = userFromResult (res, proj, 7, 8);
+				Identity identity = identityFromResult (res, user, 11, 4, 10, 5, 6);
+				String content = res.getString (9);
 	
-		return comments;
+				Comment comment = new Comment (id, index, bug, creation, identity, content);
+				comments.add (comment);
+			}
+		
+			return comments;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public Comment getCommentByIndex (Project proj, Bug bug, int index) throws SQLException {
@@ -6204,24 +7379,36 @@ public class Model {
 		assert (bug.getId () != null);
 		assert (index >= 0);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_COMMENT_BY_INDEX);
-		stmt.setInt (1, bug.getId ());
-		stmt.setInt (2, index);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Collect data:
-		ResultSet res = stmt.executeQuery ();
-		if (res.next ()) {
-			Integer id = res.getInt (1);
-			Date creation = resGetDate (res, 2);
-			User user = userFromResult (res, proj, 6, 7);
-			Identity identity = identityFromResult (res, user, 10, 3, 9, 4, 5);
-			String content = res.getString (8);
-
-			return new Comment (id, index, bug, creation, identity, content);
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_COMMENT_BY_INDEX);
+			stmt.setInt (1, bug.getId ());
+			stmt.setInt (2, index);
+	
+			// Collect data:
+			res = stmt.executeQuery ();
+			if (res.next ()) {
+				Integer id = res.getInt (1);
+				Date creation = resGetDate (res, 2);
+				User user = userFromResult (res, proj, 6, 7);
+				Identity identity = identityFromResult (res, user, 10, 3, 9, 4, 5);
+				String content = res.getString (8);
+	
+				return new Comment (id, index, bug, creation, identity, content);
+			}
+	
+			return null;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-
-		return null;
 	}
 
 	public Collection<Identity> getIdentities (Project proj, String context) throws SQLException {
@@ -6230,21 +7417,33 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 		
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_IDENTITIES_CONTEXT);
-		stmt.setInt (1, proj.getId ());
-		stmt.setString (2, context);
-	
-		// Collect data:
-		LinkedList<Identity> identities = new LinkedList<Identity> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			User user = userFromResult (res, proj, 1, 2);
-			Identity identity = identityFromResult (res, user, 8, 3, 4, 6, 5);
-			identities.add (identity);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_IDENTITIES_CONTEXT);
+			stmt.setInt (1, proj.getId ());
+			stmt.setString (2, context);
+		
+			// Collect data:
+			LinkedList<Identity> identities = new LinkedList<Identity> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				User user = userFromResult (res, proj, 1, 2);
+				Identity identity = identityFromResult (res, user, 8, 3, 4, 6, 5);
+				identities.add (identity);
+			}
+		
+			return identities;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return identities;
 	}
 
 	public Identity getIdentityByIdentifier (Project proj, int identifier, String context) throws SQLException {
@@ -6253,20 +7452,32 @@ public class Model {
 		assert (proj.getId () != null);
 		assert (context != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_IDENTITY_BY_IDENTIFIER);
-		stmt.setInt (1, proj.getId ());
-		stmt.setString (2, context);
-		stmt.setInt (3, identifier);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_IDENTITY_BY_IDENTIFIER);
+			stmt.setInt (1, proj.getId ());
+			stmt.setString (2, context);
+			stmt.setInt (3, identifier);
+			
+			// Collect data:
+			res = stmt.executeQuery ();
+			if (res.next ()) {
+				User user = userFromResult (res, proj, 1, 2);
+				return identityFromResult (res, user, 8, 3, 4, 6, 5);
+			}
 		
-		// Collect data:
-		ResultSet res = stmt.executeQuery ();
-		if (res.next ()) {
-			User user = userFromResult (res, proj, 1, 2);
-			return identityFromResult (res, user, 8, 3, 4, 6, 5);
+			return null;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return null;
 	}
 	
 	public Identity getIdentityForAttachmentIdentifier (Project proj, String patchId) throws SQLException {
@@ -6275,21 +7486,32 @@ public class Model {
 		assert (proj.getId () != null);
 
 		
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ATTACHMENT_IDENTITY);
-		stmt.setInt (1, proj.getId ());
-		stmt.setString (2, patchId);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ATTACHMENT_IDENTITY);
+			stmt.setInt (1, proj.getId ());
+			stmt.setString (2, patchId);
+			
+			// Collect data:
+			res = stmt.executeQuery ();
+			if (res.next ()) {
+				User user = userFromResult (res, proj, 1, 2);
+				Identity identity = identityFromResult (res, user, 7, 3, 4, 5, 6);
+				return identity;
+			}
 		
-		// Collect data:
-		ResultSet res = stmt.executeQuery ();
-		if (res.next ()) {
-			User user = userFromResult (res, proj, 1, 2);
-			Identity identity = identityFromResult (res, user, 7, 3, 4, 5, 6);
-			return identity;
+			return null;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return null;
 	}
 	
 	public Collection<Identity> getIdentities (Project proj) throws SQLException {
@@ -6297,20 +7519,32 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 		
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_IDENTITIES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		LinkedList<Identity> identities = new LinkedList<Identity> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			User user = userFromResult (res, proj, 1, 2);
-			Identity identity = identityFromResult (res, user, 8, 3, 4, 6, 5);
-			identities.add (identity);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_IDENTITIES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			LinkedList<Identity> identities = new LinkedList<Identity> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				User user = userFromResult (res, proj, 1, 2);
+				Identity identity = identityFromResult (res, user, 8, 3, 4, 6, 5);
+				identities.add (identity);
+			}
+		
+			return identities;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return identities;
 	}
 
 	public List<User> getUsers (Project proj) throws SQLException {
@@ -6318,68 +7552,104 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 		
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_USERS);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		LinkedList<User> identities = new LinkedList<User> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			User user = userFromResult (res, proj, 1, 2);
-			identities.add (user);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_USERS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			LinkedList<User> identities = new LinkedList<User> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				User user = userFromResult (res, proj, 1, 2);
+				identities.add (user);
+			}
+		
+			return identities;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return identities;
 	}
 
 	public Project getProject (int id) throws SQLException {
 		assert (conn != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_PROJECT);
-		stmt.setInt (1, id);
-	
-		// Collect data:
-		ResultSet res = stmt.executeQuery ();
-		if (res.next ()) {
-			Date date = resGetDate (res, 2);
-			String domain = res.getString (3);
-			String product = res.getString (4);
-			String revision = res.getString (5);
-			Date lastBugDate = resGetDate (res, 6);
-			String bugTracker = res.getString (7);
-	
-			Project proj = new Project (id, date, lastBugDate, bugTracker, domain, product, revision);
-			return proj;
-		}
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		return null;
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_PROJECT);
+			stmt.setInt (1, id);
+		
+			// Collect data:
+			res = stmt.executeQuery ();
+			if (res.next ()) {
+				Date date = resGetDate (res, 2);
+				String domain = res.getString (3);
+				String product = res.getString (4);
+				String revision = res.getString (5);
+				Date lastBugDate = resGetDate (res, 6);
+				String bugTracker = res.getString (7);
+		
+				Project proj = new Project (id, date, lastBugDate, bugTracker, domain, product, revision);
+				return proj;
+			}
+	
+			return null;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 	
 	public List<Project> getProjects () throws SQLException {
 		assert (conn != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_ALL_PROJECTS);
-	
-		// Collect data:
-		LinkedList<Project> projects = new LinkedList<Project> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Integer id = res.getInt (1);
-			Date date = resGetDate (res, 2);
-			String domain = res.getString (3);
-			String product = res.getString (4);
-			String revision = res.getString (5);
-			Date lastBugDate = resGetDate (res, 6);
-			String bugTracker = res.getString (7);
-			
-			Project proj = new Project (id, date, lastBugDate, bugTracker, domain, product, revision);
-			projects.add (proj);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_ALL_PROJECTS);
+
+			// Collect data:
+			LinkedList<Project> projects = new LinkedList<Project> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Integer id = res.getInt (1);
+				Date date = resGetDate (res, 2);
+				String domain = res.getString (3);
+				String product = res.getString (4);
+				String revision = res.getString (5);
+				Date lastBugDate = resGetDate (res, 6);
+				String bugTracker = res.getString (7);
+				
+				Project proj = new Project (id, date, lastBugDate, bugTracker, domain, product, revision);
+				projects.add (proj);
+			}
+		
+			return projects;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return projects;
 	}
 
 	public List<Dictionary> getDictionaries (Project proj) throws SQLException {
@@ -6387,78 +7657,124 @@ public class Model {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_DICTIONARIES);
-		stmt.setInt (1, proj.getId ());
-	
-		// Collect data:
-		LinkedList<Dictionary> dictionaries = new LinkedList<Dictionary> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			Integer id = res.getInt (1);
-			String name = res.getString (2);
-			String context = res.getString (3);
-	
-			Dictionary dict = new Dictionary (id, name, context, proj);
-			dictionaries.add (dict);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_DICTIONARIES);
+			stmt.setInt (1, proj.getId ());
+		
+			// Collect data:
+			LinkedList<Dictionary> dictionaries = new LinkedList<Dictionary> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				Integer id = res.getInt (1);
+				String name = res.getString (2);
+				String context = res.getString (3);
+		
+				Dictionary dict = new Dictionary (id, name, context, proj);
+				dictionaries.add (dict);
+			}
+		
+			return dictionaries;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-	
-		return dictionaries;
 	}
 
 	public Date getStartDate (Project proj) throws SQLException {
 		assert (conn != null);
 		assert (proj != null);
 		assert (proj.getId () != null);
-		
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_START_DATE);
-		stmt.setInt (1, proj.getId ());
 
-		
-		// Collect data:
-		ResultSet res = stmt.executeQuery ();
-		if (res.next ()) {
-			return resGetDate (res, 1);
-		}
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_START_DATE);
+			stmt.setInt (1, proj.getId ());
 	
-		return new Date ();
+			
+			// Collect data:
+			res = stmt.executeQuery ();
+			if (res.next ()) {
+				return resGetDate (res, 1);
+			}
+		
+			return new Date ();
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
 	}
 
 	public List<Integer> getUserSelection () throws SQLException {
 		assert (conn != null);
 
-		// Statement:
-		PreparedStatement stmt = conn.prepareStatement (SELECT_SELECTED_USERS);
+		PreparedStatement stmt = null;
+		ResultSet res = null;
 
-		// Collect data:
-		LinkedList<Integer> users = new LinkedList<Integer> ();
-		ResultSet res = stmt.executeQuery ();
-		while (res.next ()) {
-			users.add (res.getInt (1));
+		try {
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_SELECTED_USERS);
+	
+			// Collect data:
+			LinkedList<Integer> users = new LinkedList<Integer> ();
+			res = stmt.executeQuery ();
+			while (res.next ()) {
+				users.add (res.getInt (1));
+			}
+
+			return users;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
 		}
-		
-		return users;
 	}
 
 	public void updateUserSelection (List<Integer> selectedUsers) throws SQLException {
 		assert (conn != null);
 		assert (selectedUsers != null);
 
-		// Drop old selections:
-		PreparedStatement stmt = conn.prepareStatement (DELETE_SELECTED_USERS);
-		stmt.executeUpdate();
-		stmt.close ();
-		
-		// Insert new selections:
-		stmt = conn.prepareStatement (SELECTED_USER_INSERTION);
-		for (Integer id : selectedUsers) {
-			stmt.setInt (1, id);
-			stmt.executeUpdate();
-		}
+		PreparedStatement stmt1 = null;
+		PreparedStatement stmt2 = null;
 
-		stmt.close ();
+		try {
+			// Drop old selections:
+			stmt1 = conn.prepareStatement (DELETE_SELECTED_USERS);
+			stmt1.executeUpdate();
+			
+			// Insert new selections:
+			stmt2 = conn.prepareStatement (SELECTED_USER_INSERTION);
+			for (Integer id : selectedUsers) {
+				stmt2.setInt (1, id);
+				stmt2.executeUpdate();
+			}
+		} finally {
+			if (stmt1 != null) {
+				stmt1.close ();
+			}
+			if (stmt2 != null) {
+				stmt2.close ();
+			}
+		}
 	}
+
 
 	//
 	// Helper:
@@ -6494,81 +7810,88 @@ public class Model {
 	private void createTables () throws SQLException {
 		assert (conn != null);
 
-		Statement stmt = conn.createStatement();
-		stmt.executeUpdate (PROJECT_TABLE);
-		stmt.executeUpdate (USER_TABLE);
-		stmt.executeUpdate (IDENTITY_TABLE);
-		stmt.executeUpdate (INTERACTION_TABLE);
-		stmt.executeUpdate (COMPONENT_TABLE);
-		stmt.executeUpdate (PRIORITY_TABLE);
-		stmt.executeUpdate (RESOLUTION_TABLE);
-		stmt.executeUpdate (SEVERITY_TABLE);
-		stmt.executeUpdate (VERSION_TABLE);
-		stmt.executeUpdate (PLATFORMS_TABLE);
-		stmt.executeUpdate (MILESTONE_TABLE);
-		stmt.executeUpdate (OPERATING_SYSTEM_TABLE);
-		stmt.executeUpdate (KEYWORD_TABLE);
-		stmt.executeUpdate (BUG_FLAG_STATUS_TABLE);
-		stmt.executeUpdate (BUG_FLAG_TABLE);
-		stmt.executeUpdate (BUG_GROUP_TABLE);
-		stmt.executeUpdate (BUG_TABLE);
-		stmt.executeUpdate (BUG_FLAG_ASSIGNMENT_TABLE);
-		stmt.executeUpdate (BUG_GROUPS_TABLE);
-		stmt.executeUpdate (BUG_CC_TABLE);
-		stmt.executeUpdate (BUG_KEYWORDS_TABLE);
-		stmt.executeUpdate (ASSIGNED_TO_HISTORY_TABLE);
-		stmt.executeUpdate (QA_CONTACT_HISTORY_TABLE);
-		stmt.executeUpdate (PRIORITY_HISTORY_TABLE);
-		stmt.executeUpdate (SEVERITY_HISTORY_TABLE);
-		stmt.executeUpdate (RESOLUTION_HISTORY_TABLE);
-		stmt.executeUpdate (CONFIRMED_HISTORY_TABLE);
-		stmt.executeUpdate (VERSION_HISTORY_TABLE);
-		stmt.executeUpdate (MILESTONE_HISTORY_TABLE);
-		stmt.executeUpdate (OPERATING_SYSTEM_HISTORY_TABLE);
-		stmt.executeUpdate (KEYWORD_HISTORY_TABLE);
-		stmt.executeUpdate (BUG_ALIASES);
-		stmt.executeUpdate (BUG_DEADLINE_TABLE);
-		stmt.executeUpdate (BUG_DUPLICATION_TABLE);
-		stmt.executeUpdate (BUG_QA_CONTACT_TABLE);
-		stmt.executeUpdate (BUG_SEE_ALSO_TABLE);
-		stmt.executeUpdate (BUG_CLASS_TABLE);
-		stmt.executeUpdate (COMMENT_TABLE);
-		stmt.executeUpdate (BUG_DUPLICATION_COMMENT_TABLE);
-		stmt.executeUpdate (STATUS_TABLE);
-		stmt.executeUpdate (BUG_HISTORY_TABLE);
-		stmt.executeUpdate (STATUS_HISTORY_TABLE);
-		stmt.executeUpdate (CC_TABLE);
-		stmt.executeUpdate (BUG_BLOCKS_HISTORY_TABLE);
-		stmt.executeUpdate (BUG_BLOCKS_TABLE);
-		stmt.executeUpdate (BUG_DEPENDS_ON_TABLE);
-		stmt.executeUpdate (BUG_DEPENDENCY_HISTORY_TABLE);
-		stmt.executeUpdate (CATEGORY_TABLE);
-		stmt.executeUpdate (COMMIT_TABLE);
-		stmt.executeUpdate (BUGFIX_COMMIT_TABLE);
-		stmt.executeUpdate (FILE_TABLE);
-		stmt.executeUpdate (FILE_RENAMES_TABLE);
-		stmt.executeUpdate (FILE_CHANGES_TABLE);
-		stmt.executeUpdate (FILE_DELETION_TABLE);
-		stmt.executeUpdate (FILE_COPY_TABLE);
-		stmt.executeUpdate (BUG_COMMENT_COUNT_UPDATE_TRIGGER);
-		stmt.executeUpdate (PROJECT_FLAG_TABLE);
-		stmt.executeUpdate (ATTACHMENT_TABLE);
-		stmt.executeUpdate (ATTACHMENT_STATUS_TABLE);
-		stmt.executeUpdate (ATTACHMENT_STATUS_HISTORY_TABLE);
-		stmt.executeUpdate (ATTACHMENT_HISTORY_TABLE);
-		stmt.executeUpdate (ATTACHMENT_DETAIL_TABLE);
-		stmt.executeUpdate (BUG_ATTACHMENT_FLAG_ASSIGNMENT_TABLE);
-		stmt.executeUpdate (BUG_ATTACHMENT_REVIEW_COMMENT_TABLE);
-		stmt.executeUpdate (BUG_CATEGORIES_TABLE);
-		stmt.executeUpdate (COMMIT_CATEGORIES_TABLE);
-		stmt.executeUpdate (DICTIONARY_TABLE);
-		stmt.executeUpdate (SENTENCE_SENTIMENT_TABLE);
-		stmt.executeUpdate (BUG_COMMENT_SENTIMENT_TABLE);
-		stmt.executeUpdate (BLOCK_SENTIMENT_TABLE);
-		stmt.executeUpdate (SENTIMENT_TABLE);
-		stmt.executeUpdate (SELECTED_USER_TABLE);
-		stmt.executeUpdate (ATTACHMENT_ISOBSOLETE_TABLE);
-		stmt.executeUpdate (SOCIAL_STATS_TABLE);
-		stmt.close ();
+		Statement stmt = null;
+
+		try {
+			stmt = conn.createStatement();
+			stmt.executeUpdate (PROJECT_TABLE);
+			stmt.executeUpdate (USER_TABLE);
+			stmt.executeUpdate (IDENTITY_TABLE);
+			stmt.executeUpdate (INTERACTION_TABLE);
+			stmt.executeUpdate (COMPONENT_TABLE);
+			stmt.executeUpdate (PRIORITY_TABLE);
+			stmt.executeUpdate (RESOLUTION_TABLE);
+			stmt.executeUpdate (SEVERITY_TABLE);
+			stmt.executeUpdate (VERSION_TABLE);
+			stmt.executeUpdate (PLATFORMS_TABLE);
+			stmt.executeUpdate (MILESTONE_TABLE);
+			stmt.executeUpdate (OPERATING_SYSTEM_TABLE);
+			stmt.executeUpdate (KEYWORD_TABLE);
+			stmt.executeUpdate (BUG_FLAG_STATUS_TABLE);
+			stmt.executeUpdate (BUG_FLAG_TABLE);
+			stmt.executeUpdate (BUG_GROUP_TABLE);
+			stmt.executeUpdate (BUG_TABLE);
+			stmt.executeUpdate (BUG_FLAG_ASSIGNMENT_TABLE);
+			stmt.executeUpdate (BUG_GROUPS_TABLE);
+			stmt.executeUpdate (BUG_CC_TABLE);
+			stmt.executeUpdate (BUG_KEYWORDS_TABLE);
+			stmt.executeUpdate (ASSIGNED_TO_HISTORY_TABLE);
+			stmt.executeUpdate (QA_CONTACT_HISTORY_TABLE);
+			stmt.executeUpdate (PRIORITY_HISTORY_TABLE);
+			stmt.executeUpdate (SEVERITY_HISTORY_TABLE);
+			stmt.executeUpdate (RESOLUTION_HISTORY_TABLE);
+			stmt.executeUpdate (CONFIRMED_HISTORY_TABLE);
+			stmt.executeUpdate (VERSION_HISTORY_TABLE);
+			stmt.executeUpdate (MILESTONE_HISTORY_TABLE);
+			stmt.executeUpdate (OPERATING_SYSTEM_HISTORY_TABLE);
+			stmt.executeUpdate (KEYWORD_HISTORY_TABLE);
+			stmt.executeUpdate (BUG_ALIASES);
+			stmt.executeUpdate (BUG_DEADLINE_TABLE);
+			stmt.executeUpdate (BUG_DUPLICATION_TABLE);
+			stmt.executeUpdate (BUG_QA_CONTACT_TABLE);
+			stmt.executeUpdate (BUG_SEE_ALSO_TABLE);
+			stmt.executeUpdate (BUG_CLASS_TABLE);
+			stmt.executeUpdate (COMMENT_TABLE);
+			stmt.executeUpdate (BUG_DUPLICATION_COMMENT_TABLE);
+			stmt.executeUpdate (STATUS_TABLE);
+			stmt.executeUpdate (BUG_HISTORY_TABLE);
+			stmt.executeUpdate (STATUS_HISTORY_TABLE);
+			stmt.executeUpdate (CC_TABLE);
+			stmt.executeUpdate (BUG_BLOCKS_HISTORY_TABLE);
+			stmt.executeUpdate (BUG_BLOCKS_TABLE);
+			stmt.executeUpdate (BUG_DEPENDS_ON_TABLE);
+			stmt.executeUpdate (BUG_DEPENDENCY_HISTORY_TABLE);
+			stmt.executeUpdate (CATEGORY_TABLE);
+			stmt.executeUpdate (COMMIT_TABLE);
+			stmt.executeUpdate (BUGFIX_COMMIT_TABLE);
+			stmt.executeUpdate (FILE_TABLE);
+			stmt.executeUpdate (FILE_RENAMES_TABLE);
+			stmt.executeUpdate (FILE_CHANGES_TABLE);
+			stmt.executeUpdate (FILE_DELETION_TABLE);
+			stmt.executeUpdate (FILE_COPY_TABLE);
+			stmt.executeUpdate (BUG_COMMENT_COUNT_UPDATE_TRIGGER);
+			stmt.executeUpdate (PROJECT_FLAG_TABLE);
+			stmt.executeUpdate (ATTACHMENT_TABLE);
+			stmt.executeUpdate (ATTACHMENT_STATUS_TABLE);
+			stmt.executeUpdate (ATTACHMENT_STATUS_HISTORY_TABLE);
+			stmt.executeUpdate (ATTACHMENT_HISTORY_TABLE);
+			stmt.executeUpdate (ATTACHMENT_DETAIL_TABLE);
+			stmt.executeUpdate (BUG_ATTACHMENT_FLAG_ASSIGNMENT_TABLE);
+			stmt.executeUpdate (BUG_ATTACHMENT_REVIEW_COMMENT_TABLE);
+			stmt.executeUpdate (BUG_CATEGORIES_TABLE);
+			stmt.executeUpdate (COMMIT_CATEGORIES_TABLE);
+			stmt.executeUpdate (DICTIONARY_TABLE);
+			stmt.executeUpdate (SENTENCE_SENTIMENT_TABLE);
+			stmt.executeUpdate (BUG_COMMENT_SENTIMENT_TABLE);
+			stmt.executeUpdate (BLOCK_SENTIMENT_TABLE);
+			stmt.executeUpdate (SENTIMENT_TABLE);
+			stmt.executeUpdate (SELECTED_USER_TABLE);
+			stmt.executeUpdate (ATTACHMENT_ISOBSOLETE_TABLE);
+			stmt.executeUpdate (SOCIAL_STATS_TABLE);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
 	}
 }

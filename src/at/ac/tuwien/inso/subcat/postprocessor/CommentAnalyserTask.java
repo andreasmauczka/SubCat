@@ -28,7 +28,6 @@ public class CommentAnalyserTask extends PostProcessorTask {
 	private SentimentAnalyser<Identity> analyser;
 	private Parser<Identity> parser;
 	private Finder<Identity> finder;
-	private Model model;
 
 	private int commentUpdateCnt = 0;
 	private int commentCnt = 0;
@@ -49,10 +48,11 @@ public class CommentAnalyserTask extends PostProcessorTask {
 		private HashMap<Integer, Identity> authorsById;
 		private LinkedList<AuthorStats> stats;
 		private Project project;
+		private Model model;
 
 		private List<SentimentBlock> sentimentBlocks;
-
-		public Sentiment analyse (CommentNode<Identity> commentNode, Comment comment, Project project, List<Comment> comments, LinkedList<CommentNode<Identity>> analysedComments, HashMap<Integer, Identity> authorsById, LinkedList<AuthorStats> stats) throws PostProcessorException {
+		
+		public Sentiment analyse (CommentNode<Identity> commentNode, Comment comment, Project project, List<Comment> comments, LinkedList<CommentNode<Identity>> analysedComments, HashMap<Integer, Identity> authorsById, LinkedList<AuthorStats> stats, Model model) throws PostProcessorException {
 			this.sentimentBlocks = new LinkedList<SentimentBlock> ();
 			this.commentIdentity = comment.getIdentity ();
 			this.analysedComments = analysedComments;
@@ -61,7 +61,9 @@ public class CommentAnalyserTask extends PostProcessorTask {
 			this.stats = stats;
 			this.project = project;
 
+			this.model = model;
 			commentNode.accept (this);
+			this.model = null;
 
 			this.analysedComments = null;
 			this.comments = null;
@@ -167,7 +169,7 @@ public class CommentAnalyserTask extends PostProcessorTask {
 					maxIndex = i;
 				}
 			}
-			
+
 			Iterator<CommentNode<Identity>> iter = comments.descendingIterator ();
 			while (iter.hasNext ()) {
 				CommentNode<Identity> comment = iter.next ();
@@ -190,63 +192,96 @@ public class CommentAnalyserTask extends PostProcessorTask {
 		this.parser = new Parser<Identity> ();
 		this.finder = new Finder<Identity> ();
 		
+		Model model = null;
 		try {
-			this.model = processor.getModelPool ().getModel ();
+			model = processor.getModelPool ().getModel ();
 			commentUpdateCnt = model.getSentimentState (processor.getProject ());
 			commentCnt = 0;
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);
+		} finally {
+			if (model != null) {
+				model.close ();
+			}
 		}
 	}
 
 	@Override
 	public void end (PostProcessor processor) throws PostProcessorException {
-		if (model != null) {
-			model.close ();
-		}
+		this.analyser = null;
+		this.finder = null;
+		this.parser= null;
 	}
 
 	@Override
 	public void bug (PostProcessor processor, Bug bug, List<BugHistory> history, List<Comment> comments) throws PostProcessorException {
-		try {
-			model.begin ();
-
 			LinkedList<CommentNode<Identity>> analysedComments = new LinkedList<CommentNode<Identity>> ();
 			HashMap<Integer, Identity> authorsById = new HashMap<Integer, Identity> ();
 
+		Model model = null;
+		try {
+			model = processor.getModelPool ().getModel ();
+
+			// Analyse all comments first to avoid long transactions:
+			LinkedList<Stats> bugStats = new LinkedList<Stats> ();
 			for (Comment comment : comments) {
 				if (commentCnt > commentUpdateCnt) {
 					Identity author = comment.getIdentity ();
-			
+				
 					CommentNode<Identity> commentNode = parser.parse (comment.getContent ());
 					commentNode.setData (comment.getIdentity ());
-		
+			
 					authorsById.put (author.getId (), author);
 					CommentAnalyser analyser = new CommentAnalyser ();
 					LinkedList<AuthorStats> stats = new LinkedList<AuthorStats> ();
-					Sentiment sentiment = analyser.analyse (commentNode, comment, processor.getProject (), comments, analysedComments, authorsById, stats);
-		
-					model.addSentiment (sentiment);
-					model.addBugCommentSentiment (comment, sentiment);
-					for (AuthorStats stat : stats) {
-						model.addSocialStats (stat.from, stat.to, stat.quotations, stat.patchesReviewed);
-					}
-		
+					Sentiment sentiment = analyser.analyse (commentNode, comment, processor.getProject (), comments, analysedComments, authorsById, stats, model);		
 					analysedComments.add (commentNode);
+
+					bugStats.add (new Stats (comment, sentiment, stats));
 				}
 				commentCnt++;
 			}
-
-			model.commit ();
-		} catch (SQLException e) {
+	
 			try {
-				model.rollback ();
-			} catch (SQLException e1) {
+				model.begin ();
+	
+				for (Stats bStats : bugStats) {
+					model.addSentiment (bStats.sentiment);
+					model.addBugCommentSentiment (bStats.comment, bStats.sentiment);
+					for (AuthorStats stat : bStats.stats) {
+						model.addSocialStats (stat.from, stat.to, stat.quotations, stat.patchesReviewed);
+					}
+				}
+				
+				model.commit ();
+			} catch (SQLException e) {
+				try {
+					model.rollback ();
+				} catch (SQLException e1) {
+				}
+				throw e;
 			}
+		} catch (SQLException e) {
 			throw new PostProcessorException (e);
+		} finally {
+			model.close ();
 		}
 	}
 
+	private static class Stats {
+		public Comment comment;
+		public Sentiment sentiment;
+		public LinkedList<AuthorStats> stats;
+
+		public Stats(Comment comment, Sentiment sentiment,
+				LinkedList<AuthorStats> stats) {
+			super ();
+			this.comment = comment;
+			this.sentiment = sentiment;
+			this.stats = stats;
+		}
+
+	}
 
 	@Override
 	public String getName () {

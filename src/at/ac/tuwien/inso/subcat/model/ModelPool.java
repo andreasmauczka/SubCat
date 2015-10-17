@@ -9,7 +9,6 @@ import java.util.Date;
 import java.util.LinkedList;
 
 import org.sqlite.SQLiteConfig;
-import org.sqlite.SQLiteConfig.SynchronousMode;
 
 import at.ac.tuwien.inso.subcat.utility.sentiment.Sentiment;
 

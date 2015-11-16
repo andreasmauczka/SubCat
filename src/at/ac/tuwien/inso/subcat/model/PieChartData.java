@@ -52,7 +52,6 @@ public class PieChartData {
 	
 	public void setFraction (String name, int value) {
 		assert (name != null);
-		assert (value >= 0 && value <= 100);
 		
 		data.put (name, value);
 		total += value;

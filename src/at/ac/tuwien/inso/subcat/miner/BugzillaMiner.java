@@ -836,8 +836,8 @@ public class BugzillaMiner extends Miner {
 		try {
 			model = pool.getModel ();
 
-			passSize = settings.bugGetParameter (this, "pass-size", 20);
-			pageSize = settings.bugGetParameter (this, "page-size", 200);
+			passSize = settings.bugGetParameter (this, "pass-size", 10);
+			pageSize = settings.bugGetParameter (this, "page-size", 50);
 
 			if (settings.bugUpdate) {
 				List<String> flags = model.getFlags (project);

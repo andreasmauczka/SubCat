@@ -215,8 +215,8 @@ public class CommentAnalyserTask extends PostProcessorTask {
 
 	@Override
 	public void bug (PostProcessor processor, Bug bug, List<BugHistory> history, List<Comment> comments) throws PostProcessorException {
-			LinkedList<CommentNode<Identity>> analysedComments = new LinkedList<CommentNode<Identity>> ();
-			HashMap<Integer, Identity> authorsById = new HashMap<Integer, Identity> ();
+		LinkedList<CommentNode<Identity>> analysedComments = new LinkedList<CommentNode<Identity>> ();
+		HashMap<Integer, Identity> authorsById = new HashMap<Integer, Identity> ();
 
 		Model model = null;
 		try {

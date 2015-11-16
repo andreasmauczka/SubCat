@@ -933,6 +933,8 @@ public class Model {
 
 	private static final String SENTIMENT_TABLE =
 		"CREATE TABLE IF NOT EXISTS Sentiment ("
+		+ "id						INTEGER	PRIMARY KEY	AUTOINCREMENT	NOT NULL,"
+
 		+ "negative					INTEGER		NOT NULL,"
 		+ "somewhatNegative			INTEGER		NOT NULL,"
 		+ "neutral					INTEGER		NOT NULL,"

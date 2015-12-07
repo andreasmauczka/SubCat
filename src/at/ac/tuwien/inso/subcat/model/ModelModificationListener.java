@@ -228,4 +228,6 @@ public interface ModelModificationListener {
 			Sentiment sentiment);
 
 	public void socialStatsAdded (Identity src, Identity dest, int quotations);
+
+	public void commitSentimentAdded (Commit commit, Sentiment sentiment);
 }

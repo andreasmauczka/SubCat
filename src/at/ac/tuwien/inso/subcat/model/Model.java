@@ -966,6 +966,15 @@ public class Model {
 		+ "PRIMARY KEY (sentimentId, commentId)"
 		+ ")";
 
+	private static final String COMMIT_SENTIMENT_TABLE =
+		"CREATE TABLE IF NOT EXISTS CommitSentiment ("
+		+ "sentimentId	INTEGER		NOT NULL,"
+		+ "commitId		INTEGER		NOT NULL,"
+		+ "FOREIGN KEY(sentimentId) REFERENCES Sentiment (id),"
+		+ "FOREIGN KEY(commitId) REFERENCES Commit (id),"
+		+ "PRIMARY KEY (sentimentId, commitId)"
+		+ ")";
+
 	
 	//
 	// Triggers:
@@ -1389,10 +1398,20 @@ public class Model {
 		+ " Comments.bug = ?"
 		+ " AND Comments.pos = ?";
 
-	private static final String SELECT_SENTIMENT_STATES =
+	private static final String SELECT_BUG_SENTIMENT_STATES =
 		"SELECT "
 		+ "(SELECT count(*) FROM Comments, Bugs, Components, BugCommentSentiment WHERE Comments.bug = Bugs.id AND Bugs.component = Components.id AND BugCommentSentiment.commentId = Comments.id AND project = ?)";
 
+	private static final String SELECT_COMMIT_SENTIMENT_STATES =
+		"SELECT "
+		+ " count(*) "
+		+ "FROM "
+		+ " Commits,"
+		+ " CommitSentiment "
+		+ "WHERE"
+		+ " Commits.id = CommitSentiment.commitId"
+		+ " AND Commits.project = ?";
+	
 	private static final String SELECT_FULL_HISTORY =
 		"SELECT"
 		+ " BugHistory.id,"
@@ -2061,6 +2080,11 @@ public class Model {
 		+ "(sentimentId, commentId)"
 		+ "VALUES (?, ?)";
 
+	private static final String COMMIT_SENTIMENT_INSERTION =
+		"INSERT INTO CommitSentiment"
+		+ "(sentimentId, commitId)"
+		+ "VALUES (?, ?)";
+	
 	private static final String SENTIMENT_SENTENCE_INSERTION =
 		"INSERT INTO SentenceSentiment ("
 		+ "groupId,"
@@ -5465,7 +5489,32 @@ public class Model {
 			}
 		}
 	}
+
+	public void addCommitSentiment (Commit commit, Sentiment sentiment) throws SQLException {
+		assert (commit != null);
+		assert (commit.getId () != null);
+		assert (sentiment != null);
+		assert (sentiment.getId () != null);
+
+		PreparedStatement stmt = null;
+
+		try {
+			stmt = conn.prepareStatement (COMMIT_SENTIMENT_INSERTION,
+					Statement.RETURN_GENERATED_KEYS);
 	
+			stmt.setInt (1, sentiment.getId ());
+			stmt.setInt (2, commit.getId ());
+			stmt.executeUpdate();
+			stmt.close ();
+	
+			pool.emitCommitSentimentAdded (commit, sentiment);
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
+	}
+
 
 	//
 	// Get Data:
@@ -7307,7 +7356,7 @@ public class Model {
 		}
 	}
 
-	public int getSentimentState (Project proj) throws SQLException {
+	public int getBugSentimentState (Project proj) throws SQLException {
 		assert (proj != null);
 		assert (proj.getId () != null);
 
@@ -7315,7 +7364,7 @@ public class Model {
 		ResultSet res = null;
 
 		try {
-			stmt = conn.prepareStatement (SELECT_SENTIMENT_STATES);
+			stmt = conn.prepareStatement (SELECT_BUG_SENTIMENT_STATES);
 			stmt.setInt (1, proj.getId ());
 			res = stmt.executeQuery ();
 	
@@ -7333,6 +7382,34 @@ public class Model {
 				stmt.close ();
 			}
 		}
+	}
+
+	public int getCommitSentimentState (Project proj) throws SQLException {
+		assert (proj != null);
+		assert (proj.getId () != null);
+
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			stmt = conn.prepareStatement (SELECT_COMMIT_SENTIMENT_STATES);
+			stmt.setInt (1, proj.getId ());
+			res = stmt.executeQuery ();
+	
+			int commentCnt = 0;
+			if (res.next ()) {
+				commentCnt = res.getInt (1);
+			}
+
+			return commentCnt;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}		
 	}
 
 	public List<Comment> getComments (Project proj, Bug bug) throws SQLException {
@@ -7885,6 +7962,7 @@ public class Model {
 			stmt.executeUpdate (DICTIONARY_TABLE);
 			stmt.executeUpdate (SENTENCE_SENTIMENT_TABLE);
 			stmt.executeUpdate (BUG_COMMENT_SENTIMENT_TABLE);
+			stmt.executeUpdate (COMMIT_SENTIMENT_TABLE);
 			stmt.executeUpdate (BLOCK_SENTIMENT_TABLE);
 			stmt.executeUpdate (SENTIMENT_TABLE);
 			stmt.executeUpdate (SELECTED_USER_TABLE);

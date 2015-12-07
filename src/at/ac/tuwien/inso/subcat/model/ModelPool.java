@@ -706,4 +706,10 @@ public class ModelPool {
 			listener.socialStatsAdded (src, dest, quotations);
 		}
 	}
+
+	public void emitCommitSentimentAdded (Commit commit, Sentiment sentiment) {
+		for (ModelModificationListener listener : listeners) {
+			listener.commitSentimentAdded (commit, sentiment);
+		}
+	}
 }

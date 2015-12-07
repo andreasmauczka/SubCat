@@ -9,6 +9,7 @@ import java.util.List;
 import at.ac.tuwien.inso.subcat.model.Bug;
 import at.ac.tuwien.inso.subcat.model.BugHistory;
 import at.ac.tuwien.inso.subcat.model.Comment;
+import at.ac.tuwien.inso.subcat.model.Commit;
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Project;
@@ -29,17 +30,34 @@ public class CommentAnalyserTask extends PostProcessorTask {
 	private Parser<Identity> parser;
 	private Finder<Identity> finder;
 
+	private int commitUpdateCnt = 0;
+	private int commitCnt = 0;
 	private int commentUpdateCnt = 0;
 	private int commentCnt = 0;
 
-	private class AuthorStats {
-		private Identity from;
-		private Identity to;
+	private static class Stats {
+		public Comment comment;
+		public Sentiment sentiment;
+		public LinkedList<AuthorStats> stats;
 
-		private int quotations;
-		public int patchesReviewed;
+		public Stats (Comment comment, Sentiment sentiment,
+				LinkedList<AuthorStats> stats) {
+			super ();
+			this.comment = comment;
+			this.sentiment = sentiment;
+			this.stats = stats;
+		}
+
 	}
 
+	private class AuthorStats {
+		public Identity from;
+		public Identity to;
+
+		public int quotations;
+		public int patchesReviewed;
+	}
+	
 	private class CommentAnalyser extends ContentNodeVisitor<Identity> {
 		private LinkedList<CommentNode<Identity>> analysedComments;
 		private List<Comment> comments;
@@ -183,7 +201,7 @@ public class CommentAnalyserTask extends PostProcessorTask {
 	}
 
 	public CommentAnalyserTask () {
-		super (PostProcessorTask.BEGIN | PostProcessorTask.BUG | PostProcessorTask.END);
+		super (PostProcessorTask.BEGIN | PostProcessorTask.BUG | PostProcessorTask.COMMIT | PostProcessorTask.END);
 	}
 
 	@Override
@@ -195,8 +213,10 @@ public class CommentAnalyserTask extends PostProcessorTask {
 		Model model = null;
 		try {
 			model = processor.getModelPool ().getModel ();
-			commentUpdateCnt = model.getSentimentState (processor.getProject ());
+			commentUpdateCnt = model.getBugSentimentState (processor.getProject ());
 			commentCnt = 0;
+			commitUpdateCnt = model.getCommitSentimentState (processor.getProject ());
+			commitCnt = 0;
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);
 		} finally {
@@ -264,23 +284,45 @@ public class CommentAnalyserTask extends PostProcessorTask {
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);
 		} finally {
-			model.close ();
+			if (model != null) {
+				model.close ();
+			}
 		}
 	}
 
-	private static class Stats {
-		public Comment comment;
-		public Sentiment sentiment;
-		public LinkedList<AuthorStats> stats;
-
-		public Stats(Comment comment, Sentiment sentiment,
-				LinkedList<AuthorStats> stats) {
-			super ();
-			this.comment = comment;
-			this.sentiment = sentiment;
-			this.stats = stats;
+	public void commit (PostProcessor processor, Commit commit) throws PostProcessorException {
+		if (commitCnt > commitUpdateCnt) {
+			String[] paras = commit.getTitle ().split ("\n[ \t]*\n");
+			LinkedList<SentimentBlock> blocks = new LinkedList<SentimentBlock> (); 
+			for (String para : paras) {
+				SentimentBlock block = analyser.get (para.replace ('\n', ' '));
+				blocks.add (block);
+			}
+	
+			Model model = null;
+			try {
+				Sentiment sentiment = new Sentiment (blocks);
+				model = processor.getModelPool ().getModel ();
+				model.begin ();
+				model.addSentiment (sentiment);
+				model.addCommitSentiment (commit, sentiment);
+				model.commit ();
+			} catch (SQLException e) {
+				if (model != null) {
+					try {
+						model.rollback ();
+					} catch (SQLException e1) {
+					}
+				}
+				throw new PostProcessorException (e);
+			} finally {
+				if (model != null) {
+					model.close ();
+				}
+			}
+			
 		}
-
+		commitCnt++;
 	}
 
 	@Override

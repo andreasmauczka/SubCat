@@ -262,6 +262,35 @@ public class MinerRunner {
 
 
 
+			Project project;
+			Model model = pool.getModel ();
+			boolean hasSrcInfos = false;
+			boolean hasBugInfos = false;
+			if (cmd.hasOption ("project")) {
+				try {
+					int projId = Integer.parseInt(cmd.getOptionValue ("project"));
+					project = model.getProject (projId);
+				} catch (NumberFormatException e) {
+					reporter.error ("post-processor", "Invalid project ID");
+					reporter.printSummary ();
+					return ;
+				}
+
+				if (project == null) {
+					reporter.error ("post-processor", "Invalid project ID");
+					reporter.printSummary ();
+					return ;
+				}
+
+				List<String> flags = model.getFlags (project);
+				hasBugInfos = flags.contains (Model.FLAG_BUG_INFO);
+				hasSrcInfos = flags.contains (Model.FLAG_SRC_INFO);
+			} else {
+				project = model.addProject (new Date (), null, settings.bugTrackerName, settings.bugRepository, settings.bugProductName, null);
+			}
+			model.close ();
+
+
 			//
 			// Source Repository Mining:
 			//
@@ -290,6 +319,12 @@ public class MinerRunner {
 				return ;
 			}
 
+
+			if (settings.srcLocalPath != null && hasSrcInfos) {
+				reporter.error ("miner", "Source repository updates are not supported yet.");
+				reporter.printSummary (true);
+				return ;
+			}
 			
 			
 			//
@@ -302,28 +337,6 @@ public class MinerRunner {
 			settings.bugEnableUntrustedCertificates = cmd.hasOption ("bug-enable-untrusted");
 			settings.bugLoginUser = cmd.getOptionValue ("bug-account");
 			settings.bugLoginPw = cmd.getOptionValue ("bug-passwd");
-
-			Project project;
-			Model model = pool.getModel ();
-			if (cmd.hasOption ("project")) {
-				try {
-					int projId = Integer.parseInt(cmd.getOptionValue ("project"));
-					project = model.getProject (projId);
-				} catch (NumberFormatException e) {
-					reporter.error ("post-processor", "Invalid project ID");
-					reporter.printSummary ();
-					return ;
-				}
-
-				if (project == null) {
-					reporter.error ("post-processor", "Invalid project ID");
-					reporter.printSummary ();
-					return ;
-				}
-			} else {
-				project = model.addProject (new Date (), null, settings.bugTrackerName, settings.bugRepository, settings.bugProductName, null);
-			}
-			model.close ();
 
 
 			settings.bugUpdate = cmd.hasOption ("bug-update");
@@ -349,9 +362,11 @@ public class MinerRunner {
 				settings.bugRepository = project.getDomain ();
 				includeBugs = true;
 			} else if (settings.bugRepository != null && settings.bugProductName != null && settings.bugTrackerName != null) {
-				if (!project.getBugTracker ().equalsIgnoreCase (settings.bugTrackerName)
-					|| !project.getProduct ().equalsIgnoreCase (settings.bugProductName)
-					|| !project.getDomain ().equalsIgnoreCase (settings.bugRepository))
+				if (hasBugInfos == false) {
+					// The user is trying to append bug tracker information to a existing project.
+				} else if (!settings.bugTrackerName.equalsIgnoreCase (project.getBugTracker ())
+					|| !settings.bugProductName.equalsIgnoreCase (project.getProduct ())
+					|| !settings.bugRepository.equalsIgnoreCase (project.getDomain ()))
 				{
 					reporter.error ("miner", "There are already previously mined bugs for this project. Use --bug-update to update the database.");
 					reporter.printSummary (true);

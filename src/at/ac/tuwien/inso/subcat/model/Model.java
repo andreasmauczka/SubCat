@@ -971,7 +971,7 @@ public class Model {
 		+ "sentimentId	INTEGER		NOT NULL,"
 		+ "commitId		INTEGER		NOT NULL,"
 		+ "FOREIGN KEY(sentimentId) REFERENCES Sentiment (id),"
-		+ "FOREIGN KEY(commitId) REFERENCES Commit (id),"
+		+ "FOREIGN KEY(commitId) REFERENCES Commits (id),"
 		+ "PRIMARY KEY (sentimentId, commitId)"
 		+ ")";
 
@@ -1076,7 +1076,9 @@ public class Model {
 		+ "LEFT JOIN Users CommitterUser"
 		+ " ON CommitterUser.id = CommitterIdentity.user "
 		+ "WHERE"
-		+ " Commits.project = ?";
+		+ " Commits.project = ? "
+		+ "ORDER BY "
+		+ " date (Commits.date)";
 
 	private static final String SELECT_ALL_BUGS = 
 		"SELECT"
@@ -1113,7 +1115,9 @@ public class Model {
 		+ "JOIN Components"
 		+ " ON Components.id = Bugs.component "
 		+ "WHERE"
-		+ " Components.project = ?";
+		+ " Components.project = ? "
+		+ "ORDER BY "
+		+ " date (Bugs.creation)";
 
 	private static final String SELECT_BUG = 
 		"SELECT"
@@ -1178,7 +1182,9 @@ public class Model {
 		+ " ON BugClasses.id = Bugs.classification "
 		+ "WHERE"
 		+ " Components.project = ?"
-		+ " AND Bugs.identifier = ?";
+		+ " AND Bugs.identifier = ? "
+		+ "ORDER BY "
+		+ " date (Bugs.creation)";
 
 	private static final String SELECT_ALL_CATEGORIES =
 		"SELECT"
@@ -7869,9 +7875,14 @@ public class Model {
 	}
 
 	private Date resGetDate (ResultSet res, int pos) throws SQLException {
-		SimpleDateFormat formatter = new SimpleDateFormat ("yyyy-MM-dd HH:mm:ss");
-	    try {
-			return formatter.parse (res.getString (pos));
+		String str = res.getString (pos);
+		if (str == null) {
+			return null;
+		}
+		
+		try {
+	    	SimpleDateFormat formatter = new SimpleDateFormat ("yyyy-MM-dd HH:mm:ss");
+			return formatter.parse (str);
 		} catch (ParseException e) {
 			// TODO
 			return null;

@@ -186,6 +186,11 @@ public class Identity {
 		return super.equals (obj);
 	}
 
+	@Override
+	public int hashCode() {
+		return (id == null)? super.hashCode () : id;
+	}
+
 	public String getContext () {
 		return context;
 	}

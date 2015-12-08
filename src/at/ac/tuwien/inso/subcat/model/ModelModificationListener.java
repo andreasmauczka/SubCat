@@ -227,7 +227,7 @@ public interface ModelModificationListener {
 	public void bugCommentSentimentAdded (Comment comment,
 			Sentiment sentiment);
 
-	public void socialStatsAdded (Identity src, Identity dest, int quotations);
+	public void socialStatsAdded (Identity src, Identity dest, int quotations, int patchesReviewed, int bugInteractions, int fileInteractions);
 
 	public void commitSentimentAdded (Commit commit, Sentiment sentiment);
 }

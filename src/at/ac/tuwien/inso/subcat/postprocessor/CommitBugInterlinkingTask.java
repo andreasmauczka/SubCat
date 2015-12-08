@@ -32,12 +32,14 @@ package at.ac.tuwien.inso.subcat.postprocessor;
 
 import java.sql.SQLException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.regex.Pattern;
 
 import at.ac.tuwien.inso.subcat.model.Bug;
 import at.ac.tuwien.inso.subcat.model.Commit;
+import at.ac.tuwien.inso.subcat.model.FileChange;
 import at.ac.tuwien.inso.subcat.model.Model;
 
 
@@ -240,7 +242,7 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 	}
 	
 	@Override
-	public void commit (PostProcessor processor, Commit commit) throws PostProcessorException {
+	public void commit (PostProcessor processor, Commit commit, List<FileChange> changes) throws PostProcessorException {
 		Model model = null;
 		try {
 			model = processor.getModelPool ().getModel ();			

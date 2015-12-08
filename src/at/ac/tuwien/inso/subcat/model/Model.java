@@ -148,10 +148,12 @@ public class Model {
 
 	private static final String SOCIAL_STATS_TABLE =
 		"CREATE TABLE IF NOT EXISTS SocialStats ("
-		+ "src             INTEGER     NOT NULL,"
-		+ "dest            INTEGER     NOT NULL,"
-		+ "quotations      INTEGER     NOT NULL,"
-		+ "patchesReviewed INTEGER     NOT NULL,"
+		+ "src               INTEGER     NOT NULL,"
+		+ "dest              INTEGER     NOT NULL,"
+		+ "quotations        INTEGER     NOT NULL,"
+		+ "patchesReviewed   INTEGER     NOT NULL,"
+		+ "bugInteractions   INTEGER	 NOT NULL,"
+		+ "fileInteractions  INTEGER     NOT NULL,"
 		+ "PRIMARY KEY (src, dest),"
 		+ "FOREIGN KEY(src) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(dest) REFERENCES Identities (id)"
@@ -830,6 +832,8 @@ public class Model {
 		+ "FOREIGN KEY(project) REFERENCES Projects (id)"
 		+ ")";
 
+	// TODO: Files.touched handler
+
 	private static final String FILE_DELETION_TABLE =
 		"CREATE TABLE IF NOT EXISTS FileDeletion ("
 		+ "fileId			INTEGER		NOT NULL,"
@@ -873,8 +877,6 @@ public class Model {
 		+ "FOREIGN KEY(commitId) REFERENCES Commits (id),"
 		+ "FOREIGN KEY(file) REFERENCES Files (id)"
 		+ ")";
-
-	// TODO: Files.touched handler
 	
 	private static final String BUGFIX_COMMIT_TABLE =
 		"CREATE TABLE IF NOT EXISTS BugfixCommit ("
@@ -987,6 +989,27 @@ public class Model {
 		+ "  SET comments = comments + 1 "
 		+ "  WHERE Bugs.id = NEW.bug; "
 		+ "END ";
+
+	private static final String SELECT_FILE_CHANGES =
+		"SELECT "
+		+ " FileChanges.linesAdded,"
+		+ " FileChanges.linesRemoved,"
+		+ " FileChanges.emptyLinesAdded,"
+		+ " FileChanges.emptyLinesRemoved,"
+		+ " FileChanges.chunksChanged,"
+		+ " Files.id,"
+		+ " Files.project,"
+		+ " Files.name,"
+		+ " Files.touched,"
+		+ " Files.linesAdded,"
+		+ " Files.linesRemoved,"
+		+ " Files.chunksChanged "
+		+ "FROM "
+		+ " FileChanges,"
+		+ " Files "
+		+ "WHERE "
+		+ " Files.id = FileChanges.file "
+		+ " AND FileChanges.commitId = ?";
 
 	private static final String SELECT_BUG_STATS =	
 		"SELECT "
@@ -1406,8 +1429,14 @@ public class Model {
 
 	private static final String SELECT_BUG_SENTIMENT_STATES =
 		"SELECT "
-		+ "(SELECT count(*) FROM Comments, Bugs, Components, BugCommentSentiment WHERE Comments.bug = Bugs.id AND Bugs.component = Components.id AND BugCommentSentiment.commentId = Comments.id AND project = ?)";
-
+		+ " count(*) "
+		+ "FROM "
+		+ " Comments,"
+		+ " BugCommentSentiment "
+		+ "WHERE "
+		+ " BugCommentSentiment.commentId = Comments.id"
+		+ " AND Comments.bug = ?";
+	
 	private static final String SELECT_COMMIT_SENTIMENT_STATES =
 		"SELECT "
 		+ " count(*) "
@@ -1640,12 +1669,14 @@ public class Model {
 		+ "VALUES (?,?,?,?,?)";
 
 	private static final String INSERT_OR_REPLACE_SOCIAL_STATS =
-		"INSERT OR REPLACE INTO SocialStats (src, dest, quotations, patchesReviewed)"
+		"INSERT OR REPLACE INTO SocialStats (src, dest, quotations, patchesReviewed, bugInteractions, fileInteractions)"
 		+ "VALUES ("
 		+ " ?,"
 		+ " ?,"
 		+ " COALESCE((SELECT quotations FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?,"
-		+ " COALESCE((SELECT patchesReviewed FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?"
+		+ " COALESCE((SELECT patchesReviewed FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?,"
+		+ " COALESCE((SELECT bugInteractions FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?,"
+		+ " COALESCE((SELECT fileInteractions FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?"
 		+ ")";
 	
 	private static final String INTERACTION_INSERTION =
@@ -1932,7 +1963,23 @@ public class Model {
 		+ " depends = (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Bugs.identifier = BugDependencyHistory.dependsIdentifier AND Components.project = ?) "
 		+ "WHERE"
 		+ " depends IS NULL"
-		+ " AND bug in (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
+		+ " AND bug IN (SELECT Bugs.id FROM Bugs, Components WHERE Bugs.component = Components.id AND Components.project = ?)";
+
+	private static final String CLEAN_FILE_CHANGE_INTERACTIONS =
+		"UPDATE "
+		+ " SocialStats "
+		+ "SET "
+		+ " fileInteractions = 0 "
+		+ "WHERE "
+		+ " src IN (SELECT Identities.id FROM Identities, Users WHERE Identities.user = Users.id AND Users.project = ?)";
+
+	private static final String CLEAN_BUG_CHANGE_INTERACTIONS =
+		"UPDATE "
+		+ " SocialStats "
+		+ "SET "
+		+ " bugInteractions = 0 "
+		+ "WHERE "
+		+ " src IN (SELECT Identities.id FROM Identities, Users WHERE Identities.user = Users.id AND Users.project = ?)";
 
 	private static final String COMMIT_INSERTION =
 		"INSERT INTO Commits"
@@ -2626,11 +2673,13 @@ public class Model {
 		}
 	}
 	
-	public void addSocialStats (Identity src, Identity dest, int quotations, int patchesReviewed) throws SQLException {
+	public void addSocialStats (Identity src, Identity dest, int quotations, int patchesReviewed, int bugInteractions, int fileInteractions) throws SQLException {
 		assert (src != null && src.getId () != null);
 		assert (dest != null && dest.getId () != null);
 		assert (quotations >= 0);
 		assert (patchesReviewed >= 0);
+		assert (bugInteractions >= 0);
+		assert (fileInteractions >= 0);
 
 		PreparedStatement stmt = null;
 
@@ -2648,9 +2697,17 @@ public class Model {
 			stmt.setInt (7, dest.getId ());
 			stmt.setInt (8, patchesReviewed);
 			
+			stmt.setInt (9, src.getId ());
+			stmt.setInt (10, dest.getId ());
+			stmt.setInt (11, bugInteractions);
+			
+			stmt.setInt (12, src.getId ());
+			stmt.setInt (13, dest.getId ());
+			stmt.setInt (14, fileInteractions);
+			
 			stmt.executeUpdate();
 			
-			pool.emitSocialStatsAdded (src, dest, quotations);
+			pool.emitSocialStatsAdded (src, dest, quotations, patchesReviewed, bugInteractions, fileInteractions);
 		} finally {
 			if (stmt != null) {
 				stmt.close ();
@@ -5273,6 +5330,40 @@ public class Model {
 		return change;
 	}
 
+	public void cleanFileInteractionStats (Project project) throws SQLException {
+		assert (conn != null);
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = null;
+		try {
+			stmt = conn.prepareStatement (CLEAN_FILE_CHANGE_INTERACTIONS);
+			stmt.setInt (1, project.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
+	}
+
+	public void cleanBugInteractionStats (Project project) throws SQLException {
+		assert (conn != null);
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = null;
+		try {
+			stmt = conn.prepareStatement (CLEAN_BUG_CHANGE_INTERACTIONS);
+			stmt.setInt (1, project.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
+	}
+
 	public void add (FileChange change) throws SQLException {
 		assert (conn != null);
 		assert (change != null);
@@ -5300,7 +5391,54 @@ public class Model {
 			}
 		}
 	}
+
+	public List<FileChange> getFileChanges (Commit commit) throws SQLException {
+		assert (conn != null);
+		assert (commit != null);
+		assert (commit.getId () != null);
+
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {	
+			// Statement:
+			stmt = conn.prepareStatement (SELECT_FILE_CHANGES);
+			stmt.setInt (1, commit.getId ());
 	
+			res = stmt.executeQuery ();
+			LinkedList<FileChange> changes = new LinkedList<FileChange> ();
+			while (res.next ()) {
+				// File:
+				int fileId = res.getInt (6);
+				String fileName = res.getString (8);
+				int fileTouched = res.getInt (9);
+				int fileLinesAdded = res.getInt (10);
+				int fileLinesRemoved = res.getInt (11);
+				int fileChunksChanged = res.getInt (12);
+				// TODO: deletion commits
+				ManagedFile file = new ManagedFile (fileId, commit.getProject (), fileName, null, fileTouched, fileLinesAdded, fileLinesRemoved, fileChunksChanged);
+				
+				// Change:
+				int linesAdded = res.getInt (1);
+				int linesRemoved = res.getInt (2);
+				int emptyLinesAdded = res.getInt (3);
+				int emptyLinesRemoved = res.getInt (4);
+				int changedChunks = res.getInt (5);
+
+				FileChange change = new FileChange (commit, file, linesAdded, linesRemoved, emptyLinesAdded, emptyLinesRemoved, changedChunks);
+				changes.add (change);
+			}
+
+			return changes;
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
+	}
 	
 	public BugfixCommit addBugfixCommit (Commit commit, Bug bug) throws SQLException {
 		BugfixCommit bugfix = new BugfixCommit (commit, bug);
@@ -7362,16 +7500,16 @@ public class Model {
 		}
 	}
 
-	public int getBugSentimentState (Project proj) throws SQLException {
-		assert (proj != null);
-		assert (proj.getId () != null);
+	public int getBugSentimentState (Bug bug) throws SQLException {
+		assert (bug != null);
+		assert (bug.getId () != null);
 
 		PreparedStatement stmt = null;
 		ResultSet res = null;
 
 		try {
 			stmt = conn.prepareStatement (SELECT_BUG_SENTIMENT_STATES);
-			stmt.setInt (1, proj.getId ());
+			stmt.setInt (1, bug.getId ());
 			res = stmt.executeQuery ();
 	
 			int commentCnt = 0;

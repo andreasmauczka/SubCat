@@ -89,4 +89,26 @@ public class ManagedFile {
 	public int getChunksChanged () {
 		return chunksChanged;
 	}
+
+	public boolean equals (ManagedFile obj) {
+		if (id == null || obj.id == null) {
+			return obj == this;
+		}
+
+		return id.equals (obj.id);
+	}
+
+	@Override
+	public boolean equals (Object obj) {
+		if (obj instanceof ManagedFile) {
+			return equals ((ManagedFile) obj);
+		}
+
+		return super.equals (obj);
+	}
+
+	@Override
+	public int hashCode() {
+		return (id == null)? super.hashCode () : id;
+	}
 }

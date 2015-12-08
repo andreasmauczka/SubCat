@@ -36,6 +36,7 @@ import at.ac.tuwien.inso.subcat.model.Bug;
 import at.ac.tuwien.inso.subcat.model.BugHistory;
 import at.ac.tuwien.inso.subcat.model.Comment;
 import at.ac.tuwien.inso.subcat.model.Commit;
+import at.ac.tuwien.inso.subcat.model.FileChange;
 
 
 public abstract class PostProcessorTask {
@@ -66,7 +67,7 @@ public abstract class PostProcessorTask {
 	public void begin (PostProcessor processor) throws PostProcessorException {
 	}
 	
-	public void commit (PostProcessor processor, Commit commit) throws PostProcessorException {
+	public void commit (PostProcessor processor, Commit commit, List<FileChange> changes) throws PostProcessorException {
 	}
 	
 	public void bug (PostProcessor processor, Bug bug, List<BugHistory> history, List<Comment> comments) throws PostProcessorException {

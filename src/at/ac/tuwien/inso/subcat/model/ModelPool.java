@@ -701,9 +701,9 @@ public class ModelPool {
 	}
 
 	public void emitSocialStatsAdded (Identity src, Identity dest,
-			int quotations) {
+			int quotations, int patchesReviewed, int bugInteractions, int fileInteractions) {
 		for (ModelModificationListener listener : listeners) {
-			listener.socialStatsAdded (src, dest, quotations);
+			listener.socialStatsAdded (src, dest, quotations, patchesReviewed, bugInteractions, fileInteractions);
 		}
 	}
 

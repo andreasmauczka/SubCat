@@ -51,6 +51,7 @@ import at.ac.tuwien.inso.subcat.model.Bug;
 import at.ac.tuwien.inso.subcat.model.BugHistory;
 import at.ac.tuwien.inso.subcat.model.Comment;
 import at.ac.tuwien.inso.subcat.model.Commit;
+import at.ac.tuwien.inso.subcat.model.FileChange;
 import at.ac.tuwien.inso.subcat.model.Model;
 import at.ac.tuwien.inso.subcat.model.Model.Stats;
 import at.ac.tuwien.inso.subcat.model.ModelPool;
@@ -156,7 +157,10 @@ public class PostProcessor {
 						model.foreachCommit (proj, new ObjectCallback<Commit> () {
 							@Override
 							public boolean processResult (Commit item) throws SQLException, Exception {								
-								emitCommit (item);
+								Model model2 = pool.getModel ();
+								List<FileChange> changes = model2.getFileChanges (item);
+								model2.close ();
+								emitCommit (item, changes);
 								return !stopped;
 							}				
 						});
@@ -211,13 +215,13 @@ public class PostProcessor {
 		}
 	}
 
-	private void emitCommit (Commit commit) throws PostProcessorException {
+	private void emitCommit (Commit commit, List<FileChange> changes) throws PostProcessorException {
 		for (PostProcessorTask task : commitTasks) {
 			if (stopped){
 				break;
 			}
 
-			task.commit (this, commit);
+			task.commit (this, commit, changes);
 		}
 
 		for (PostProcessorListener l : listener) {

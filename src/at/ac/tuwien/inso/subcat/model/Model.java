@@ -148,12 +148,15 @@ public class Model {
 
 	private static final String SOCIAL_STATS_TABLE =
 		"CREATE TABLE IF NOT EXISTS SocialStats ("
-		+ "src               INTEGER     NOT NULL,"
-		+ "dest              INTEGER     NOT NULL,"
-		+ "quotations        INTEGER     NOT NULL,"
-		+ "patchesReviewed   INTEGER     NOT NULL,"
-		+ "bugInteractions   INTEGER	 NOT NULL,"
-		+ "fileInteractions  INTEGER     NOT NULL,"
+		+ "src                    INTEGER     NOT NULL,"
+		+ "dest                   INTEGER     NOT NULL,"
+		+ "quotations             INTEGER     NOT NULL,"
+		+ "patchesReviewed        INTEGER     NOT NULL,"
+		+ "bugInteractions        INTEGER     NOT NULL,"
+		+ "fileInteractions       INTEGER     NOT NULL,"
+		+ "bugLinkingInteractions INTEGER     NOT NULL,"
+		+ "pushed				  INTEGER	  NOT NULL,"
+		+ "bugsClosed			  INTEGER	  NOT NULL,"
 		+ "PRIMARY KEY (src, dest),"
 		+ "FOREIGN KEY(src) REFERENCES Identities (id),"
 		+ "FOREIGN KEY(dest) REFERENCES Identities (id)"
@@ -1095,7 +1098,7 @@ public class Model {
 		+ "LEFT JOIN Users AuthorUser"
 		+ " ON AuthorUser.id = AuthorIdentity.user "
 		+ "LEFT JOIN Identities CommitterIdentity"
-		+ " ON Commits.author = CommitterIdentity.id "
+		+ " ON Commits.committer = CommitterIdentity.id "
 		+ "LEFT JOIN Users CommitterUser"
 		+ " ON CommitterUser.id = CommitterIdentity.user "
 		+ "WHERE"
@@ -1583,6 +1586,44 @@ public class Model {
 		+ "WHERE"
 		+ " project = ?";
 	
+	private static final String SELECT_BUG_CLOSED_STATS =
+		"SELECT DISTINCT"
+		+ "	Bugs.id,"
+		+ "	uSrc.id,"
+		+ "	uSrc.name,"
+		+ "	idSrc.id,"
+		+ "	idSrc.identifier,"
+		+ "	idSrc.context,"
+		+ "	idSrc.mail,"
+		+ "	idSrc.name,"
+		+ "	idSrc.user,"
+		+ "	uDest.id,"
+		+ "	uDest.name,"
+		+ "	idDest.id,"
+		+ "	idDest.identifier,"
+		+ "	idDest.context,"
+		+ "	idDest.mail,"
+		+ "	idDest.name,"
+		+ "	idDest.user "
+		+ "FROM"
+		+ "	StatusHistory,"
+		+ "	Bugs,"
+		+ "	Status,"
+		+ "	Identities idSrc,"
+		+ "	Identities idDest,"
+		+ "	Users uSrc,"
+		+ "	Users uDest "
+		+ "WHERE"
+		+ "	Bugs.id=StatusHistory.bug"
+		+ "	AND StatusHistory.addedBy != Bugs.identity"
+		+ "	AND StatusHistory.newStatus=Status.id"
+		+ "	AND Status.name = \"RESOLVED\""
+		+ "	AND idSrc.id = StatusHistory.addedBy"
+		+ "	AND idDest.id = Bugs.identity"
+		+ "	AND uSrc.id = idSrc.user"
+		+ "	AND uDest.id = idDest.user"
+		+ "	AND Status.project = ?";
+
 	private static final String LOAD_EXTENSION =
 		"SELECT load_extension (?)";
 
@@ -1669,16 +1710,19 @@ public class Model {
 		+ "VALUES (?,?,?,?,?)";
 
 	private static final String INSERT_OR_REPLACE_SOCIAL_STATS =
-		"INSERT OR REPLACE INTO SocialStats (src, dest, quotations, patchesReviewed, bugInteractions, fileInteractions)"
+		"INSERT OR REPLACE INTO SocialStats (src, dest, quotations, patchesReviewed, bugInteractions, fileInteractions, bugLinkingInteractions, pushed, bugsClosed)"
 		+ "VALUES ("
 		+ " ?,"
 		+ " ?,"
 		+ " COALESCE((SELECT quotations FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?,"
 		+ " COALESCE((SELECT patchesReviewed FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?,"
 		+ " COALESCE((SELECT bugInteractions FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?,"
-		+ " COALESCE((SELECT fileInteractions FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?"
+		+ " COALESCE((SELECT fileInteractions FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?,"
+		+ " COALESCE((SELECT bugLinkingInteractions FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?,"
+		+ " COALESCE((SELECT pushed FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?,"
+		+ " COALESCE((SELECT bugsClosed FROM SocialStats WHERE src = ? AND dest = ?), 0) + ?"
 		+ ")";
-	
+
 	private static final String INTERACTION_INSERTION =
 		"INSERT INTO Interactions"
 		+ "(start, end, quotes, pos, neg, date, closed)"
@@ -1973,14 +2017,22 @@ public class Model {
 		+ "WHERE "
 		+ " src IN (SELECT Identities.id FROM Identities, Users WHERE Identities.user = Users.id AND Users.project = ?)";
 
-	private static final String CLEAN_BUG_CHANGE_INTERACTIONS =
+	private static final String CLEAN_BUG_INTERLINKING_INTERACTIONS =
 		"UPDATE "
 		+ " SocialStats "
 		+ "SET "
-		+ " bugInteractions = 0 "
+		+ " bugLinkingInteractions = 0 "
 		+ "WHERE "
 		+ " src IN (SELECT Identities.id FROM Identities, Users WHERE Identities.user = Users.id AND Users.project = ?)";
 
+	private static final String CLEAN_BUG_CLOSED_INTERACTIONS =
+		"UPDATE "
+		+ " SocialStats "
+		+ "SET "
+		+ " bugsClosed = 0 "
+		+ "WHERE "
+		+ " src IN (SELECT Identities.id FROM Identities, Users WHERE Identities.user = Users.id AND Users.project = ?)";
+	
 	private static final String COMMIT_INSERTION =
 		"INSERT INTO Commits"
 		+ "(project, author, committer, date, title, linesAdded, linesRemoved, changedFiles, identifier)"
@@ -2673,20 +2725,22 @@ public class Model {
 		}
 	}
 	
-	public void addSocialStats (Identity src, Identity dest, int quotations, int patchesReviewed, int bugInteractions, int fileInteractions) throws SQLException {
+	public void addSocialStats (Identity src, Identity dest, int quotations, int patchesReviewed, int bugInteractions, int fileInteractions, int bugLinkingInteractions, int pushed, int bugsClosed) throws SQLException {
 		assert (src != null && src.getId () != null);
 		assert (dest != null && dest.getId () != null);
 		assert (quotations >= 0);
 		assert (patchesReviewed >= 0);
 		assert (bugInteractions >= 0);
 		assert (fileInteractions >= 0);
+		assert (bugLinkingInteractions >= 0);
+		assert (bugsClosed >= 0);
+		assert (src.equals (dest) == false);
 
 		PreparedStatement stmt = null;
 
 		try {
 			stmt = conn.prepareStatement (INSERT_OR_REPLACE_SOCIAL_STATS);
 			stmt.setInt (1, src.getId ());
-			
 			stmt.setInt (2, dest.getId ());
 			
 			stmt.setInt (3, src.getId ());
@@ -2705,9 +2759,20 @@ public class Model {
 			stmt.setInt (13, dest.getId ());
 			stmt.setInt (14, fileInteractions);
 			
-			stmt.executeUpdate();
+			stmt.setInt (15, src.getId ());
+			stmt.setInt (16, dest.getId ());
+			stmt.setInt (17, bugLinkingInteractions);
 			
-			pool.emitSocialStatsAdded (src, dest, quotations, patchesReviewed, bugInteractions, fileInteractions);
+			stmt.setInt (18, src.getId ());
+			stmt.setInt (19, dest.getId ());
+			stmt.setInt (20, pushed);
+			
+			stmt.setInt (21, src.getId ());
+			stmt.setInt (22, dest.getId ());
+			stmt.setInt (23, bugsClosed);
+
+			stmt.executeUpdate();
+			pool.emitSocialStatsAdded (src, dest, quotations, patchesReviewed, bugInteractions, fileInteractions, bugLinkingInteractions, pushed);
 		} finally {
 			if (stmt != null) {
 				stmt.close ();
@@ -5347,14 +5412,31 @@ public class Model {
 		}
 	}
 
-	public void cleanBugInteractionStats (Project project) throws SQLException {
+	public void cleanBugInterlinkingStats (Project project) throws SQLException {
 		assert (conn != null);
 		assert (project != null);
 		assert (project.getId () != null);
 
 		PreparedStatement stmt = null;
 		try {
-			stmt = conn.prepareStatement (CLEAN_BUG_CHANGE_INTERACTIONS);
+			stmt = conn.prepareStatement (CLEAN_BUG_INTERLINKING_INTERACTIONS);
+			stmt.setInt (1, project.getId ());
+			stmt.executeUpdate();
+		} finally {
+			if (stmt != null) {
+				stmt.close ();
+			}
+		}
+	}
+
+	public void cleanBugClosedStats (Project project) throws SQLException {
+		assert (conn != null);
+		assert (project != null);
+		assert (project.getId () != null);
+
+		PreparedStatement stmt = null;
+		try {
+			stmt = conn.prepareStatement (CLEAN_BUG_CLOSED_INTERACTIONS);
 			stmt.setInt (1, project.getId ());
 			stmt.executeUpdate();
 		} finally {
@@ -6213,6 +6295,43 @@ public class Model {
 		}
 	}
 
+	public void foreachBugClosedStats (Project proj, ObjectCallback<Tuple<Identity,Identity>> callback) throws SQLException, Exception {
+		assert (conn != null);
+		assert (proj != null);
+		assert (proj.getId () != null);
+		assert (callback != null);
+
+		PreparedStatement stmt = null;
+		ResultSet res = null;
+
+		try {
+			stmt = conn.prepareStatement (SELECT_BUG_CLOSED_STATS);
+			stmt.setInt (1, proj.getId ());
+		
+			// Execution:
+			res = stmt.executeQuery ();
+			boolean do_next = true;
+			while (res.next () && do_next) {
+				User uSrc = userFromResult (res, proj, 2, 3);
+				Identity iSrc = identityFromResult (res, uSrc, 5, 4, 6, 8, 7);
+
+				User uDest = userFromResult (res, proj, 10, 11);
+				Identity iDest = identityFromResult (res, uDest, 13, 12, 14, 16, 15);
+
+				do_next = callback.processResult (new Tuple<Identity, Identity> (iSrc, iDest));
+			}
+		
+			res.close ();
+		} finally {
+			if (res != null) {
+				res.close ();
+			}
+			if (res != null) {
+				stmt.close ();
+			}
+		}
+	}	
+	
 	public void foreachCommit (Project proj, ObjectCallback<Commit> callback) throws SQLException, Exception {
 		assert (conn != null);
 		assert (proj != null);
@@ -6344,32 +6463,31 @@ public class Model {
 			stmt = conn.prepareStatement (SELECT_BUG);
 			stmt.setInt (1, proj.getId ());
 			stmt.setInt (2, identifier);
-			
 	
 			// Execution:
 			res = stmt.executeQuery ();
 			if (res.next ()) {
 				int id = res.getInt (1);
-				String title = res.getString (8);
-				Date creation = resGetDate (res, 9);
+				String title = res.getString (9);
+				Date creation = resGetDate (res, 10);
 	
 				User user = null;
 				Identity identity = null;
 				if (res.getInt (2) != 0) {
-					user = userFromResult (res, proj, 5, 6);
-					identity = identityFromResult (res, user, 17, 2, 12, 3, 4);
+					user = userFromResult (res, proj, 6, 7);
+					identity = identityFromResult (res, user, 17, 3, 13, 4, 5);
 				}
 	
-				int compId = res.getInt (7);
-				String compName = res.getString (13);
+				int compId = res.getInt (8);
+				String compName = res.getString (14);
 				Component component = new Component (compId, proj, compName);
 	
-				int prioId = res.getInt (10);
-				String prioName = res.getString (14);
+				int prioId = res.getInt (11);
+				String prioName = res.getString (15);
 				Priority priority = new Priority (prioId, proj, prioName);
 	
-				int sevId = res.getInt (11);
-				String sevName = res.getString (15);
+				int sevId = res.getInt (12);
+				String sevName = res.getString (16);
 				Severity severity = new Severity (sevId, proj, sevName);
 	
 				int resId = res.getInt (18);

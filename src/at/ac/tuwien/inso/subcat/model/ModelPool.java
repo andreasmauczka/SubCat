@@ -149,6 +149,7 @@ public class ModelPool {
 		// TODO: Escape path
 		SQLiteConfig config = new SQLiteConfig ();
 		config.enableLoadExtension (true);
+		config.setSharedCache (true);
 		
 		// TODO: Wait until we can set SQLITE_CONFIG_MULTITHREAD
 		// 		 ...
@@ -701,9 +702,9 @@ public class ModelPool {
 	}
 
 	public void emitSocialStatsAdded (Identity src, Identity dest,
-			int quotations, int patchesReviewed, int bugInteractions, int fileInteractions) {
+			int quotations, int patchesReviewed, int bugInteractions, int fileInteractions, int bugLinkingInteractions, int pushed) {
 		for (ModelModificationListener listener : listeners) {
-			listener.socialStatsAdded (src, dest, quotations, patchesReviewed, bugInteractions, fileInteractions);
+			listener.socialStatsAdded (src, dest, quotations, patchesReviewed, bugInteractions, fileInteractions, bugLinkingInteractions, pushed);
 		}
 	}
 

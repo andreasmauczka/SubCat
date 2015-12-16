@@ -40,6 +40,7 @@ import java.util.regex.Pattern;
 import at.ac.tuwien.inso.subcat.model.Bug;
 import at.ac.tuwien.inso.subcat.model.Commit;
 import at.ac.tuwien.inso.subcat.model.FileChange;
+import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.Model;
 
 
@@ -163,11 +164,11 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 		return new Token (TokenType.WORD, _str);
 	}
 
-	private void semanticLvl (Commit commit, Set<Integer> added, int bugId, int certainty, Model model) throws SQLException {
+	private void semanticLvl (Commit commit, Set<Integer> added, int bugId, int certainty, PostProcessor processor) throws SQLException {
 		assert (added != null);
 		assert (certainty >= 0);
 		assert (bugId > 0);
-		
+
 		if (certainty <= 1) {
 			// Not enough evidence
 			return ;
@@ -178,17 +179,36 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 			return ;
 		}
 
-		Bug bug = model.getBug (commit.getProject (), bugId);
-		if (bug != null) {
-			model.addBugfixCommit (commit, bug);
-			added.add (bugId);
+		Model model = null;
+		try {
+			model = processor.getModelPool ().getModel ();
+			Bug bug = model.getBug (commit.getProject (), bugId);
+			if (bug != null) {
+					Identity from = commit.getAuthor ();
+					Identity to = bug.getIdentity ();
+					model.begin ();
+					if (from.equals (to) == false) {
+						model.addSocialStats (from, to, 0, 0, 0, 0, 1, 0, 0);
+					}
+					model.addBugfixCommit (commit, bug);
+					model.commit ();
+					added.add (bugId);
+			}
+		} catch (SQLException e) {
+			if (model != null) {
+				model.rollback ();
+			}
+			throw e;
+		} finally {
+			if (model != null) {
+				model.close ();
+			}
 		}
 	}
 
-	private void processParagraph (Commit commit, Set<Integer> added, String content, Model model) throws SQLException {
+	private void processParagraph (Commit commit, Set<Integer> added, String content, PostProcessor processor) throws SQLException {
 		assert (content != null);
 		assert (added != null);
-		
 		StringTokenizer st = new StringTokenizer (content);
 		int wordScore = 0;
 
@@ -197,7 +217,7 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 	
 			switch (token.type) {
 			case LINK:
-				semanticLvl (commit, added, token.valueInt, Integer.MAX_VALUE, model);
+				semanticLvl (commit, added, token.valueInt, Integer.MAX_VALUE, processor);
 				break;
 	
 			case BUG_KEYWORD:
@@ -205,7 +225,7 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 				break;
 	
 			case NUMERIC:
-				semanticLvl (commit, added, token.valueInt, wordScore + 1, model);
+				semanticLvl (commit, added, token.valueInt, wordScore + 1, processor);
 				break;
 	
 			case WORD:
@@ -215,12 +235,12 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 		}
 	}
 	
-	private void processCommitMessage (Commit commit, Model model) throws SQLException {
+	private void processCommitMessage (Commit commit, PostProcessor processor) throws SQLException {
 		assert (commit != null);
 
 		Set<Integer> added = new HashSet<Integer> ();
 		for (String para : pPara.split (commit.getTitle ())) {
-			this.processParagraph (commit, added, para, model);
+			this.processParagraph (commit, added, para, processor);
 		}
 	}
 
@@ -232,6 +252,7 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 		try {
 			model = processor.getModelPool ().getModel ();
 			model.removeBugfixCommits (processor.getProject ());
+			model.cleanBugInterlinkingStats (processor.getProject ());
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);
 		} finally {
@@ -243,16 +264,10 @@ public class CommitBugInterlinkingTask extends PostProcessorTask {
 	
 	@Override
 	public void commit (PostProcessor processor, Commit commit, List<FileChange> changes) throws PostProcessorException {
-		Model model = null;
 		try {
-			model = processor.getModelPool ().getModel ();			
-			processCommitMessage (commit, model);
+			processCommitMessage (commit, processor);
 		} catch (SQLException e) {
 			throw new PostProcessorException (e);
-		} finally {
-			if (model != null) {
-				model.close ();
-			}
 		}
 	}
 	

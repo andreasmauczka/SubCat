@@ -15,7 +15,9 @@ import at.ac.tuwien.inso.subcat.model.FileChange;
 import at.ac.tuwien.inso.subcat.model.Identity;
 import at.ac.tuwien.inso.subcat.model.ManagedFile;
 import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.ObjectCallback;
 import at.ac.tuwien.inso.subcat.model.Project;
+import at.ac.tuwien.inso.subcat.model.Tuple;
 import at.ac.tuwien.inso.subcat.utility.commentparser.CommentNode;
 import at.ac.tuwien.inso.subcat.utility.commentparser.ContentNodeVisitor;
 import at.ac.tuwien.inso.subcat.utility.commentparser.Finder;
@@ -213,11 +215,24 @@ public class CommentAnalyserTask extends PostProcessorTask {
 		
 		Model model = null;
 		try {
+			Project project = processor.getProject ();
 			model = processor.getModelPool ().getModel ();
 			fileInteractions = new HashMap<ManagedFile, HashSet<Identity>> ();
-			commitUpdateCnt = model.getCommitSentimentState (processor.getProject ());
+			commitUpdateCnt = model.getCommitSentimentState (project);
 			commitCnt = 0;
-		} catch (SQLException e) {
+
+			
+			model.cleanBugClosedStats (project);
+			final Model fm = model;
+
+			model.foreachBugClosedStats (project, new ObjectCallback<Tuple<Identity,Identity>> () {
+				@Override
+				public boolean processResult (Tuple<Identity, Identity> item) throws SQLException, Exception {
+					fm.addSocialStats (item.fst, item.snd, 0, 0, 0, 0, 0, 0, 1);
+					return true;
+				}
+			});
+		} catch (Exception e) {
 			throw new PostProcessorException (e);
 		} finally {
 			if (model != null) {
@@ -249,7 +264,7 @@ public class CommentAnalyserTask extends PostProcessorTask {
 				for (Identity from: identities) {
 					for (Identity to : identities) {
 						if (from.equals (to) == false) {
-							model.addSocialStats (from, to, 0, 0, 0, 1);
+							model.addSocialStats (from, to, 0, 0, 0, 1, 0, 0, 0);
 						}
 					}
 				}
@@ -281,7 +296,6 @@ public class CommentAnalyserTask extends PostProcessorTask {
 			model = processor.getModelPool ().getModel ();
 			int commentUpdateCnt = model.getBugSentimentState (bug);
 			int commentCnt = 0;
-			
 			// Analyse all comments first to avoid long transactions:
 			LinkedList<Stats> bugStats = new LinkedList<Stats> ();
 			for (Comment comment : comments) {
@@ -315,14 +329,14 @@ public class CommentAnalyserTask extends PostProcessorTask {
 					model.addSentiment (bStats.sentiment);
 					model.addBugCommentSentiment (bStats.comment, bStats.sentiment);
 					for (AuthorStats stat : bStats.stats) {
-						model.addSocialStats (stat.from, stat.to, stat.quotations, stat.patchesReviewed, 0, 0);
+						model.addSocialStats (stat.from, stat.to, stat.quotations, stat.patchesReviewed, 0, 0, 0, 0, 0);
 					}
 				}
 
 				// Update old:
 				for (Identity from : authorsOld) {
 					for (Identity to : authorsNew) {
-						model.addSocialStats (from, to, 0, 0, 1, 0);
+						model.addSocialStats (from, to, 0, 0, 1, 0, 0, 0, 0);
 					}
 				}
 
@@ -330,7 +344,7 @@ public class CommentAnalyserTask extends PostProcessorTask {
 				for (Identity from : authorsNew) {
 					for (Identity to : authorsById.values ()) {
 						if (from.equals (to) == false) {
-							model.addSocialStats (from, to, 0, 0, 1, 0);
+							model.addSocialStats (from, to, 0, 0, 1, 0, 0, 0, 0);
 						}
 					}
 				}
@@ -353,6 +367,8 @@ public class CommentAnalyserTask extends PostProcessorTask {
 
 	@Override
 	public void commit (PostProcessor processor, Commit commit, List<FileChange> changes) throws PostProcessorException {
+		commitCnt++;
+
 		for (FileChange change : changes) {
 			HashSet<Identity> modifications = fileInteractions.get (change.getFile ());
 			if (modifications == null) {
@@ -362,7 +378,7 @@ public class CommentAnalyserTask extends PostProcessorTask {
 			
 			modifications.add (commit.getAuthor ());
 		}
-		
+
 		if (commitCnt > commitUpdateCnt) {
 			String[] paras = commit.getTitle ().split ("\n[ \t]*\n");
 			LinkedList<SentimentBlock> blocks = new LinkedList<SentimentBlock> (); 
@@ -378,6 +394,12 @@ public class CommentAnalyserTask extends PostProcessorTask {
 				model.begin ();
 				model.addSentiment (sentiment);
 				model.addCommitSentiment (commit, sentiment);
+
+				Identity from = commit.getCommitter ();
+				Identity to = commit.getAuthor ();
+				if (from.equals (to) == false) {
+					model.addSocialStats (from, to, 0, 0, 0, 0, 0, 1, 0);
+				}
 				model.commit ();
 			} catch (SQLException e) {
 				if (model != null) {
@@ -394,7 +416,6 @@ public class CommentAnalyserTask extends PostProcessorTask {
 			}
 			
 		}
-		commitCnt++;
 	}
 
 	@Override

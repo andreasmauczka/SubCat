@@ -34,6 +34,7 @@ package at.ac.tuwien.inso.subcat.ui.widgets;
 import java.awt.Paint;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -192,7 +193,7 @@ public class TrendChart extends Composite {
 			@Override
 			public void widgetSelected (SelectionEvent e) {
 				Button button = (Button) e.getSource();
-				ChartIdentifier boxData = (ChartIdentifier) button.getData();
+				ChartIdentifier boxData = (ChartIdentifier) button.getData ();
 				assert (boxData != null);
 
 				boolean checked = button.getSelection();
@@ -313,7 +314,7 @@ public class TrendChart extends Composite {
 	public void addConfiguration (TrendChartConfigData config, List<String> flags) {
 		assert (config != null);
 
-		LinkedList<Combo> combos = new LinkedList<Combo> ();
+		ArrayList<Combo> combos = new ArrayList<Combo> ();
 		
 		// Title Row:
 		Label lblGrpTitle = new Label (optionComposite, SWT.NONE);
@@ -368,21 +369,19 @@ public class TrendChart extends Composite {
 
 
 		OptionListConfig leftConfig = config.getOptionList().getConfig ();
-		int x = 0;
 
-		for (Combo combo : combos) {
-			TrendChartPlotConfig topConfig = (TrendChartPlotConfig) config.getDropDowns().get (x).getConfig ();
+		for (OptionListConfigData.Pair pair : config.getOptionList ().getData ()) {
+			int x = 0;
+			for (Combo combo : combos) {
+				TrendChartPlotConfig topConfig = (TrendChartPlotConfig) config.getDropDowns().get (x).getConfig ();
 
-			for (OptionListConfigData.Pair pair : config.getOptionList ().getData ()) {
 				Button button = new Button (selectionComposite, SWT.CHECK);
 				button.setLayoutData(new GridData(SWT.CENTER, SWT.CENTER, true, false, 1, 1));
 				button.setData (new ChartIdentifier (topConfig, combo, leftConfig, pair.id, boxWeight++));
-				button.addSelectionListener (boxListener);
+				button.addSelectionListener (boxListener);				
+				x++;
 			}
-
-			x++;
 		}
-
 
 		// Scrolling area size update:
 	    scrolledComposite.setMinSize (optionComposite.computeSize (SWT.DEFAULT, SWT.DEFAULT));

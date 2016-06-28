@@ -12,6 +12,7 @@ import at.ac.tuwien.inso.subcat.model.Category;
 import at.ac.tuwien.inso.subcat.model.Comment;
 import at.ac.tuwien.inso.subcat.model.Commit;
 import at.ac.tuwien.inso.subcat.model.Model;
+import at.ac.tuwien.inso.subcat.model.FileChange;
 import at.ac.tuwien.inso.subcat.utility.Lemmatizer;
 import at.ac.tuwien.inso.subcat.utility.classifier.Class;
 import at.ac.tuwien.inso.subcat.utility.classifier.Classifier;
@@ -28,7 +29,7 @@ public class ClassificationTask extends PostProcessorTask {
 		super (PostProcessorTask.COMMIT | PostProcessorTask.BUG);
 	}
 
-	public void commit (PostProcessor processor, Commit commit) throws PostProcessorException {
+	public void commit (PostProcessor processor, Commit commit, List<FileChange> changes) throws PostProcessorException {
 		Settings settings = processor.getSettings ();
 		if (settings.srcDictionaries.size () == 0) {
 			return ;

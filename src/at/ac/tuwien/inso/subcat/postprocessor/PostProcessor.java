@@ -140,7 +140,7 @@ public class PostProcessor {
 			endTasks.add (task);
 		}
 	}
-	
+
 	public void process () throws PostProcessorException {
 		stopped = false;
 
@@ -173,10 +173,10 @@ public class PostProcessor {
 								Model model2 = pool.getModel ();
 								List<BugHistory> history = model2.getBugHistory (proj, bug);
 								List<Comment> comments = model2.getComments (proj, bug);
-								emitBug (bug, history, comments);
 								model2.close ();
+								emitBug (bug, history, comments);
 								return !stopped;
-							}				
+							}
 						});
 					}
 

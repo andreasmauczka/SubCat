@@ -3083,7 +3083,6 @@ public class Model {
 		if (flags == null) {
 			return ;
 		}
-
 		_addBugAttachmentFlagAssignments (attachment, flags);
 		pool.emitBugAttachmentFlagAssignmentsAdded (attachment, flags);
 	}
@@ -3202,7 +3201,7 @@ public class Model {
 	}
 
 	public void add (Platform pf) throws SQLException {
-		assert (conn != null);
+ 		assert (conn != null);
 		assert (pf != null);
 		Project project = pf.getProject ();
 		assert (project.getId () != null);
@@ -3398,7 +3397,6 @@ public class Model {
 			stmt.setInt (1, commit.getId ());
 			stmt.setInt (2, category.getId ());
 			stmt.executeUpdate();
-			
 			pool.emitCommitCategoryAdded (commit, category);
 		} finally {
 			if (stmt != null) {
@@ -5516,7 +5514,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -5634,6 +5632,7 @@ public class Model {
 			stmt.executeUpdate();
 	
 			int newId = getLastInsertedId (stmt);
+			stmt.close ();
 	
 			addSentenceSentiments (newId, sentiment.getSentenceSentiments ());
 		} finally {
@@ -5642,7 +5641,7 @@ public class Model {
 			}
 		}
 	}
-	
+
 	public void addSentiment (Sentiment sentiment) throws SQLException {
 		assert (sentiment != null);
 
@@ -5672,10 +5671,11 @@ public class Model {
 	
 			stmt.setInt (16, sentiment.getWordCount ());
 			stmt.setInt (17, sentiment.getSentenceCount ());
-			stmt.executeUpdate();
+			stmt.executeUpdate ();
 	
 			int newId = getLastInsertedId (stmt);
 			sentiment.setId (newId);
+			stmt.close ();
 	
 			int i = 0;
 			for (SentimentBlock block : sentiment.getBlocks ()) {
@@ -5925,7 +5925,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6092,7 +6092,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6151,7 +6151,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6210,7 +6210,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6289,7 +6289,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6326,7 +6326,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6370,7 +6370,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6444,7 +6444,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6537,7 +6537,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6577,7 +6577,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6601,7 +6601,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6633,7 +6633,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6665,7 +6665,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6697,7 +6697,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6729,7 +6729,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6761,7 +6761,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6793,7 +6793,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6825,7 +6825,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6857,7 +6857,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6889,7 +6889,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6921,7 +6921,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6953,7 +6953,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -6985,7 +6985,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7017,7 +7017,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7049,7 +7049,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7081,7 +7081,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7113,7 +7113,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7145,7 +7145,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7183,7 +7183,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7215,7 +7215,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7247,7 +7247,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7279,7 +7279,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7311,7 +7311,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7343,7 +7343,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7375,7 +7375,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7412,7 +7412,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7444,7 +7444,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7476,7 +7476,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7508,7 +7508,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7540,7 +7540,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7572,7 +7572,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7612,7 +7612,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7640,7 +7640,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7668,7 +7668,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}		
@@ -7709,7 +7709,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7746,7 +7746,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7781,7 +7781,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7815,7 +7815,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7849,7 +7849,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7882,7 +7882,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7914,7 +7914,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7950,7 +7950,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -7987,7 +7987,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -8023,7 +8023,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -8054,7 +8054,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -8082,7 +8082,7 @@ public class Model {
 			if (res != null) {
 				res.close ();
 			}
-			if (res != null) {
+			if (stmt != null) {
 				stmt.close ();
 			}
 		}
@@ -8232,9 +8232,9 @@ public class Model {
 			stmt.executeUpdate (COMMIT_SENTIMENT_TABLE);
 			stmt.executeUpdate (BLOCK_SENTIMENT_TABLE);
 			stmt.executeUpdate (SENTIMENT_TABLE);
-			stmt.executeUpdate (SELECTED_USER_TABLE);
 			stmt.executeUpdate (ATTACHMENT_ISOBSOLETE_TABLE);
 			stmt.executeUpdate (SOCIAL_STATS_TABLE);
+			stmt.executeUpdate (SELECTED_USER_TABLE);
 		} finally {
 			if (stmt != null) {
 				stmt.close ();

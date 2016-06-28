@@ -324,7 +324,6 @@ public class CommentAnalyserTask extends PostProcessorTask {
 
 			try {
 				model.begin ();
-	
 				for (Stats bStats : bugStats) {
 					model.addSentiment (bStats.sentiment);
 					model.addBugCommentSentiment (bStats.comment, bStats.sentiment);

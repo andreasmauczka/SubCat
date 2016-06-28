@@ -98,17 +98,22 @@ public class ModelPool {
 	// Helper:
 	//
 	private synchronized Connection popConnection () throws SQLException {
+		return createConnection ();
+		/*
 		assert (connections != null);
 
 		Connection conn = connections.poll ();
 		if (connections.size () == 0) {
 			conn = createConnection ();
 		}
-		
+
 		return conn;
+		*/		
 	}
 
 	synchronized void pushConnection (Connection conn) throws SQLException {
+		conn.close ();
+		/*
 		assert (conn != null);
 
 		if (connections == null || connections.size () == connPoolSize) {
@@ -116,6 +121,7 @@ public class ModelPool {
 		} else {
 			connections.add (conn);
 		}
+		*/
 	}
 
 	
@@ -153,6 +159,7 @@ public class ModelPool {
 		
 		// TODO: Wait until we can set SQLITE_CONFIG_MULTITHREAD
 		// 		 ...
+
 
 		Connection conn = DriverManager.getConnection ("jdbc:sqlite:" + name, config.toProperties());
 		

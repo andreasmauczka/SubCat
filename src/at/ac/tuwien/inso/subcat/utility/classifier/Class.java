@@ -66,10 +66,12 @@ public class Class {
 	}
 
 	public boolean contains (String word) {
-		return words.containsKey (word);
+		assert (word != null);
+		return words.containsKey (word.toLowerCase ());
 	}
 
 	public Integer getWordWeight (String word) {
-		return words.get (word);
+		assert (word != null);
+		return words.get (word.toLowerCase ());
 	}
 }
